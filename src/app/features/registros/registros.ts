@@ -17,7 +17,7 @@ export class Registros implements OnInit {
   loading = signal(true);
   busqueda = signal('');
   mostrarForm = signal(false);
-
+  itemMove: any;
   filtrados = computed(() => {
     const q = this.busqueda().toLowerCase();
     return this.registros().filter(
@@ -38,7 +38,8 @@ export class Registros implements OnInit {
     });
   }
 
-  abrirForm() {
+  abrirForm(item: any = null) {
+    this.itemMove = item;
     this.mostrarForm.set(true);
   }
   cerrarForm() {

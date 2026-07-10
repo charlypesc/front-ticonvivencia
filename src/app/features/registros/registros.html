@@ -16,7 +16,7 @@
             <button class="btn btn--outline btn--sm">
                 <i class="ti ti-filter"></i> Tipo de falta
             </button>
-            <button class="btn btn--primary btn--sm" (click)="abrirForm()">
+            <button class="btn btn--primary btn--sm" (click)="abrirForm(null)">
                 <i class="ti ti-plus"></i> Nuevo
             </button>
         </div>
@@ -56,7 +56,7 @@
                         </span>
                     </td>
                     <td>
-                        <a [routerLink]="['registros', r.id_registro]" class="btn-ver">
+                        <a class="btn-ver" (click)="abrirForm(r)">
                             <i class="ti ti-eye"></i> Ver
                         </a>
                     </td>
@@ -70,5 +70,5 @@
 
 <!-- Modal formulario nuevo registro -->
 @if (mostrarForm()) {
-<app-registro-form (cerrar)="cerrarForm()" />
+<app-registro-form [registro]="itemMove" (cerrar)="cerrarForm()" />
 }

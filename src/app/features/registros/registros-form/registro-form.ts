@@ -1,4 +1,4 @@
-import { Component, OnInit, Output, EventEmitter, signal } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, signal, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.services';
@@ -12,7 +12,7 @@ import { ApiService } from '../../../core/services/api.services';
 })
 export class RegistroForm implements OnInit {
   @Output() cerrar = new EventEmitter<void>();
-
+  @Input() registro: any | null;
   tiposFalta = signal<any[]>([]);
   estudiantes = signal<any[]>([]);
   loading = signal(false);
@@ -36,6 +36,19 @@ export class RegistroForm implements OnInit {
     // Carga tipos de falta y estudiantes en paralelo
     this.api.getTiposFalta().subscribe((data) => this.tiposFalta.set(data));
     this.api.getEstudiantes().subscribe((data) => this.estudiantes.set(data));
+    if (this.registro) {
+      this.api
+        .getRegistro(this.registro.id_registro)
+        .subscribe(
+          (data) => ((this.registro = data), (this.estudiantesSeleccionados = data.estudiantes)),
+        );
+      this.form = {
+        ...this.registro,
+        fecha_incidente: this.registro.fecha_incidente
+          ? String(this.registro.fecha_incidente).slice(0, 10)
+          : '',
+      };
+    }
   }
 
   toggleEstudiante(id: number) {
@@ -72,21 +85,38 @@ export class RegistroForm implements OnInit {
     }
 
     this.loading.set(true);
-
-    this.api
-      .createRegistro({
-        ...this.form,
-        estudiantes: this.estudiantesSeleccionados,
-      })
-      .subscribe({
-        next: () => {
-          this.success.set(true);
-          setTimeout(() => this.cerrar.emit(), 1200);
-        },
-        error: () => {
-          this.loading.set(false);
-          this.error.set('Error al guardar el registro');
-        },
-      });
+    if (this.registro === null) {
+      this.api
+        .createRegistro({
+          ...this.form,
+          estudiantes: this.estudiantesSeleccionados,
+        })
+        .subscribe({
+          next: () => {
+            this.success.set(true);
+            setTimeout(() => this.cerrar.emit(), 1200);
+          },
+          error: () => {
+            this.loading.set(false);
+            this.error.set('Error al guardar el registro');
+          },
+        });
+    } else {
+      this.api
+        .updateRegistro({
+          ...this.form,
+          estudiantes: this.estudiantesSeleccionados,
+        })
+        .subscribe({
+          next: () => {
+            this.success.set(true);
+            setTimeout(() => this.cerrar.emit(), 1200);
+          },
+          error: () => {
+            this.loading.set(false);
+            this.error.set('Error al guardar el registro');
+          },
+        });
+    }
   }
 }

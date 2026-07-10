@@ -14,9 +14,14 @@
         </div>
         }
 
-        @if (success()) {
+        @if (success() && registro === null) {
         <div class="alert alert--success">
             <i class="ti ti-circle-check"></i> Registro guardado exitosamente
+        </div>
+        }
+        @if (success() && registro) {
+        <div class="alert alert--success">
+            <i class="ti ti-circle-check"></i> Registro actualizado exitosamente
         </div>
         }
 
@@ -84,6 +89,7 @@
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrar.emit()">Cancelar</button>
+            @if(registro ===null){
             <button class="btn btn--primary" style="width:auto" (click)="guardar()" [disabled]="loading()">
                 @if (loading()) {
                 <i class="ti ti-loader-2 spin"></i> Guardando...
@@ -91,6 +97,15 @@
                 <i class="ti ti-device-floppy"></i> Guardar registro
                 }
             </button>
+            }@else{
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()" [disabled]="loading()">
+                @if (loading()) {
+                <i class="ti ti-loader-2 spin"></i> Actualizando...
+                } @else {
+                <i class="ti ti-device-floppy"></i> Actualizar cambios
+                }
+            </button>
+            }
         </div>
 
     </div>

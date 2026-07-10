@@ -21,7 +21,9 @@ export class ApiService {
   validarRegistro(id: number) {
     return this.http.patch(`${this.base}/registros/${id}/validar`, {});
   }
-
+  updateRegistro(data: any) {
+    return this.http.put(`${this.base}/registros/${data.id_registro}`, data);
+  }
   // Estudiantes
   getEstudiantes() {
     return this.http.get<any[]>(`${this.base}/estudiantes`);
