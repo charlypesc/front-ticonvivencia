@@ -8,7 +8,7 @@ import { RegistroForm } from './registros-form/registro-form';
 @Component({
   selector: 'app-registros',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, RegistroForm],
+  imports: [CommonModule, FormsModule, RegistroForm],
   templateUrl: './registros.html',
   styleUrl: './registros.scss',
 })
