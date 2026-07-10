@@ -1,0 +1,42 @@
+<div class="login-wrapper">
+    <div class="login-card">
+        <div class="login-header">
+            <i class="ti ti-school login-icon"></i>
+            <h1>TiConvivencia</h1>
+            <p class="text-muted">Ingresa con tu cuenta</p>
+        </div>
+        @if (error()) {
+        <div class="alert alert--error">
+            <i class="ti ti-alert-circle"></i>
+            {{ error() }}
+        </div>
+        }
+        <form (ngSubmit)="onSubmit()">
+            <div class="form-group">
+                <label for="correo">
+                    <i class="ti ti-mail"></i>
+                    Correo electrónico
+                </label>
+                <input id="correo" type="email" placeholder="nombre@colegio.cl" [(ngModel)]="correo" name="correo"
+                    autocomplete="email" />
+            </div>
+            <div class="form-group">
+                <label for="password">
+                    <i class="ti ti-lock"></i>
+                    Contraseña
+                </label>
+                <input id="password" type="password" placeholder="••••••••" [(ngModel)]="password" name="password"
+                    autocomplete="current-password" />
+            </div>
+            <button type="submit" class="btn btn--primary" [disabled]="loading()">
+                @if (loading()) {
+                <i class="ti ti-loader-2 spin"></i>
+                Iniciando sesión...
+                } @else {
+                <i class="ti ti-login"></i>
+                Iniciar sesión
+                }
+            </button>
+        </form>
+    </div>
+</div>
