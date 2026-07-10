@@ -37,4 +37,10 @@ export class ApiService {
   toggleUsuario(id: number) {
     return this.http.patch(`${this.base}/usuarios/${id}/toggle`, {});
   }
+
+  //Faltas
+
+  getTiposFalta() {
+    return this.http.get<any[]>(`${this.base}/tipos-falta`);
+  }
 }

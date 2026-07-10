@@ -27,6 +27,12 @@ export class Sidebar {
       roles: [RolesEnum.ENCARGADO, RolesEnum.DIRECTOR],
     },
     {
+      label: 'Consultar RUT',
+      icon: 'ti-search',
+      route: '/consultar-rut',
+      roles: [RolesEnum.ENCARGADO, RolesEnum.DIRECTOR],
+    },
+    {
       label: 'Registros',
       icon: 'ti-folder',
       route: '/registros',
@@ -39,12 +45,6 @@ export class Sidebar {
       roles: [RolesEnum.DIRECTOR],
     },
     { label: 'Estudiantes', icon: 'ti-users', route: '/estudiantes', roles: [RolesEnum.ENCARGADO] },
-    {
-      label: 'Consultar RUT',
-      icon: 'ti-search',
-      route: '/consultar-rut',
-      roles: [RolesEnum.ENCARGADO, RolesEnum.DIRECTOR],
-    },
     {
       label: 'Tipos de falta',
       icon: 'ti-settings',

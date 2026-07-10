@@ -1,0 +1,97 @@
+<div class="modal-backdrop" (click)="cerrar.emit()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+        <div class="modal__header">
+            <h3><i class="ti ti-file-plus"></i> Nuevo registro de convivencia</h3>
+            <button class="modal__close" (click)="cerrar.emit()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        @if (success()) {
+        <div class="alert alert--success">
+            <i class="ti ti-circle-check"></i> Registro guardado exitosamente
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Fecha del incidente *</label>
+                    <input type="date" [(ngModel)]="form.fecha_incidente" name="fecha" />
+                </div>
+                <div class="form-group">
+                    <label>Tipo de falta *</label>
+                    <select [(ngModel)]="form.id_tipo_falta" name="tipo">
+                        <option [ngValue]="null" disabled>Seleccione...</option>
+                        @for (t of tiposFalta(); track t.id_tipo_falta) {
+                        <option [ngValue]="t.id_tipo_falta">
+                            {{ t.nombre }} — {{ t.gravedad }}
+                        </option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Temática *</label>
+                <input type="text" placeholder="Ej: Agresión física en recreo" [(ngModel)]="form.tematica"
+                    name="tematica" />
+            </div>
+
+            <div class="form-group">
+                <label>Antecedentes *</label>
+                <textarea placeholder="Descripción detallada de los hechos..." [(ngModel)]="form.antecedentes"
+                    name="antecedentes"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Acuerdos</label>
+                <textarea placeholder="Acuerdos y medidas adoptadas..." [(ngModel)]="form.acuerdos"
+                    name="acuerdos"></textarea>
+            </div>
+
+            <!-- Estudiantes involucrados -->
+            <div class="form-group">
+                <label>Estudiantes involucrados</label>
+                <div class="estudiantes-list">
+                    @for (e of estudiantes(); track e.id_estudiante) {
+                    <div class="estudiante-item" [class.selected]="isSeleccionado(e.id_estudiante)">
+                        <label class="estudiante-check">
+                            <input type="checkbox" [checked]="isSeleccionado(e.id_estudiante)"
+                                (change)="toggleEstudiante(e.id_estudiante)" />
+                            <span>{{ e.nombre }} {{ e.apellido }} — {{ e.run }}-{{ e.dv }}</span>
+                        </label>
+                        @if (isSeleccionado(e.id_estudiante)) {
+                        <select [ngModel]="getRol(e.id_estudiante)" (ngModelChange)="setRol(e.id_estudiante, $event)"
+                            [name]="'rol_' + e.id_estudiante" class="rol-select">
+                            <option value="víctima">Víctima</option>
+                            <option value="agresor">Agresor</option>
+                            <option value="testigo">Testigo</option>
+                        </select>
+                        }
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrar.emit()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()" [disabled]="loading()">
+                @if (loading()) {
+                <i class="ti ti-loader-2 spin"></i> Guardando...
+                } @else {
+                <i class="ti ti-device-floppy"></i> Guardar registro
+                }
+            </button>
+        </div>
+
+    </div>
+</div>

@@ -28,6 +28,23 @@ export const routes: Routes = [
         loadComponent: () => import('./features/registros/registros').then((m) => m.Registros),
       },
       {
+        path: 'estudiantes',
+        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        loadComponent: () =>
+          import('./features/estudiantes/estudiantes').then((m) => m.Estudiantes),
+      },
+      {
+        path: 'consultar-rut',
+        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        loadComponent: () =>
+          import('./features/consultar-rut/consultar-rut').then((m) => m.ConsultarRut),
+      },
+      {
+        path: 'tipos-falta',
+        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        loadComponent: () => import('./features/tipos-falta/tipos-falta').then((m) => m.TiposFalta),
+      },
+      {
         path: 'validaciones',
         canActivate: [roleGuard(RolesEnum.ENCARGADO)],
         loadComponent: () =>

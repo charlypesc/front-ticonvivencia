@@ -1,0 +1,114 @@
+$primary:  #1e3a6e;
+$gray-200: #e5e7eb;
+$gray-100: #f3f4f6;
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid $gray-200;
+
+    h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      color: $primary;
+    }
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: #9ca3af;
+    display: flex;
+    padding: 4px;
+    border-radius: 6px;
+    &:hover { background: $gray-100; }
+  }
+
+  &__body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  &__footer {
+    padding: 16px 24px;
+    border-top: 1px solid $gray-200;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.estudiantes-list {
+  border: 1px solid $gray-200;
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.estudiante-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid $gray-100;
+  gap: 12px;
+
+  &:last-child { border-bottom: none; }
+  &.selected { background: #eef2fb; }
+}
+
+.estudiante-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  flex: 1;
+}
+
+.rol-select {
+  padding: 4px 8px;
+  border: 1px solid $gray-200;
+  border-radius: 6px;
+  font-size: 12px;
+  outline: none;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spin .8s linear infinite; }

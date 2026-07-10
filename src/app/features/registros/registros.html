@@ -1,1 +1,74 @@
-<p>registros works!</p>
+<div class="page-header">
+    <h2>Registros de convivencia</h2>
+</div>
+
+<div class="card">
+    <div class="toolbar">
+        <div class="toolbar__search">
+            <i class="ti ti-search"></i>
+            <input type="text" placeholder="Buscar por temática o tipo de falta..." [ngModel]="busqueda()"
+                (ngModelChange)="busqueda.set($event)" />
+        </div>
+        <div class="toolbar__actions">
+            <button class="btn btn--outline btn--sm">
+                <i class="ti ti-calendar"></i> Fecha
+            </button>
+            <button class="btn btn--outline btn--sm">
+                <i class="ti ti-filter"></i> Tipo de falta
+            </button>
+            <button class="btn btn--primary btn--sm" (click)="abrirForm()">
+                <i class="ti ti-plus"></i> Nuevo
+            </button>
+        </div>
+    </div>
+
+    @if (loading()) {
+    <div class="empty-state">
+        <i class="ti ti-loader-2 spin"></i>
+        <p>Cargando registros...</p>
+    </div>
+    } @else if (filtrados().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-folder-off"></i>
+        <p>No hay registros para mostrar</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Temática</th>
+                    <th>Tipo de falta</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (r of filtrados(); track r.id_registro) {
+                <tr>
+                    <td>{{ r.fecha_incidente | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ r.tematica }}</td>
+                    <td>{{ r.tipo_falta_nombre }}</td>
+                    <td>
+                        <span class="badge badge--{{ r.estado_validacion }}">
+                            {{ r.estado_validacion }}
+                        </span>
+                    </td>
+                    <td>
+                        <a [routerLink]="['registros', r.id_registro]" class="btn-ver">
+                            <i class="ti ti-eye"></i> Ver
+                        </a>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+
+<!-- Modal formulario nuevo registro -->
+@if (mostrarForm()) {
+<app-registro-form (cerrar)="cerrarForm()" />
+}
