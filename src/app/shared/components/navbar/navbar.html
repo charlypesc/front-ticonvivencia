@@ -1,0 +1,21 @@
+<header class="navbar">
+    <div class="navbar__brand">
+        <i class="ti ti-school"></i>
+        <span>TiConvivencia</span>
+    </div>
+
+    <div class="navbar__right">
+        <button class="navbar__icon-btn">
+            <i class="ti ti-bell"></i>
+        </button>
+
+        <div class="navbar__user">
+            <div class="navbar__avatar">{{ iniciales() }}</div>
+            <span class="navbar__correo">{{ usuario()?.correo }}</span>
+        </div>
+
+        <button class="navbar__icon-btn" (click)="logout()" title="Cerrar sesión">
+            <i class="ti ti-logout"></i>
+        </button>
+    </div>
+</header>
