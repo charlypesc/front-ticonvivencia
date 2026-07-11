@@ -28,7 +28,18 @@ export class ApiService {
   getEstudiantes() {
     return this.http.get<any[]>(`${this.base}/estudiantes`);
   }
-
+  createEstudiante(data: any) {
+    return this.http.post(`${this.base}/estudiantes`, data);
+  }
+  updateEstudiante(id: number, data: any) {
+    return this.http.put(`${this.base}/estudiantes/${id}`, data);
+  }
+  toggleEstudiante(id: number) {
+    return this.http.patch(`${this.base}/estudiantes/${id}/toggle`, {});
+  }
+  getCursos() {
+    return this.http.get<any[]>(`${this.base}/estudiantes/cursos`);
+  }
   // Usuarios
   getUsuarios() {
     return this.http.get<any[]>(`${this.base}/usuarios`);

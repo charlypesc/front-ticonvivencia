@@ -1,1 +1,151 @@
-<p>estudiantes works!</p>
+<div class="page-header">
+    <h2>Estudiantes</h2>
+</div>
+
+<div class="card">
+    <!-- el style auto es por el scss general apila con flex -->
+    <div style="display:flex;">
+        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
+            <i class="ti ti-plus"></i> Agregar
+        </button>
+        <!-- todo : implementar busqueda -->
+        <!-- <div class="toolbar__search">
+            <i class="ti ti-search"></i>
+            <input type="text" placeholder="Buscar por nombre o RUN..." [ngModel]="busqueda()"
+                (ngModelChange)="busqueda.set($event)" />
+        </div> -->
+    </div>
+
+    @if (success()) {
+    <div class="alert alert--success">
+        <i class="ti ti-circle-check"></i> {{ success() }}
+    </div>
+    }
+
+    @if (loading()) {
+    <div class="empty-state">
+        <i class="ti ti-loader-2 spin"></i>
+        <p>Cargando estudiantes...</p>
+    </div>
+    } @else if (filtrados().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-users-off"></i>
+        <p>No hay estudiantes registrados</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>RUN</th>
+                    <th>Nombre</th>
+                    <th>Curso</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (e of filtrados(); track e.id_estudiante) {
+                <tr>
+                    <td>{{ e.run }}-{{ e.dv }}</td>
+                    <td>{{ e.nombre }} {{ e.apellido }}</td>
+                    <td>{{ e.curso_nombre }}</td>
+                    <td>
+                        <span class="badge" [class.badge--validado]="e.activo" [class.badge--pendiente]="!e.activo">
+                            {{ e.activo ? 'activo' : 'inactivo' }}
+                        </span>
+                    </td>
+                    <td class="acciones">
+                        <button class="btn-icon" title="Editar" (click)="abrirForm(e)">
+                            <i class="ti ti-pencil"></i>
+                        </button>
+                        <button class="btn-icon" [title]="e.activo ? 'Desactivar' : 'Activar'" (click)="toggle(e)">
+                            <i class="ti" [class.ti-user-off]="e.activo" [class.ti-user-check]="!e.activo"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+
+<!-- Modal -->
+@if (mostrarForm()) {
+<div class="modal-backdrop" (click)="cerrarForm()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+        <div class="modal__header">
+            <h3>
+                <i class="ti ti-user-plus"></i>
+                {{ editando() ? 'Editar estudiante' : 'Agregar estudiante' }}
+            </h3>
+            <button class="modal__close" (click)="cerrarForm()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>RUN *</label>
+                    <input type="text" placeholder="12345678" [(ngModel)]="form.run" name="run"
+                        [disabled]="!!editando()" />
+                </div>
+                <div class="form-group">
+                    <label>DV *</label>
+                    <input type="text" placeholder="9" [(ngModel)]="form.dv" name="dv" maxlength="1"
+                        [disabled]="!!editando()" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" placeholder="Juan" [(ngModel)]="form.nombre" name="nombre" />
+                </div>
+                <div class="form-group">
+                    <label>Apellido *</label>
+                    <input type="text" placeholder="Pérez" [(ngModel)]="form.apellido" name="apellido" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Sexo *</label>
+                    <select [(ngModel)]="form.sexo" name="sexo">
+                        <option value="" disabled>Seleccione...</option>
+                        <option value="M">Masculino</option>
+                        <option value="F">Femenino</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Curso *</label>
+                    <select [(ngModel)]="form.id_curso" name="curso">
+                        <option [ngValue]="null" disabled>Seleccione...</option>
+                        @for (c of cursos(); track c.id_curso) {
+                        <option [ngValue]="c.id_curso">{{ c.nombre }} — {{ c.grado }}</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+                <i class="ti ti-device-floppy"></i>
+                {{ editando() ? 'Guardar cambios' : 'Agregar estudiante' }}
+            </button>
+        </div>
+
+    </div>
+</div>
+}

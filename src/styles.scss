@@ -230,3 +230,66 @@ table {
 .gap-4       { gap: 16px; }
 .justify-between { justify-content: space-between; }
 .w-full      { width: 100%; }
+
+
+// ─── para "modal" :S ───────────────────────────────────
+// Modal reutiliza estilos globales + registro-form
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid $gray-200;
+
+    h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      color: $primary;
+    }
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: $gray-400;
+    display: flex;
+    padding: 4px;
+    border-radius: 6px;
+    &:hover { background: $gray-100; }
+  }
+
+  &__body {
+    padding: 20px 24px;
+  }
+
+  &__footer {
+    padding: 16px 24px;
+    border-top: 1px solid $gray-200;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+}
