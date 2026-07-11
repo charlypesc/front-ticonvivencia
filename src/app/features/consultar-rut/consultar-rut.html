@@ -1,1 +1,107 @@
-<p>consultar-rut works!</p>
+<div class="page-header">
+    <h2>Consultar por RUT</h2>
+</div>
+
+<!-- Buscador -->
+<div class="card buscador">
+    <div class="buscador__input">
+        <i class="ti ti-search"></i>
+        <input type="text" placeholder="Ej: 12345678-9" [(ngModel)]="rut" name="rut" (keyup.enter)="buscar()" />
+    </div>
+    <div class="buscador__actions">
+        <button class="btn btn--outline btn--sm" (click)="limpiar()">
+            <i class="ti ti-x"></i> Limpiar
+        </button>
+        <button class="btn btn--primary btn--sm" (click)="buscar()" [disabled]="loading()">
+            @if (loading()) {
+            <i class="ti ti-loader-2 spin"></i> Buscando...
+            } @else {
+            <i class="ti ti-search"></i> Buscar
+            }
+        </button>
+    </div>
+</div>
+
+<!-- Error -->
+@if (error()) {
+<div class="alert alert--error">
+    <i class="ti ti-alert-circle"></i> {{ error() }}
+</div>
+}
+
+<!-- Resultado -->
+@if (estudiante()) {
+<!-- Perfil estudiante -->
+<div class="card perfil">
+    <div class="perfil__avatar">
+        <i class="ti ti-user"></i>
+    </div>
+    <div class="perfil__info">
+        <h3>{{ estudiante().nombre }} {{ estudiante().apellido }}</h3>
+        <div class="perfil__meta">
+            <span><i class="ti ti-id-badge"></i> {{ estudiante().run }}-{{ estudiante().dv }}</span>
+            <span><i class="ti ti-school"></i> {{ estudiante().curso_nombre }} — {{ estudiante().grado }}</span>
+            <span>
+                <i class="ti ti-circle"></i>
+                <span class="badge" [class.badge--validado]="estudiante().activo"
+                    [class.badge--pendiente]="!estudiante().activo">
+                    {{ estudiante().activo ? 'Activo' : 'Inactivo' }}
+                </span>
+            </span>
+        </div>
+    </div>
+    <div class="perfil__stat">
+        <span class="stat-num">{{ registros().length }}</span>
+        <span class="stat-label">registros totales</span>
+    </div>
+</div>
+
+<!-- Historial -->
+<div class="card">
+    <div class="card__header">
+        <h3><i class="ti ti-history"></i> Historial de convivencia</h3>
+    </div>
+
+    @if (registros().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-mood-happy"></i>
+        <p>Este estudiante no tiene registros de convivencia</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Temática</th>
+                    <th>Tipo de falta</th>
+                    <th>Gravedad</th>
+                    <th>Estado</th>
+                    <!-- <th></th> -->
+                </tr>
+            </thead>
+            <tbody>
+                @for (r of registros(); track r.id_registro) {
+                <tr>
+                    <td>{{ r.fecha_incidente | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ r.tematica }}</td>
+                    <td>{{ r.tipo_falta_nombre }}</td>
+                    <td>
+                        <span class="badge badge--{{ r.gravedad }}">{{ r.gravedad }}</span>
+                    </td>
+                    <td>
+                        <span class="badge badge--{{ r.estado_validacion }}">{{ r.estado_validacion }}</span>
+                    </td>
+                    <!-- <td>
+                        <a [routerLink]="['/registros', r.id_registro]" class="btn-ver">
+                            <i class="ti ti-eye"></i> Ver
+                        </a>
+                    </td> -->
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+}

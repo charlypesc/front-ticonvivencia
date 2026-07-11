@@ -1,0 +1,121 @@
+@use '../../../styles/variables' as *;
+.page-header {
+  margin-bottom: 20px;
+  h2 { font-size: 1.25rem; font-weight: 700; }
+}
+
+.buscador {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 16px 20px;
+
+  &__input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    max-width: 400px;
+
+    i { color: $gray-400; font-size: 18px; }
+
+    input {
+      border: none;
+      outline: none;
+      font-size: 15px;
+      width: 100%;
+      &::placeholder { color: $gray-400; }
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.perfil {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 16px;
+  padding: 20px 24px;
+
+  &__avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #eef2fb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    i { font-size: 24px; color: $primary; }
+  }
+
+  &__info {
+    flex: 1;
+
+    h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+  }
+
+  &__meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: $gray-400;
+
+    span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+
+  &__stat {
+    text-align: center;
+    padding: 12px 20px;
+    background: #eef2fb;
+    border-radius: 10px;
+
+    .stat-num {
+      display: block;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: $primary;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: $gray-400;
+    }
+  }
+}
+
+.btn-ver {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: $primary;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background .15s;
+  &:hover { background: #eef2fb; }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 0;
+  color: $gray-400;
+  i { font-size: 2rem; display: block; margin-bottom: 8px; }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spin .8s linear infinite; }

@@ -73,4 +73,8 @@ export class ApiService {
   confirmarRegistro(id: number, data: any) {
     return this.http.patch(`${this.base}/registros/${id}/confirmar`, data);
   }
+  //consulta rut
+  consultarRut(rut: string) {
+    return this.http.get(`${this.base}/estudiantes/rut/${encodeURIComponent(rut)}`);
+  }
 }
