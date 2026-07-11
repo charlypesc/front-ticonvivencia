@@ -65,4 +65,12 @@ export class ApiService {
   deleteTipoFalta(id: number) {
     return this.http.delete(`${this.base}/tipos-falta/${id}`);
   }
+  //subir documento
+  subirDocumento(archivo: FormData) {
+    return this.http.post(`${this.base}/documents`, archivo);
+  }
+
+  confirmarRegistro(id: number, data: any) {
+    return this.http.patch(`${this.base}/registros/${id}/confirmar`, data);
+  }
 }

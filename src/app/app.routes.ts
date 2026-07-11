@@ -59,6 +59,11 @@ export const routes: Routes = [
         path: 'tipos-falta',
         loadComponent: () => import('./features/tipos-falta/tipos-falta').then((m) => m.TiposFalta),
       },
+      {
+        path: 'subir-documento',
+        loadComponent: () =>
+          import('./features/subir-documento/subir-documento').then((m) => m.SubirDocumento),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

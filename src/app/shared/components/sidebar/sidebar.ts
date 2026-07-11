@@ -33,6 +33,12 @@ export class Sidebar {
       roles: [RolesEnum.ENCARGADO, RolesEnum.DIRECTOR],
     },
     {
+      label: 'Subir documento',
+      icon: 'ti-cloud-upload',
+      route: '/subir-documento',
+      roles: [RolesEnum.ENCARGADO],
+    },
+    {
       label: 'Registros',
       icon: 'ti-folder',
       route: '/registros',

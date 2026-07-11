@@ -1,0 +1,157 @@
+$primary:   #1e3a6e;
+$gray-200:  #e5e7eb;
+$gray-400:  #9ca3af;
+$green:     #10b981;
+$yellow:    #f59e0b;
+$red:       #ef4444;
+
+.page-header {
+  margin-bottom: 20px;
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  p { margin-top: 4px; font-size: 13px; }
+}
+
+// ── DROP ZONE ──────────────────────────────────
+.dropzone {
+  border: 2px dashed $gray-200;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: $gray-400;
+  font-size: 14px;
+
+  &--active {
+    border-color: $primary;
+    background: #eef2fb;
+  }
+
+  &--ready {
+    border-color: $green;
+    background: #f0fdf4;
+    color: #065f46;
+  }
+
+  &__icon {
+    font-size: 2.5rem;
+    color: $gray-400;
+
+    &--ok { color: $green; }
+  }
+
+  &__filename {
+    font-weight: 600;
+    font-size: 14px;
+  }
+}
+
+.btn-seleccionar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid $gray-200;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  transition: background .15s;
+
+  &:hover { background: #f9fafb; }
+}
+
+.card-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid $gray-200;
+}
+
+// ── VALIDACIÓN ─────────────────────────────────
+.validacion-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.validacion-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+// Barra de confianza
+.confidence-bar {
+  height: 4px;
+  background: $gray-200;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 6px;
+
+  &__fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width .4s ease;
+
+    &.bar--verde   { background: $green; }
+    &.bar--amarillo { background: $yellow; }
+    &.bar--rojo    { background: $red; }
+  }
+}
+
+// Badge de porcentaje junto al label
+.confianza-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+
+  &.bar--verde    { background: #d1fae5; color: #065f46; }
+  &.bar--amarillo { background: #fef3c7; color: #92400e; }
+  &.bar--rojo     { background: #fee2e2; color: #991b1b; }
+}
+
+// Checkbox validado
+.validado-check {
+  margin-bottom: 20px;
+}
+
+.check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+
+  input[type="checkbox"] { width: 16px; height: 16px; accent-color: $primary; }
+  i { color: $primary; font-size: 18px; }
+}
+
+.validacion-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid $gray-200;
+}
+
+// @keyframes spin { to { transform: rotate(360deg); } }
+// .spin { display: inline-block; animation: spin .8s linear infinite; }

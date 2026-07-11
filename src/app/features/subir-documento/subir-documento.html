@@ -1,0 +1,151 @@
+<!-- PASO 1: UPLOAD -->
+@if (paso() === 'upload') {
+<div class="page-header">
+    <h2><i class="ti ti-cloud-upload"></i> Subir documento</h2>
+</div>
+
+@if (error()) {
+<div class="alert alert--error">
+    <i class="ti ti-alert-circle"></i> {{ error() }}
+</div>
+}
+
+<div class="card">
+    <div class="dropzone" [class.dropzone--active]="dragging()" [class.dropzone--ready]="archivo()"
+        (dragover)="onDragOver($event)" (dragleave)="onDragLeave()" (drop)="onDrop($event)">
+        @if (archivo()) {
+        <i class="ti ti-file-check dropzone__icon dropzone__icon--ok"></i>
+        <p class="dropzone__filename">{{ archivo()!.name }}</p>
+        <p class="text-muted text-sm">{{ (archivo()!.size / 1024).toFixed(0) }} KB</p>
+        } @else {
+        <i class="ti ti-cloud-upload dropzone__icon"></i>
+        <p>Arrastra el archivo aquí</p>
+        <label class="btn-seleccionar">
+            <i class="ti ti-folder-open"></i> Seleccionar archivo
+            <input type="file" accept=".jpg,.jpeg,.png,.pdf" (change)="onFileSelect($event)" hidden />
+        </label>
+        <p class="text-muted text-sm">JPG, PNG o PDF · máximo 10 MB</p>
+        }
+    </div>
+
+    <div class="card-footer">
+        <button class="btn btn--outline" [disabled]="loading()" (click)="archivo.set(null)">
+            <i class="ti ti-x"></i> Cancelar
+        </button>
+        <button class="btn btn--primary" style="width:auto" (click)="cargarDocumento()"
+            [disabled]="!archivo() || loading()">
+            @if (loading()) {
+            <i class="ti ti-loader-2 spin"></i> Procesando...
+            } @else {
+            <i class="ti ti-upload"></i> Cargar documento
+            }
+        </button>
+    </div>
+</div>
+}
+
+<!-- PASO 2: VALIDACIÓN IA -->
+@if (paso() === 'validacion') {
+<div class="page-header">
+    <h2><i class="ti ti-sparkles"></i> Validar datos extraídos por IA</h2>
+    <p class="text-muted">Revisa y corrige los campos antes de confirmar el registro.</p>
+</div>
+
+@if (error()) {
+<div class="alert alert--error">
+    <i class="ti ti-alert-circle"></i> {{ error() }}
+</div>
+}
+
+<div class="validacion-grid">
+
+    <!-- Columna izquierda -->
+    <div class="validacion-col">
+
+        <div class="form-group">
+            <label>
+                <i class="ti ti-calendar"></i> Fecha del incidente
+                <span class="confianza-badge" [class]="getBarClass('fecha_incidente')">
+                    {{ getPct('fecha_incidente') }}%
+                </span>
+            </label>
+            <input type="date" [(ngModel)]="form.fecha_incidente" name="fecha" />
+            <div class="confidence-bar">
+                <div class="confidence-bar__fill" [class]="getBarClass('fecha_incidente')"
+                    [style.width.%]="getPct('fecha_incidente')"></div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <i class="ti ti-alert-triangle"></i> Tipo de falta
+                <span class="confianza-badge" [class]="getBarClass('tematica')">
+                    {{ getPct('tematica') }}%
+                </span>
+            </label>
+            <input type="text" [(ngModel)]="form.tematica" name="tematica" />
+            <div class="confidence-bar">
+                <div class="confidence-bar__fill" [class]="getBarClass('tematica')"
+                    [style.width.%]="getPct('tematica')"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Columna derecha -->
+    <div class="validacion-col">
+
+        <div class="form-group">
+            <label>
+                <i class="ti ti-file-text"></i> Antecedentes
+                <span class="confianza-badge" [class]="getBarClass('antecedentes')">
+                    {{ getPct('antecedentes') }}%
+                </span>
+            </label>
+            <textarea [(ngModel)]="form.antecedentes" name="antecedentes"></textarea>
+            <div class="confidence-bar">
+                <div class="confidence-bar__fill" [class]="getBarClass('antecedentes')"
+                    [style.width.%]="getPct('antecedentes')"></div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <i class="ti ti-handshake"></i> Acuerdos
+                <span class="confianza-badge" [class]="getBarClass('acuerdos')">
+                    {{ getPct('acuerdos') }}%
+                </span>
+            </label>
+            <textarea [(ngModel)]="form.acuerdos" name="acuerdos"></textarea>
+            <div class="confidence-bar">
+                <div class="confidence-bar__fill" [class]="getBarClass('acuerdos')"
+                    [style.width.%]="getPct('acuerdos')"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Checkbox validado humanamente -->
+<div class="validado-check">
+    <label class="check-label">
+        <input type="checkbox" [(ngModel)]="form.validado_humanamente" name="validado" />
+        <i class="ti ti-checkbox"></i>
+        Marcar como validado humanamente
+    </label>
+</div>
+
+<!-- Acciones -->
+<div class="validacion-footer">
+    <button class="btn btn--outline" (click)="guardarPendiente()">
+        <i class="ti ti-device-floppy"></i> Guardar como pendiente
+    </button>
+    <button class="btn btn--primary" style="width:auto" (click)="confirmar()" [disabled]="loading()">
+        @if (loading()) {
+        <i class="ti ti-loader-2 spin"></i> Confirmando...
+        } @else {
+        <i class="ti ti-circle-check"></i> Confirmar registro
+        }
+    </button>
+</div>
+}
