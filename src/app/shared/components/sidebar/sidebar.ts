@@ -33,23 +33,17 @@ export class Sidebar {
       roles: [RolesEnum.ENCARGADO, RolesEnum.DIRECTOR],
     },
     {
-      label: 'Subir documento',
-      icon: 'ti-cloud-upload',
-      route: '/subir-documento',
-      roles: [RolesEnum.ENCARGADO],
-    },
-    {
       label: 'Registros',
       icon: 'ti-folder',
       route: '/registros',
-      roles: [RolesEnum.ENCARGADO, RolesEnum.DIRECTOR],
+      roles: [RolesEnum.ENCARGADO],
     },
-    {
-      label: 'Validaciones',
-      icon: 'ti-circle-check',
-      route: '/validaciones',
-      roles: [RolesEnum.DIRECTOR],
-    },
+    // {
+    //   label: 'Validaciones',
+    //   icon: 'ti-circle-check',
+    //   route: '/validaciones',
+    //   roles: [RolesEnum.ENCARGADO],
+    // },
     { label: 'Estudiantes', icon: 'ti-users', route: '/estudiantes', roles: [RolesEnum.ENCARGADO] },
     {
       label: 'Tipos de falta',

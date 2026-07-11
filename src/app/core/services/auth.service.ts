@@ -44,8 +44,9 @@ export class AuthService {
     return !!this.getToken();
   }
 
-  hasRole(rol: string): boolean {
-    return this.usuario()?.rol === rol;
+  hasRole(...roles: string[]): boolean {
+    const rol = this.usuario()?.rol;
+    return !!rol && roles.includes(rol);
   }
 
   private loadUser(): Usuario | null {

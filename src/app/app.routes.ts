@@ -35,7 +35,7 @@ export const routes: Routes = [
       },
       {
         path: 'consultar-rut',
-        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        canActivate: [roleGuard(RolesEnum.ENCARGADO, RolesEnum.DIRECTOR)],
         loadComponent: () =>
           import('./features/consultar-rut/consultar-rut').then((m) => m.ConsultarRut),
       },

@@ -77,4 +77,10 @@ export class ApiService {
   consultarRut(rut: string) {
     return this.http.get(`${this.base}/estudiantes/rut/${encodeURIComponent(rut)}`);
   }
+
+  //dashboard
+
+  getDashboard() {
+    return this.http.get<any>(`${this.base}/dashboard`);
+  }
 }

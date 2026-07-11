@@ -1,1 +1,121 @@
-<p>usuarios works!</p>
+<div class="page-header">
+    <h2>Gestión de usuarios</h2>
+</div>
+
+@if (success()) {
+<div class="alert alert--success">
+    <i class="ti ti-circle-check"></i> {{ success() }}
+</div>
+}
+
+@if (error()) {
+<div class="alert alert--error">
+    <i class="ti ti-alert-circle"></i> {{ error() }}
+</div>
+}
+
+<div class="card">
+    <div style="display: flex;">
+        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
+            <i class="ti ti-user-plus"></i> Nuevo usuario
+        </button>
+    </div>
+    @if (loading()) {
+    <div class="empty-state">
+        <i class="ti ti-loader-2 spin"></i>
+        <p>Cargando usuarios...</p>
+    </div>
+    } @else if (usuarios().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-users-off"></i>
+        <p>No hay usuarios registrados</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (u of usuarios(); track u.id_usuario) {
+                <tr>
+                    <td>{{ u.correo }}</td>
+                    <td>
+                        <span class="badge" [class.badge--validado]="u.rol === 'DIRECTOR'"
+                            [class.badge--leve]="u.rol === 'ENCARGADO'">
+                            {{ u.rol }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge" [class.badge--validado]="u.activo" [class.badge--pendiente]="!u.activo">
+                            {{ u.activo ? 'activo' : 'inactivo' }}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn-icon" [class.btn-icon--danger]="u.activo"
+                            [title]="u.activo ? 'Desactivar' : 'Activar'" (click)="toggle(u)">
+                            <i class="ti" [class.ti-user-off]="u.activo" [class.ti-user-check]="!u.activo"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+
+<!-- Modal -->
+@if (mostrarForm()) {
+<div class="modal-backdrop" (click)="cerrarForm()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+        <div class="modal__header">
+            <h3><i class="ti ti-user-plus"></i> Nuevo usuario</h3>
+            <button class="modal__close" (click)="cerrarForm()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-group">
+                <label><i class="ti ti-mail"></i> Correo electrónico *</label>
+                <input type="email" placeholder="usuario@colegio.cl" [(ngModel)]="form.correo" name="correo" />
+            </div>
+
+            <div class="form-group">
+                <label><i class="ti ti-lock"></i> Contraseña *</label>
+                <input type="password" placeholder="Mínimo 8 caracteres" [(ngModel)]="form.password" name="password" />
+            </div>
+
+            <div class="form-group">
+                <label><i class="ti ti-shield"></i> Rol *</label>
+                <select [(ngModel)]="form.rol" name="rol">
+                    <option value="" disabled>Seleccione un rol...</option>
+                    <option value="ENCARGADO">Encargado de Convivencia</option>
+                    <option value="DIRECTOR">Director</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+                <i class="ti ti-device-floppy"></i> Crear usuario
+            </button>
+        </div>
+
+    </div>
+</div>
+}

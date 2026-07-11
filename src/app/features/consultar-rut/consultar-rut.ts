@@ -7,7 +7,7 @@ import { ApiService } from '../../core/services/api.services';
 @Component({
   selector: 'app-consultar-rut',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   templateUrl: './consultar-rut.html',
   styleUrl: './consultar-rut.scss',
 })

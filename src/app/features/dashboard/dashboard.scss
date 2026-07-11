@@ -1,0 +1,96 @@
+@use '../../../styles/variables' as *;
+
+.page-header {
+  margin-bottom: 20px;
+  h2 { font-size: 1.25rem; font-weight: 700; }
+}
+
+// ── STATS ──────────────────────────────────────
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid $gray-200;
+  border-radius: 10px;
+  padding: 24px;
+  text-align: center;
+
+  &__num {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: $primary;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  &__label {
+    font-size: 13px;
+    color: $gray-400;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  &--warn &__num { color: $warn; }
+}
+
+// ── ÚLTIMOS REGISTROS ──────────────────────────
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: $gray-400;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ver-todos {
+  font-size: 13px;
+  color: $primary;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  &:hover { text-decoration: underline; }
+}
+
+.ultimos-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ultimo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid $gray-200;
+  text-decoration: none;
+  color: inherit;
+  transition: background .15s;
+  border-radius: 6px;
+  padding-left: 8px;
+  padding-right: 8px;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: #f9fafb; }
+
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+
+    i { color: $gray-400; font-size: 16px; }
+  }
+}
+
