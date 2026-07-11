@@ -56,4 +56,13 @@ export class ApiService {
   getTiposFalta() {
     return this.http.get<any[]>(`${this.base}/tipos-falta`);
   }
+  createTipoFalta(data: any) {
+    return this.http.post(`${this.base}/tipos-falta`, data);
+  }
+  updateTipoFalta(id: number, data: any) {
+    return this.http.put(`${this.base}/tipos-falta/${id}`, data);
+  }
+  deleteTipoFalta(id: number) {
+    return this.http.delete(`${this.base}/tipos-falta/${id}`);
+  }
 }

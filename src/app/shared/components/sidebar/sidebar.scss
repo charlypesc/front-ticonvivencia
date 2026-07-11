@@ -1,10 +1,4 @@
-$primary:      #1e3a6e;
-$primary-bg:   #eef2fb;
-$sidebar-w:    220px;
-$navbar-h:     56px;
-$gray-200:     #e5e7eb;
-$gray-600:     #4b5563;
-$gray-400:     #9ca3af;
+@use '../../../../styles/variables' as *;
 
 .sidebar {
   position: fixed;

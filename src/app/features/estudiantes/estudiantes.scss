@@ -1,7 +1,4 @@
-$primary:  #1e3a6e;
-$gray-200: #e5e7eb;
-$gray-100: #f3f4f6;
-$gray-400: #9ca3af;
+@use '../../../styles/variables' as *;
 
 .page-header {
   margin-bottom: 20px;
@@ -60,22 +57,8 @@ $gray-400: #9ca3af;
   }
 }
 
-.empty-state {
-  text-align: center;
-  padding: 48px 0;
-  color: $gray-400;
-  i { font-size: 2rem; display: block; margin-bottom: 8px; }
-  p { font-size: 14px; }
-}
 
 
 
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
 
-@keyframes spin { to { transform: rotate(360deg); } }
-.spin { display: inline-block; animation: spin .8s linear infinite; }

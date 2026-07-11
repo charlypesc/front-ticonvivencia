@@ -1,1 +1,129 @@
-<p>tipos-falta works!</p>
+<div class="page-header">
+    <h2>Tipos de falta</h2>
+</div>
+
+@if (success()) {
+<div class="alert alert--success">
+    <i class="ti ti-circle-check"></i> {{ success() }}
+</div>
+}
+
+@if (error()) {
+<div class="alert alert--error">
+    <i class="ti ti-alert-circle"></i> {{ error() }}
+</div>
+}
+
+<div class="card">
+    <div style="display:flex">
+        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
+            <i class="ti ti-plus"></i> Agregar tipo
+        </button>
+    </div>
+    @if (loading()) {
+    <div class="empty-state">
+        <i class="ti ti-loader-2 spin"></i>
+        <p>Cargando...</p>
+    </div>
+    } @else if (tiposFalta().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-list-off"></i>
+        <p>No hay tipos de falta registrados</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Gravedad</th>
+                    <th>Medida sugerida</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (t of tiposFalta(); track t.id_tipo_falta) {
+                <tr>
+                    <td>{{ t.nombre }}</td>
+                    <td>
+                        <span class="badge badge--{{ t.gravedad }}">{{ t.gravedad }}</span>
+                    </td>
+                    <td class="text-muted">{{ t.medida_sugerida ?? '—' }}</td>
+                    <td class="acciones">
+                        <button class="btn-icon" title="Editar" (click)="abrirForm(t)">
+                            <i class="ti ti-pencil"></i>
+                        </button>
+                        <button class="btn-icon btn-icon--danger" title="Eliminar" (click)="eliminar(t)">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+
+<!-- Modal -->
+@if (mostrarForm()) {
+<div class="modal-backdrop" (click)="cerrarForm()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+        <div class="modal__header">
+            <h3>
+                <i class="ti ti-settings"></i>
+                {{ editando() ? 'Editar tipo de falta' : 'Agregar tipo de falta' }}
+            </h3>
+            <button class="modal__close" (click)="cerrarForm()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" placeholder="Ej: Agresión física" [(ngModel)]="form.nombre" name="nombre" />
+                </div>
+                <div class="form-group">
+                    <label>Gravedad *</label>
+                    <select [(ngModel)]="form.gravedad" name="gravedad">
+                        <option value="" disabled>Seleccione...</option>
+                        <option value="leve">Leve</option>
+                        <option value="grave">Grave</option>
+                        <option value="gravísima">Gravísima</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea placeholder="Descripción detallada según reglamento interno..." [(ngModel)]="form.descripcion"
+                    name="descripcion"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Medida sugerida</label>
+                <input type="text" placeholder="Ej: Suspensión y citación de apoderado"
+                    [(ngModel)]="form.medida_sugerida" name="medida_sugerida" />
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+                <i class="ti ti-device-floppy"></i>
+                {{ editando() ? 'Guardar cambios' : 'Agregar tipo' }}
+            </button>
+        </div>
+
+    </div>
+</div>
+}

@@ -1,25 +1,5 @@
+@use 'styles/variables' as *;
 @import '@tabler/icons-webfont/dist/tabler-icons.css';
-
-// ─── TOKENS ───────────────────────────────────────
-$primary:       #1e3a6e;
-$primary-light: #2d55a8;
-$primary-bg:    #eef2fb;
-$accent-warn:   #f59e0b;
-$accent-ok:     #10b981;
-$accent-danger: #ef4444;
-$gray-50:       #f9fafb;
-$gray-100:      #f3f4f6;
-$gray-200:      #e5e7eb;
-$gray-400:      #9ca3af;
-$gray-600:      #4b5563;
-$gray-900:      #111827;
-$white:         #ffffff;
-
-$sidebar-w:     220px;
-$navbar-h:      56px;
-$radius:        8px;
-$shadow-sm:     0 1px 3px rgba(0,0,0,.08);
-$shadow-md:     0 4px 12px rgba(0,0,0,.10);
 
 // ─── RESET ────────────────────────────────────────
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -77,6 +57,9 @@ h3 { font-size: 1rem; font-weight: 600; }
 
   &:disabled { opacity: .5; cursor: not-allowed; }
 }
+
+
+
 
 // ─── FORMULARIOS ──────────────────────────────────
 .form-group {
@@ -293,3 +276,25 @@ table {
     gap: 10px;
   }
 }
+
+.empty-state {
+  text-align: center;
+  padding: 48px 0;
+  color: $gray-400;
+  i { font-size: 2rem; display: block; margin-bottom: 8px; }
+  p { font-size: 14px; }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.acciones {
+  display: flex;
+  gap: 8px;
+}
+//para el loading
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spin .8s linear infinite; }
+

@@ -1,8 +1,4 @@
-$primary:    #1e3a6e;
-$white:      #ffffff;
-$navbar-h:   56px;
-$gray-200:   #e5e7eb;
-$gray-400:   #9ca3af;
+@use '../../../../styles/variables' as *;
 
 .navbar {
   position: fixed;

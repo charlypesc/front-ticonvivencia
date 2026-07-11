@@ -55,6 +55,10 @@ export const routes: Routes = [
         canActivate: [roleGuard(RolesEnum.DIRECTOR)],
         loadComponent: () => import('./features/usuarios/usuarios').then((m) => m.Usuarios),
       },
+      {
+        path: 'tipos-falta',
+        loadComponent: () => import('./features/tipos-falta/tipos-falta').then((m) => m.TiposFalta),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

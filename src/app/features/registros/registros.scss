@@ -1,6 +1,4 @@
-$primary:    #1e3a6e;
-$gray-200:   #e5e7eb;
-$gray-400:   #9ca3af;
+@use '../../../styles/variables' as *;
 
 .page-header {
   margin-bottom: 20px;
