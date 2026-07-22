@@ -22,7 +22,7 @@
     <div class="stat-card stat-card--warn">
         <div class="stat-card__num">{{ resumen().pendientes }}</div>
         <div class="stat-card__label">
-            <i class="ti ti-clock"></i> Pendientes validar
+            <i class="ti ti-clock"></i> Registros por validar
         </div>
     </div>
 
@@ -38,7 +38,7 @@
 <div class="card">
     <div class="card__header">
         <span class="section-label">
-            <i class="ti ti-history"></i> ÚLTIMOS REGISTROS
+            <i class="ti ti-history"></i> Estudiantes involucrados
         </span>
         <a routerLink="/registros" class="ver-todos">
             Ver todos <i class="ti ti-arrow-right"></i>
@@ -53,7 +53,7 @@
     } @else {
     <div class="ultimos-list">
         @for (r of resumen().ultimos; track r.id_registro) {
-        <a [routerLink]="['/registros', r.id_registro]" class="ultimo-item">
+        <a class="ultimo-item">
             <div class="ultimo-item__info">
                 <i class="ti ti-user"></i>
                 <span>

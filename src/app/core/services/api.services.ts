@@ -24,6 +24,9 @@ export class ApiService {
   updateRegistro(data: any) {
     return this.http.put(`${this.base}/registros/${data.id_registro}`, data);
   }
+  deleteRegistro(id: number) {
+    return this.http.delete(`${this.base}/registros/${id}`);
+  }
   // Estudiantes
   getEstudiantes() {
     return this.http.get<any[]>(`${this.base}/estudiantes`);
@@ -36,6 +39,9 @@ export class ApiService {
   }
   toggleEstudiante(id: number) {
     return this.http.patch(`${this.base}/estudiantes/${id}/toggle`, {});
+  }
+  deleteEstudiante(id: number) {
+    return this.http.delete(`${this.base}/estudiantes/${id}`);
   }
   getCursos() {
     return this.http.get<any[]>(`${this.base}/estudiantes/cursos`);

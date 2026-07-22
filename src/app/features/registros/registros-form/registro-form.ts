@@ -45,12 +45,12 @@ export class RegistroForm implements OnInit {
       this.form = {
         ...this.registro,
         fecha_incidente: this.registro.fecha_incidente
-          ? String(this.registro.fecha_incidente).slice(0, 10)
+          ? String(this.registro.fecha_incidente).slice(0, 10) // Formato YYYY-MM-DD cortamos con el slice y tomamos los primeros 10 caracteres para que el inpunt lo lea correctamte
           : '',
       };
     }
   }
-
+  //Es el toggle: si el estudiante ya está en la lista de seleccionados, splice lo saca (deselecciona); si no esta, lo agrega con push.
   toggleEstudiante(id: number) {
     const idx = this.estudiantesSeleccionados.findIndex((e) => e.id_estudiante === id);
     if (idx >= 0) {

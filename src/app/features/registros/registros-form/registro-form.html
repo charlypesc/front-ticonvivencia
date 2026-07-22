@@ -35,9 +35,9 @@
                     <label>Tipo de falta *</label>
                     <select [(ngModel)]="form.id_tipo_falta" name="tipo">
                         <option [ngValue]="null" disabled>Seleccione...</option>
-                        @for (t of tiposFalta(); track t.id_tipo_falta) {
-                        <option [ngValue]="t.id_tipo_falta">
-                            {{ t.nombre }} — {{ t.gravedad }}
+                        @for (tf of tiposFalta(); track tf.id_tipo_falta) {
+                        <option [ngValue]="tf.id_tipo_falta">
+                            {{ tf.nombre }} — {{ tf.gravedad }}
                         </option>
                         }
                     </select>
@@ -63,6 +63,7 @@
             </div>
 
             <!-- Estudiantes involucrados -->
+            <!-- con signal se llama estudiantes() como funcion y el for itera correctamente -> OJO -->
             <div class="form-group">
                 <label>Estudiantes involucrados</label>
                 <div class="estudiantes-list">
@@ -71,7 +72,7 @@
                         <label class="estudiante-check">
                             <input type="checkbox" [checked]="isSeleccionado(e.id_estudiante)"
                                 (change)="toggleEstudiante(e.id_estudiante)" />
-                            <span>{{ e.nombre }} {{ e.apellido }} — {{ e.run }}-{{ e.dv }}</span>
+                            <span>{{ e.nombre }} {{ e.apellido }} | {{ e.run }}-{{ e.dv }}</span>
                         </label>
                         @if (isSeleccionado(e.id_estudiante)) {
                         <select [ngModel]="getRol(e.id_estudiante)" (ngModelChange)="setRol(e.id_estudiante, $event)"

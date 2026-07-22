@@ -17,6 +17,8 @@ export class Registros implements OnInit {
   loading = signal(true);
   busqueda = signal('');
   mostrarForm = signal(false);
+  error = signal('');
+  success = signal('');
   itemMove: any;
   filtrados = computed(() => {
     const q = this.busqueda().toLowerCase();
@@ -45,5 +47,24 @@ export class Registros implements OnInit {
   cerrarForm() {
     this.mostrarForm.set(false);
     this.ngOnInit(); // recarga la lista
+  }
+
+  eliminar(r: any) {
+    if (
+      !confirm(
+        `¿Eliminar el registro "${r.tematica}", esto eliminará los estudiantes asociados y el documento digitalizado asociado, estas seguro?`,
+      )
+    )
+      return;
+    this.error.set('');
+    this.api.deleteRegistro(r.id_registro).subscribe({
+      next: () => {
+        this.success.set('Registro eliminado');
+        this.cerrarForm();
+      },
+      error: (err) => {
+        this.error.set(err.error?.message ?? 'Error al eliminar');
+      },
+    });
   }
 }

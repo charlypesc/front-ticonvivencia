@@ -62,6 +62,9 @@
                         <button class="btn-icon" [title]="e.activo ? 'Desactivar' : 'Activar'" (click)="toggle(e)">
                             <i class="ti" [class.ti-user-off]="e.activo" [class.ti-user-check]="!e.activo"></i>
                         </button>
+                        <button class="btn-icon" title="Eliminar" (click)="eliminar(e)">
+                            <i class="ti ti-trash"></i>
+                        </button>
                     </td>
                 </tr>
                 }

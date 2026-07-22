@@ -61,6 +61,7 @@ export const routes: Routes = [
       },
       {
         path: 'subir-documento',
+        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
         loadComponent: () =>
           import('./features/subir-documento/subir-documento').then((m) => m.SubirDocumento),
       },

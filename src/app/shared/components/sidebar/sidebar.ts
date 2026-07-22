@@ -38,6 +38,12 @@ export class Sidebar {
       route: '/registros',
       roles: [RolesEnum.ENCARGADO],
     },
+    {
+      label: 'Subir documento',
+      icon: 'ti-file',
+      route: '/subir-documento',
+      roles: [RolesEnum.ENCARGADO],
+    },
     // {
     //   label: 'Validaciones',
     //   icon: 'ti-circle-check',

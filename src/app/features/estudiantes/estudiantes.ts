@@ -109,4 +109,18 @@ export class Estudiantes implements OnInit {
   toggle(e: any) {
     this.api.toggleEstudiante(e.id_estudiante).subscribe(() => this.cargar());
   }
+
+  eliminar(e: any) {
+    if (!confirm(`¿Eliminar a ${e.nombre} ${e.apellido}?`)) return;
+    this.error.set('');
+    this.api.deleteEstudiante(e.id_estudiante).subscribe({
+      next: () => {
+        this.success.set('Estudiante eliminado');
+        this.cargar();
+      },
+      error: (err) => {
+        alert(err.error?.message);
+      },
+    });
+  }
 }
