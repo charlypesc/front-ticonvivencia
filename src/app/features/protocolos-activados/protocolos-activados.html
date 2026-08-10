@@ -1,0 +1,121 @@
+<div class="page-header">
+    <h2>Protocolos activados</h2>
+</div>
+
+@if (success()) {
+<div class="alert alert--success">
+    <i class="ti ti-circle-check"></i> {{ success() }}
+</div>
+}
+
+@if (error()) {
+<div class="alert alert--error">
+    <i class="ti ti-alert-circle"></i> {{ error() }}
+</div>
+}
+
+<div class="card">
+    <div style="display:flex">
+        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
+            <i class="ti ti-plus"></i> Activar protocolo
+        </button>
+    </div>
+    @if (loading()) {
+    <div class="empty-state">
+        <i class="ti ti-loader-2 spin"></i>
+        <p>Cargando...</p>
+    </div>
+    } @else if (activados().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-list-off"></i>
+        <p>No hay protocolos activados</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Protocolo</th>
+                    <th>Registro</th>
+                    <th>Fecha activación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (a of activados(); track a.id_protocolo_activado) {
+                <tr>
+                    <td>{{ a.nombre }}</td>
+                    <td class="text-muted">#{{ a.id_registro }}</td>
+                    <td>{{ a.fecha_activacion | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td class="acciones">
+                        <button class="btn-icon" title="Editar" (click)="abrirForm(a)">
+                            <i class="ti ti-pencil"></i>
+                        </button>
+                        <button class="btn-icon btn-icon--danger" title="Eliminar" (click)="eliminar(a)">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+
+<!-- Modal -->
+@if (mostrarForm()) {
+<div class="modal-backdrop" (click)="cerrarForm()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+        <div class="modal__header">
+            <h3>
+                <i class="ti ti-shield-check"></i>
+                {{ editando() ? 'Editar activación' : 'Activar protocolo' }}
+            </h3>
+            <button class="modal__close" (click)="cerrarForm()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-group">
+                <label>Protocolo del establecimiento *</label>
+                <select [(ngModel)]="form.id_protocolo_establecimiento" name="id_protocolo_establecimiento">
+                    <option [ngValue]="null" disabled>Seleccione un protocolo...</option>
+                    @for (p of protocolosEstablecimiento(); track p.id_protocolo_establecimiento) {
+                    <option [ngValue]="p.id_protocolo_establecimiento">{{ p.nombre }}</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Registro *</label>
+                <select [(ngModel)]="form.id_registro" name="id_registro">
+                    <option [ngValue]="null" disabled>Seleccione un registro...</option>
+                    @for (r of registros(); track r.id_registro) {
+                    <option [ngValue]="r.id_registro">
+                        #{{ r.id_registro }} — {{ r.tematica }} ({{ r.fecha_incidente | date:'dd/MM/yyyy' }})
+                    </option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+                <i class="ti ti-device-floppy"></i>
+                {{ editando() ? 'Guardar cambios' : 'Activar protocolo' }}
+            </button>
+        </div>
+
+    </div>
+</div>
+}

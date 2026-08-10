@@ -89,4 +89,49 @@ export class ApiService {
   getDashboard() {
     return this.http.get<any>(`${this.base}/dashboard`);
   }
+
+  // Protocolos genéricos (catálogo)
+  getProtocolosGenericos() {
+    return this.http.get<any[]>(`${this.base}/protocolos-genericos`);
+  }
+  createProtocoloGenerico(data: any) {
+    return this.http.post(`${this.base}/protocolos-genericos`, data);
+  }
+  updateProtocoloGenerico(id: number, data: any) {
+    return this.http.put(`${this.base}/protocolos-genericos/${id}`, data);
+  }
+  deleteProtocoloGenerico(id: number) {
+    return this.http.delete(`${this.base}/protocolos-genericos/${id}`);
+  }
+
+  // Protocolos del establecimiento
+  getProtocolosEstablecimiento() {
+    return this.http.get<any[]>(`${this.base}/protocolos-establecimiento`);
+  }
+  createProtocoloEstablecimiento(data: any) {
+    return this.http.post(`${this.base}/protocolos-establecimiento`, data);
+  }
+  updateProtocoloEstablecimiento(id: number, data: any) {
+    return this.http.put(`${this.base}/protocolos-establecimiento/${id}`, data);
+  }
+  deleteProtocoloEstablecimiento(id: number) {
+    return this.http.delete(`${this.base}/protocolos-establecimiento/${id}`);
+  }
+
+  // Protocolos activados
+  getProtocolosActivados() {
+    return this.http.get<any[]>(`${this.base}/protocolos-activados`);
+  }
+  getProtocolosActivadosByRegistro(idRegistro: number) {
+    return this.http.get<any[]>(`${this.base}/protocolos-activados/registro/${idRegistro}`);
+  }
+  createProtocoloActivado(data: any) {
+    return this.http.post(`${this.base}/protocolos-activados`, data);
+  }
+  updateProtocoloActivado(id: number, data: any) {
+    return this.http.put(`${this.base}/protocolos-activados/${id}`, data);
+  }
+  deleteProtocoloActivado(id: number) {
+    return this.http.delete(`${this.base}/protocolos-activados/${id}`);
+  }
 }

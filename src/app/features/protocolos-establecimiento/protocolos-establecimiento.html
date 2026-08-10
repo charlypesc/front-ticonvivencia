@@ -1,0 +1,107 @@
+<div class="page-header">
+    <h2>Protocolos del establecimiento</h2>
+</div>
+
+@if (success()) {
+<div class="alert alert--success">
+    <i class="ti ti-circle-check"></i> {{ success() }}
+</div>
+}
+
+@if (error()) {
+<div class="alert alert--error">
+    <i class="ti ti-alert-circle"></i> {{ error() }}
+</div>
+}
+
+<div class="card">
+    <div style="display:flex">
+        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
+            <i class="ti ti-plus"></i> Adoptar protocolo
+        </button>
+    </div>
+    @if (loading()) {
+    <div class="empty-state">
+        <i class="ti ti-loader-2 spin"></i>
+        <p>Cargando...</p>
+    </div>
+    } @else if (protocolos().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-list-off"></i>
+        <p>No hay protocolos adoptados por el establecimiento</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (p of protocolos(); track p.id_protocolo_establecimiento) {
+                <tr>
+                    <td>{{ p.nombre }}</td>
+                    <td class="text-muted">{{ p.descripcion ?? '—' }}</td>
+                    <td class="acciones">
+                        <button class="btn-icon" title="Editar" (click)="abrirForm(p)">
+                            <i class="ti ti-pencil"></i>
+                        </button>
+                        <button class="btn-icon btn-icon--danger" title="Eliminar" (click)="eliminar(p)">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+
+<!-- Modal -->
+@if (mostrarForm()) {
+<div class="modal-backdrop" (click)="cerrarForm()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+        <div class="modal__header">
+            <h3>
+                <i class="ti ti-shield"></i>
+                {{ editando() ? 'Editar protocolo adoptado' : 'Adoptar protocolo' }}
+            </h3>
+            <button class="modal__close" (click)="cerrarForm()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-group">
+                <label>Protocolo genérico *</label>
+                <select [(ngModel)]="form.id_protocolo" name="id_protocolo">
+                    <option [ngValue]="null" disabled>Seleccione un protocolo...</option>
+                    @for (c of catalogoDisponible(); track c.id_protocolo) {
+                    <option [ngValue]="c.id_protocolo">{{ c.nombre }}</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+                <i class="ti ti-device-floppy"></i>
+                {{ editando() ? 'Guardar cambios' : 'Adoptar protocolo' }}
+            </button>
+        </div>
+
+    </div>
+</div>
+}
