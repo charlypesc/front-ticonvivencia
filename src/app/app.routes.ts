@@ -65,6 +65,30 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/subir-documento/subir-documento').then((m) => m.SubirDocumento),
       },
+      {
+        path: 'protocolos-genericos',
+        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        loadComponent: () =>
+          import('./features/protocolos-genericos/protocolos-genericos').then(
+            (m) => m.ProtocolosGenericos,
+          ),
+      },
+      {
+        path: 'protocolos-establecimiento',
+        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        loadComponent: () =>
+          import('./features/protocolos-establecimiento/protocolos-establecimiento').then(
+            (m) => m.ProtocolosEstablecimiento,
+          ),
+      },
+      {
+        path: 'protocolos-activados',
+        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        loadComponent: () =>
+          import('./features/protocolos-activados/protocolos-activados').then(
+            (m) => m.ProtocolosActivados,
+          ),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

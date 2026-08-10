@@ -57,6 +57,24 @@ export class Sidebar {
       route: '/tipos-falta',
       roles: [RolesEnum.ENCARGADO],
     },
+    {
+      label: 'Protocolos genéricos',
+      icon: 'ti-shield',
+      route: '/protocolos-genericos',
+      roles: [RolesEnum.ENCARGADO],
+    },
+    {
+      label: 'Protocolos del establecimiento',
+      icon: 'ti-building',
+      route: '/protocolos-establecimiento',
+      roles: [RolesEnum.ENCARGADO],
+    },
+    {
+      label: 'Protocolos activados',
+      icon: 'ti-shield-check',
+      route: '/protocolos-activados',
+      roles: [RolesEnum.ENCARGADO],
+    },
     { label: 'Usuarios', icon: 'ti-user-cog', route: '/usuarios', roles: [RolesEnum.DIRECTOR] },
   ];
 
