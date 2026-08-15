@@ -13,6 +13,7 @@ import { ApiService } from '../../../core/services/api.services';
 export class RegistroForm implements OnInit {
   @Output() cerrar = new EventEmitter<void>();
   @Input() registro: any | null;
+  @Input() estudiantePreseleccionado: number | null = null;
   tiposFalta = signal<any[]>([]);
   estudiantes = signal<any[]>([]);
   loading = signal(false);
@@ -21,6 +22,40 @@ export class RegistroForm implements OnInit {
 
   // Selección múltiple de estudiantes
   estudiantesSeleccionados: { id_estudiante: number; rol_en_incidente: string }[] = [];
+
+  // Buscador para agregar estudiantes a la lista de involucrados
+  busquedaEstudiante = signal('');
+  mostrarSugerenciasEstudiante = signal(false);
+
+  involucrados() {
+    return this.estudiantes().filter((e) => this.isSeleccionado(e.id_estudiante));
+  }
+
+  sugerenciasEstudiante() {
+    const q = this.busquedaEstudiante().toLowerCase().trim();
+    if (q.length < 2) return [];
+
+    // Mismo criterio que el buscador de Estudiantes: cada palabra escrita se
+    // busca por separado, sin importar el orden ni qué haya en el medio.
+    const tokens = q.split(/\s+/);
+    return this.estudiantes()
+      .filter((e) => !this.isSeleccionado(e.id_estudiante))
+      .filter((e) => {
+        const nombreCompleto = `${e.nombre} ${e.apellido}`.toLowerCase();
+        return tokens.every((t) => nombreCompleto.includes(t)) || e.run?.includes(q);
+      })
+      .slice(0, 8);
+  }
+
+  seleccionarEstudianteSugerido(id: number) {
+    this.toggleEstudiante(id);
+    this.busquedaEstudiante.set('');
+    this.mostrarSugerenciasEstudiante.set(false);
+  }
+
+  ocultarSugerenciasEstudianteConDelay() {
+    setTimeout(() => this.mostrarSugerenciasEstudiante.set(false), 150);
+  }
 
   form = {
     fecha_incidente: '',
@@ -48,6 +83,8 @@ export class RegistroForm implements OnInit {
           ? String(this.registro.fecha_incidente).slice(0, 10) // Formato YYYY-MM-DD cortamos con el slice y tomamos los primeros 10 caracteres para que el inpunt lo lea correctamte
           : '',
       };
+    } else if (this.estudiantePreseleccionado) {
+      this.toggleEstudiante(this.estudiantePreseleccionado);
     }
   }
   //Es el toggle: si el estudiante ya está en la lista de seleccionados, splice lo saca (deselecciona); si no esta, lo agrega con push.
@@ -73,6 +110,14 @@ export class RegistroForm implements OnInit {
     return (
       this.estudiantesSeleccionados.find((e) => e.id_estudiante === id)?.rol_en_incidente ?? ''
     );
+  }
+
+  // Registros antiguos (o importados por IA) pueden traer un rol libre que no
+  // calza con las 3 opciones del select (ej: "involucrado") — sin esto el
+  // <select> se ve vacío aunque el dato exista.
+  rolesConocidos = ['víctima', 'agresor', 'testigo'];
+  esRolConocido(rol: string) {
+    return this.rolesConocidos.includes(rol);
   }
 
   guardar() {

@@ -32,6 +32,13 @@ export class Sidebar {
       route: '/consultar-rut',
       roles: [RolesEnum.ENCARGADO, RolesEnum.DIRECTOR],
     },
+    { label: 'Estudiantes', icon: 'ti-users', route: '/estudiantes', roles: [RolesEnum.ENCARGADO] },
+    {
+      label: 'Cursos',
+      icon: 'ti-school',
+      route: '/cursos',
+      roles: [RolesEnum.ENCARGADO],
+    },
     {
       label: 'Registros',
       icon: 'ti-folder',
@@ -50,7 +57,6 @@ export class Sidebar {
     //   route: '/validaciones',
     //   roles: [RolesEnum.ENCARGADO],
     // },
-    { label: 'Estudiantes', icon: 'ti-users', route: '/estudiantes', roles: [RolesEnum.ENCARGADO] },
     {
       label: 'Tipos de falta',
       icon: 'ti-settings',
@@ -75,6 +81,8 @@ export class Sidebar {
       route: '/protocolos-activados',
       roles: [RolesEnum.ENCARGADO],
     },
+    // Catálogo cross-tenant (País/Región/Provincia/Comuna)
+    { label: 'Geo', icon: 'ti-map-2', route: '/geo', roles: [RolesEnum.ENCARGADO] },
     { label: 'Usuarios', icon: 'ti-user-cog', route: '/usuarios', roles: [RolesEnum.DIRECTOR] },
   ];
 

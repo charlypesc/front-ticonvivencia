@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.services';
+import { ConfirmService } from '../../core/services/confirm.service';
 
 @Component({
   selector: 'app-tipos-falta',
@@ -25,7 +26,10 @@ export class TiposFalta implements OnInit {
     medida_sugerida: '',
   };
 
-  constructor(private api: ApiService) {}
+  constructor(
+    private api: ApiService,
+    private confirmService: ConfirmService,
+  ) {}
 
   ngOnInit() {
     this.cargar();
@@ -85,8 +89,8 @@ export class TiposFalta implements OnInit {
     });
   }
 
-  eliminar(tipo: any) {
-    if (!confirm(`¿Eliminar "${tipo.nombre}"?`)) return;
+  async eliminar(tipo: any) {
+    if (!(await this.confirmService.confirmarAccion(`¿Eliminar "${tipo.nombre}"?`))) return;
     this.api.deleteTipoFalta(tipo.id_tipo_falta).subscribe({
       next: () => {
         this.success.set('Tipo eliminado');

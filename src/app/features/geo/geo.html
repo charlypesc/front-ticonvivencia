@@ -1,0 +1,603 @@
+<div class="page-header">
+    <h2>Geo</h2>
+</div>
+
+@if (success()) {
+<div class="alert alert--success">
+    <i class="ti ti-circle-check"></i> {{ success() }}
+</div>
+}
+
+@if (error()) {
+<div class="alert alert--error">
+    <i class="ti ti-alert-circle"></i> {{ error() }}
+</div>
+}
+
+<div class="card">
+    <div class="toolbar__search">
+        <i class="ti ti-search"></i>
+        <input type="text" placeholder="Buscar por RBD..." [ngModel]="busquedaRbd()"
+            (ngModelChange)="onBuscarRbdChange($event)" (focus)="mostrarResultadosBusqueda.set(true)"
+            (blur)="ocultarResultadosBusquedaConDelay()" name="busquedaRbd" />
+        @if (buscandoRbd()) {
+        <i class="ti ti-loader-2 spin"></i>
+        }
+
+        @if (mostrarResultadosBusqueda() && busquedaRbd().trim().length >= 2) {
+        <div class="autocomplete">
+            @if (resultadosBusquedaRbd().length === 0 && !buscandoRbd()) {
+            <div class="autocomplete__item autocomplete__item--vacio">Sin resultados para "{{ busquedaRbd() }}"</div>
+            } @else {
+            @for (est of resultadosBusquedaRbd(); track est.id_establecimiento_geo) {
+            <div class="autocomplete__item" (mousedown)="irAEstablecimiento(est)">
+                <span class="autocomplete__nombre">{{ est.nombre }}</span>
+                <span class="autocomplete__meta">RBD {{ est.rbd }}</span>
+            </div>
+            }
+            }
+        </div>
+        }
+    </div>
+
+    <div class="breadcrumb">
+        @for (crumb of breadcrumb(); track crumb.nivel) {
+        <button class="breadcrumb__item" [class.breadcrumb__item--activo]="crumb.nivel === nivel()"
+            (click)="irANivel(crumb.nivel)">
+            {{ crumb.label }}
+        </button>
+        @if (!$last) {
+        <i class="ti ti-chevron-right"></i>
+        }
+        }
+    </div>
+
+    <div style="display:flex; gap:8px; margin-bottom:12px">
+        @if (nivel() === 1) {
+        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirFormPais()">
+            <i class="ti ti-plus"></i> Agregar país
+        </button>
+        } @else if (nivel() === 2) {
+        <label class="btn btn--outline btn--sm" style="width: auto; cursor:pointer;"
+            [class.btn--disabled]="importando()">
+            @if (importando()) {
+            <i class="ti ti-loader-2 spin"></i> Importando... {{ progresoPct() }}%
+            } @else {
+            <i class="ti ti-file-spreadsheet"></i> Importar Excel de RBD
+            }
+            <input type="file" accept=".xlsx,.xls" (change)="onSeleccionarExcel($event)" [disabled]="importando()"
+                hidden />
+        </label>
+        } @else if (nivel() === 5) {
+        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirFormEstablecimiento()">
+            <i class="ti ti-plus"></i> Agregar establecimiento
+        </button>
+        }
+    </div>
+
+    @if (importando()) {
+    <div class="import-progress">
+        <div class="import-progress__bar">
+            <div class="import-progress__fill" [style.width.%]="progresoPct()"></div>
+        </div>
+        @if (progreso(); as p) {
+        <p class="text-muted text-sm">{{ p.procesadas }} / {{ p.total }} filas procesadas</p>
+        }
+    </div>
+    }
+
+    @if (loading()) {
+    <div class="empty-state">
+        <i class="ti ti-loader-2 spin"></i>
+        <p>Cargando...</p>
+    </div>
+    } @else {
+
+    <!-- Nivel 1: Países -->
+    @if (nivel() === 1) {
+    @if (paises().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-world-off"></i>
+        <p>No hay países registrados</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Código</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (p of paises(); track p.id_pais) {
+                <tr class="fila-clickeable" (click)="verRegiones(p)">
+                    <td>{{ p.nombre }}</td>
+                    <td class="text-muted">{{ p.codigo ?? '—' }}</td>
+                    <td class="acciones">
+                        <button class="btn-icon" title="Editar" (click)="$event.stopPropagation(); abrirFormPais(p)">
+                            <i class="ti ti-pencil"></i>
+                        </button>
+                        <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            (click)="$event.stopPropagation(); eliminarPais(p)">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+    }
+
+    <!-- Nivel 2: Regiones -->
+    @if (nivel() === 2) {
+    @if (regionesDelPais().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-map-off"></i>
+        <p>No hay regiones registradas para {{ paisSel()?.nombre }}</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (r of regionesDelPais(); track r.id_region) {
+                <tr class="fila-clickeable" (click)="verProvincias(r)">
+                    <td>{{ r.nombre }}</td>
+                    <td class="acciones">
+                        <button class="btn-icon" title="Editar"
+                            (click)="$event.stopPropagation(); abrirFormRegion(r)">
+                            <i class="ti ti-pencil"></i>
+                        </button>
+                        <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            (click)="$event.stopPropagation(); eliminarRegion(r)">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+    }
+
+    <!-- Nivel 3: Provincias -->
+    @if (nivel() === 3) {
+    @if (provinciasDeLaRegion().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-map-off"></i>
+        <p>No hay provincias registradas para {{ regionSel()?.nombre }}</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (pr of provinciasDeLaRegion(); track pr.id_provincia) {
+                <tr class="fila-clickeable" (click)="verComunas(pr)">
+                    <td>{{ pr.nombre }}</td>
+                    <td class="acciones">
+                        <button class="btn-icon" title="Editar"
+                            (click)="$event.stopPropagation(); abrirFormProvincia(pr)">
+                            <i class="ti ti-pencil"></i>
+                        </button>
+                        <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            (click)="$event.stopPropagation(); eliminarProvincia(pr)">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+    }
+
+    <!-- Nivel 5: Establecimientos -->
+    @if (nivel() === 5) {
+    @if (loadingEstablecimientos()) {
+    <div class="empty-state">
+        <i class="ti ti-loader-2 spin"></i>
+        <p>Cargando...</p>
+    </div>
+    } @else if (establecimientos().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-building-off"></i>
+        <p>No hay establecimientos registrados para {{ comunaSel()?.nombre }}</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>RBD</th>
+                    <th>Tipo dependencia</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (e of establecimientos(); track e.id_establecimiento_geo) {
+                <tr class="fila-clickeable" (click)="verDetalleEstablecimiento(e)">
+                    <td>{{ e.nombre }}</td>
+                    <td class="text-muted">{{ e.rbd }}</td>
+                    <td class="text-muted">{{ e.tipo_dependencia ?? '—' }}</td>
+                    <td class="acciones">
+                        <button class="btn-icon" title="Editar"
+                            (click)="$event.stopPropagation(); abrirFormEstablecimiento(e)">
+                            <i class="ti ti-pencil"></i>
+                        </button>
+                        <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            (click)="$event.stopPropagation(); eliminarEstablecimiento(e)">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+    }
+
+    <!-- Nivel 4: Comunas -->
+    @if (nivel() === 4) {
+    @if (comunasDeLaProvincia().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-map-off"></i>
+        <p>No hay comunas registradas para {{ provinciaSel()?.nombre }}</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (c of comunasDeLaProvincia(); track c.id_comuna) {
+                <tr class="fila-clickeable" (click)="verEstablecimientos(c)">
+                    <td>{{ c.nombre }}</td>
+                    <td class="acciones">
+                        <button class="btn-icon" title="Editar"
+                            (click)="$event.stopPropagation(); abrirFormComuna(c)">
+                            <i class="ti ti-pencil"></i>
+                        </button>
+                        <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            (click)="$event.stopPropagation(); eliminarComuna(c)">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+    }
+
+    }
+</div>
+
+<!-- Modal Detalle Establecimiento -->
+@if (mostrarDetalleEstablecimiento() && detalleEstablecimiento(); as det) {
+<div class="modal-backdrop" (click)="cerrarDetalleEstablecimiento()">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-building"></i> {{ det.nombre }}</h3>
+            <button class="modal__close" (click)="cerrarDetalleEstablecimiento()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        <div class="modal__body">
+            <div class="detalle-list">
+                <div class="detalle-item">
+                    <i class="ti ti-id-badge"></i>
+                    <span>RBD {{ det.rbd }}</span>
+                </div>
+                @if (det.tipo_dependencia) {
+                <div class="detalle-item">
+                    <i class="ti ti-building-community"></i>
+                    <span>{{ det.tipo_dependencia }}</span>
+                </div>
+                }
+                @if (det.direccion) {
+                <div class="detalle-item">
+                    <i class="ti ti-map-pin"></i>
+                    <span>{{ det.direccion }}</span>
+                </div>
+                }
+                @if (det.telefono) {
+                <div class="detalle-item">
+                    <i class="ti ti-phone"></i>
+                    <a [href]="'tel:' + det.telefono">{{ det.telefono }}</a>
+                </div>
+                }
+                @if (det.correo) {
+                <div class="detalle-item">
+                    <i class="ti ti-mail"></i>
+                    <a [href]="'mailto:' + det.correo">{{ det.correo }}</a>
+                </div>
+                }
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarDetalleEstablecimiento()">Cerrar</button>
+            <button class="btn btn--primary" style="width:auto"
+                (click)="cerrarDetalleEstablecimiento(); abrirFormEstablecimiento(det)">
+                <i class="ti ti-pencil"></i>
+                Editar
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Modal País -->
+@if (mostrarFormPais()) {
+<div class="modal-backdrop" (click)="cerrarFormPais()">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-world"></i> {{ editandoPais() ? 'Editar país' : 'Agregar país' }}</h3>
+            <button class="modal__close" (click)="cerrarFormPais()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" placeholder="Ej: Chile" [(ngModel)]="formPais.nombre" name="nombre" />
+            </div>
+            <div class="form-group">
+                <label>Código</label>
+                <input type="text" placeholder="Ej: 56" [(ngModel)]="formPais.codigo" name="codigo" />
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarFormPais()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarPais()">
+                <i class="ti ti-device-floppy"></i>
+                {{ editandoPais() ? 'Guardar cambios' : 'Agregar país' }}
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Modal Región -->
+@if (mostrarFormRegion()) {
+<div class="modal-backdrop" (click)="cerrarFormRegion()">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-map-2"></i> {{ editandoRegion() ? 'Editar región' : 'Agregar región' }}</h3>
+            <button class="modal__close" (click)="cerrarFormRegion()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" placeholder="Ej: Región Metropolitana de Santiago" [(ngModel)]="formRegion.nombre"
+                    name="nombre" />
+            </div>
+            <div class="form-group">
+                <label>País *</label>
+                <select [(ngModel)]="formRegion.id_pais" name="id_pais">
+                    <option [ngValue]="null" disabled>Seleccione...</option>
+                    @for (p of paises(); track p.id_pais) {
+                    <option [ngValue]="p.id_pais">{{ p.nombre }}</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarFormRegion()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarRegion()">
+                <i class="ti ti-device-floppy"></i>
+                {{ editandoRegion() ? 'Guardar cambios' : 'Agregar región' }}
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Modal Provincia -->
+@if (mostrarFormProvincia()) {
+<div class="modal-backdrop" (click)="cerrarFormProvincia()">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-map-2"></i> {{ editandoProvincia() ? 'Editar provincia' : 'Agregar provincia' }}</h3>
+            <button class="modal__close" (click)="cerrarFormProvincia()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" placeholder="Ej: Santiago" [(ngModel)]="formProvincia.nombre" name="nombre" />
+            </div>
+            <div class="form-group">
+                <label>Región *</label>
+                <select [(ngModel)]="formProvincia.id_region" name="id_region">
+                    <option [ngValue]="null" disabled>Seleccione...</option>
+                    @for (r of regiones(); track r.id_region) {
+                    <option [ngValue]="r.id_region">{{ r.nombre }}</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarFormProvincia()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarProvincia()">
+                <i class="ti ti-device-floppy"></i>
+                {{ editandoProvincia() ? 'Guardar cambios' : 'Agregar provincia' }}
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Modal Comuna -->
+@if (mostrarFormComuna()) {
+<div class="modal-backdrop" (click)="cerrarFormComuna()">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-map-pin"></i> {{ editandoComuna() ? 'Editar comuna' : 'Agregar comuna' }}</h3>
+            <button class="modal__close" (click)="cerrarFormComuna()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" placeholder="Ej: Providencia" [(ngModel)]="formComuna.nombre" name="nombre" />
+            </div>
+            <div class="form-group">
+                <label>Provincia *</label>
+                <select [(ngModel)]="formComuna.id_provincia" name="id_provincia">
+                    <option [ngValue]="null" disabled>Seleccione...</option>
+                    @for (pr of provincias(); track pr.id_provincia) {
+                    <option [ngValue]="pr.id_provincia">{{ pr.nombre }}</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarFormComuna()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarComuna()">
+                <i class="ti ti-device-floppy"></i>
+                {{ editandoComuna() ? 'Guardar cambios' : 'Agregar comuna' }}
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Modal Establecimiento -->
+@if (mostrarFormEstablecimiento()) {
+<div class="modal-backdrop" (click)="cerrarFormEstablecimiento()">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3>
+                <i class="ti ti-building"></i>
+                {{ editandoEstablecimiento() ? 'Editar establecimiento' : 'Agregar establecimiento' }}
+            </h3>
+            <button class="modal__close" (click)="cerrarFormEstablecimiento()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" placeholder="Ej: Liceo Politécnico Arica" [(ngModel)]="formEstablecimiento.nombre"
+                        name="nombre" />
+                </div>
+                <div class="form-group">
+                    <label>RBD *</label>
+                    <input type="text" placeholder="Ej: 1-9" [(ngModel)]="formEstablecimiento.rbd" name="rbd" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Comuna *</label>
+                <select [(ngModel)]="formEstablecimiento.id_comuna" name="id_comuna">
+                    <option [ngValue]="null" disabled>Seleccione...</option>
+                    @for (c of comunas(); track c.id_comuna) {
+                    <option [ngValue]="c.id_comuna">{{ c.nombre }}</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Tipo de dependencia</label>
+                <input type="text" placeholder="Ej: Municipal" [(ngModel)]="formEstablecimiento.tipo_dependencia"
+                    name="tipo_dependencia" />
+            </div>
+
+            <div class="form-group">
+                <label>Dirección</label>
+                <input type="text" placeholder="Ej: 18 de Septiembre 1234" [(ngModel)]="formEstablecimiento.direccion"
+                    name="direccion" />
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="text" [(ngModel)]="formEstablecimiento.telefono" name="telefono" />
+                </div>
+                <div class="form-group">
+                    <label>Correo</label>
+                    <input type="text" [(ngModel)]="formEstablecimiento.correo" name="correo" />
+                </div>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarFormEstablecimiento()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarEstablecimiento()">
+                <i class="ti ti-device-floppy"></i>
+                {{ editandoEstablecimiento() ? 'Guardar cambios' : 'Agregar establecimiento' }}
+            </button>
+        </div>
+    </div>
+</div>
+}

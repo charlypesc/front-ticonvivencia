@@ -45,6 +45,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/tipos-falta/tipos-falta').then((m) => m.TiposFalta),
       },
       {
+        path: 'cursos',
+        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        loadComponent: () => import('./features/cursos/cursos').then((m) => m.Cursos),
+      },
+      {
         path: 'validaciones',
         canActivate: [roleGuard(RolesEnum.ENCARGADO)],
         loadComponent: () =>
@@ -80,6 +85,11 @@ export const routes: Routes = [
           import('./features/protocolos-establecimiento/protocolos-establecimiento').then(
             (m) => m.ProtocolosEstablecimiento,
           ),
+      },
+      {
+        path: 'geo',
+        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        loadComponent: () => import('./features/geo/geo').then((m) => m.Geo),
       },
       {
         path: 'protocolos-activados',

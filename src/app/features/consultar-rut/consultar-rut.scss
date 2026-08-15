@@ -59,7 +59,14 @@
   &__info {
     flex: 1;
 
-    h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
   }
 
   &__meta {
@@ -94,6 +101,37 @@
       color: $gray-400;
     }
   }
+
+  &__agregar {
+    width: 68px;
+    height: 68px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 10px;
+    background: $primary;
+    color: $white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s;
+
+    i { font-size: 24px; }
+
+    &:hover { background: $primary-light; }
+  }
+}
+
+.card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fila-clickeable {
+  cursor: pointer;
+  &:hover { background: #f9fafb; }
 }
 
 .btn-ver {

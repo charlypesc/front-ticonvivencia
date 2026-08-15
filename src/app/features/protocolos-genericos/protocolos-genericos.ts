@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.services';
+import { ConfirmService } from '../../core/services/confirm.service';
 
 @Component({
   selector: 'app-protocolos-genericos',
@@ -23,7 +24,10 @@ export class ProtocolosGenericos implements OnInit {
     descripcion: '',
   };
 
-  constructor(private api: ApiService) {}
+  constructor(
+    private api: ApiService,
+    private confirmService: ConfirmService,
+  ) {}
 
   ngOnInit() {
     this.cargar();
@@ -81,8 +85,11 @@ export class ProtocolosGenericos implements OnInit {
     });
   }
 
-  eliminar(protocolo: any) {
-    if (!confirm(`¿Eliminar el protocolo genérico "${protocolo.nombre}"?`)) return;
+  async eliminar(protocolo: any) {
+    const confirmado = await this.confirmService.confirmarAccion(
+      `¿Eliminar el protocolo genérico "${protocolo.nombre}"?`,
+    );
+    if (!confirmado) return;
     this.error.set('');
     this.api.deleteProtocoloGenerico(protocolo.id_protocolo).subscribe({
       next: () => {

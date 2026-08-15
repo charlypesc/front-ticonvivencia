@@ -43,8 +43,32 @@ export class ApiService {
   deleteEstudiante(id: number) {
     return this.http.delete(`${this.base}/estudiantes/${id}`);
   }
+  // Cursos
   getCursos() {
-    return this.http.get<any[]>(`${this.base}/estudiantes/cursos`);
+    return this.http.get<any[]>(`${this.base}/cursos`);
+  }
+  createCurso(data: any) {
+    return this.http.post(`${this.base}/cursos`, data);
+  }
+  updateCurso(id: number, data: any) {
+    return this.http.put(`${this.base}/cursos/${id}`, data);
+  }
+  deleteCurso(id: number) {
+    return this.http.delete(`${this.base}/cursos/${id}`);
+  }
+  importarCursosExcel(archivo: FormData) {
+    return this.http.post<{ job_id: string; total: number }>(`${this.base}/cursos/importar`, archivo);
+  }
+  getProgresoImportacion(jobId: string) {
+    return this.http.get<any>(`${this.base}/cursos/importar/${jobId}/progreso`);
+  }
+  // Establecimiento (registro único del tenant) — todavía no conectado a
+  // sidebar/rutas: queda listo para engancharlo desde el futuro panel admin.
+  getEstablecimiento() {
+    return this.http.get<any>(`${this.base}/establecimiento`);
+  }
+  updateEstablecimiento(data: any) {
+    return this.http.put(`${this.base}/establecimiento`, data);
   }
   // Usuarios
   getUsuarios() {
@@ -116,6 +140,80 @@ export class ApiService {
   }
   deleteProtocoloEstablecimiento(id: number) {
     return this.http.delete(`${this.base}/protocolos-establecimiento/${id}`);
+  }
+
+  // Geo (País/Región/Provincia/Comuna) — catálogo global, sin id_establecimiento
+  getPaises() {
+    return this.http.get<any[]>(`${this.base}/geo/paises`);
+  }
+  createPais(data: any) {
+    return this.http.post(`${this.base}/geo/paises`, data);
+  }
+  updatePais(id: number, data: any) {
+    return this.http.put(`${this.base}/geo/paises/${id}`, data);
+  }
+  deletePais(id: number) {
+    return this.http.delete(`${this.base}/geo/paises/${id}`);
+  }
+  getRegiones() {
+    return this.http.get<any[]>(`${this.base}/geo/regiones`);
+  }
+  createRegion(data: any) {
+    return this.http.post(`${this.base}/geo/regiones`, data);
+  }
+  updateRegion(id: number, data: any) {
+    return this.http.put(`${this.base}/geo/regiones/${id}`, data);
+  }
+  deleteRegion(id: number) {
+    return this.http.delete(`${this.base}/geo/regiones/${id}`);
+  }
+  getProvincias() {
+    return this.http.get<any[]>(`${this.base}/geo/provincias`);
+  }
+  createProvincia(data: any) {
+    return this.http.post(`${this.base}/geo/provincias`, data);
+  }
+  updateProvincia(id: number, data: any) {
+    return this.http.put(`${this.base}/geo/provincias/${id}`, data);
+  }
+  deleteProvincia(id: number) {
+    return this.http.delete(`${this.base}/geo/provincias/${id}`);
+  }
+  getComunas() {
+    return this.http.get<any[]>(`${this.base}/geo/comunas`);
+  }
+  createComuna(data: any) {
+    return this.http.post(`${this.base}/geo/comunas`, data);
+  }
+  updateComuna(id: number, data: any) {
+    return this.http.put(`${this.base}/geo/comunas/${id}`, data);
+  }
+  deleteComuna(id: number) {
+    return this.http.delete(`${this.base}/geo/comunas/${id}`);
+  }
+  getEstablecimientosGeo(idComuna: number) {
+    return this.http.get<any[]>(`${this.base}/geo/establecimientos?id_comuna=${idComuna}`);
+  }
+  buscarEstablecimientosGeoPorRbd(rbd: string) {
+    return this.http.get<any[]>(`${this.base}/geo/establecimientos?rbd=${encodeURIComponent(rbd)}`);
+  }
+  createEstablecimientoGeo(data: any) {
+    return this.http.post(`${this.base}/geo/establecimientos`, data);
+  }
+  updateEstablecimientoGeo(id: number, data: any) {
+    return this.http.put(`${this.base}/geo/establecimientos/${id}`, data);
+  }
+  deleteEstablecimientoGeo(id: number) {
+    return this.http.delete(`${this.base}/geo/establecimientos/${id}`);
+  }
+  importarEstablecimientosGeoExcel(archivo: FormData) {
+    return this.http.post<{ job_id: string; total: number }>(
+      `${this.base}/geo/establecimientos/importar`,
+      archivo,
+    );
+  }
+  getProgresoImportacionEstablecimientosGeo(jobId: string) {
+    return this.http.get<any>(`${this.base}/geo/establecimientos/importar/${jobId}/progreso`);
   }
 
   // Protocolos activados

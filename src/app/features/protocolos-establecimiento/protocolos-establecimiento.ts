@@ -2,6 +2,7 @@ import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.services';
+import { ConfirmService } from '../../core/services/confirm.service';
 
 @Component({
   selector: 'app-protocolos-establecimiento',
@@ -30,7 +31,10 @@ export class ProtocolosEstablecimiento implements OnInit {
     );
   });
 
-  constructor(private api: ApiService) {}
+  constructor(
+    private api: ApiService,
+    private confirmService: ConfirmService,
+  ) {}
 
   ngOnInit() {
     this.cargar();
@@ -91,8 +95,11 @@ export class ProtocolosEstablecimiento implements OnInit {
     });
   }
 
-  eliminar(protocolo: any) {
-    if (!confirm(`¿Eliminar el protocolo "${protocolo.nombre}" del establecimiento?`)) return;
+  async eliminar(protocolo: any) {
+    const confirmado = await this.confirmService.confirmarAccion(
+      `¿Eliminar el protocolo "${protocolo.nombre}" del establecimiento?`,
+    );
+    if (!confirmado) return;
     this.error.set('');
     this.api.deleteProtocoloEstablecimiento(protocolo.id_protocolo_establecimiento).subscribe({
       next: () => {

@@ -66,22 +66,46 @@
             <!-- con signal se llama estudiantes() como funcion y el for itera correctamente -> OJO -->
             <div class="form-group">
                 <label>Estudiantes involucrados</label>
+                <div class="toolbar__search">
+                    <i class="ti ti-search"></i>
+                    <input type="text" placeholder="Buscar por nombre..." [ngModel]="busquedaEstudiante()"
+                        (ngModelChange)="busquedaEstudiante.set($event)"
+                        (focus)="mostrarSugerenciasEstudiante.set(true)"
+                        (blur)="ocultarSugerenciasEstudianteConDelay()" name="busquedaEstudiante" />
+
+                    @if (mostrarSugerenciasEstudiante() && sugerenciasEstudiante().length > 0) {
+                    <div class="autocomplete">
+                        @for (e of sugerenciasEstudiante(); track e.id_estudiante) {
+                        <div class="autocomplete__item" (mousedown)="seleccionarEstudianteSugerido(e.id_estudiante)">
+                            <span class="autocomplete__nombre">{{ e.nombre }} {{ e.apellido }}</span>
+                            <span class="autocomplete__meta">{{ e.run }}-{{ e.dv }}</span>
+                        </div>
+                        }
+                    </div>
+                    }
+                </div>
+
                 <div class="estudiantes-list">
-                    @for (e of estudiantes(); track e.id_estudiante) {
-                    <div class="estudiante-item" [class.selected]="isSeleccionado(e.id_estudiante)">
-                        <label class="estudiante-check">
-                            <input type="checkbox" [checked]="isSeleccionado(e.id_estudiante)"
-                                (change)="toggleEstudiante(e.id_estudiante)" />
-                            <span>{{ e.nombre }} {{ e.apellido }} | {{ e.run }}-{{ e.dv }}</span>
-                        </label>
-                        @if (isSeleccionado(e.id_estudiante)) {
+                    @if (involucrados().length === 0) {
+                    <p class="estudiantes-vacio">Busque y seleccione a los estudiantes involucrados.</p>
+                    }
+                    @for (e of involucrados(); track e.id_estudiante) {
+                    <div class="estudiante-item selected">
+                        <span class="estudiante-check">
+                            {{ e.nombre }} {{ e.apellido }} | {{ e.run }}-{{ e.dv }}
+                        </span>
                         <select [ngModel]="getRol(e.id_estudiante)" (ngModelChange)="setRol(e.id_estudiante, $event)"
                             [name]="'rol_' + e.id_estudiante" class="rol-select">
+                            @if (getRol(e.id_estudiante) && !esRolConocido(getRol(e.id_estudiante))) {
+                            <option [value]="getRol(e.id_estudiante)">Involucrado</option>
+                            }
                             <option value="víctima">Víctima</option>
                             <option value="agresor">Agresor</option>
                             <option value="testigo">Testigo</option>
                         </select>
-                        }
+                        <button type="button" class="btn-icon" title="Quitar" (click)="toggleEstudiante(e.id_estudiante)">
+                            <i class="ti ti-x"></i>
+                        </button>
                     </div>
                     }
                 </div>
