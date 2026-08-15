@@ -29,6 +29,12 @@
 </div>
 }
 
+@if (success()) {
+<div class="alert alert--success">
+    <i class="ti ti-circle-check"></i> {{ success() }}
+</div>
+}
+
 <!-- Resultado -->
 @if (estudiante()) {
 <!-- Perfil estudiante -->
@@ -37,10 +43,15 @@
         <i class="ti ti-user"></i>
     </div>
     <div class="perfil__info">
-        <h3>{{ estudiante().nombre }} {{ estudiante().apellido }}</h3>
+        <h3>
+            {{ estudiante().nombre }} {{ estudiante().apellido }}
+            <button class="btn-icon" title="Editar estudiante" (click)="abrirForm()">
+                <i class="ti ti-pencil"></i>
+            </button>
+        </h3>
         <div class="perfil__meta">
             <span><i class="ti ti-id-badge"></i> {{ estudiante().run }}-{{ estudiante().dv }}</span>
-            <span><i class="ti ti-school"></i> {{ estudiante().curso_nombre }} — {{ estudiante().grado }}</span>
+            <span><i class="ti ti-school"></i> {{ estudiante().curso_nombre | cursoNombre }}</span>
             <span>
                 <i class="ti ti-circle"></i>
                 <span class="badge" [class.badge--validado]="estudiante().activo"
@@ -50,6 +61,9 @@
             </span>
         </div>
     </div>
+    <button class="perfil__agregar" title="Agregar registro" (click)="abrirNuevoRegistro()">
+        <i class="ti ti-file-plus"></i>
+    </button>
     <div class="perfil__stat">
         <span class="stat-num">{{ registros().length }}</span>
         <span class="stat-label">registros totales</span>
@@ -75,6 +89,7 @@
                     <th>Fecha</th>
                     <th>Temática</th>
                     <th>Tipo de falta</th>
+                    <th>Rol</th>
                     <th>Gravedad</th>
                     <th>Estado</th>
                     <!-- <th></th> -->
@@ -82,10 +97,11 @@
             </thead>
             <tbody>
                 @for (r of registros(); track r.id_registro) {
-                <tr>
+                <tr class="fila-clickeable" (click)="abrirRegistro(r)">
                     <td>{{ r.fecha_incidente | date:'dd/MM/yyyy' }}</td>
                     <td>{{ r.tematica }}</td>
                     <td>{{ r.tipo_falta_nombre }}</td>
+                    <td>{{ r.rol_en_incidente | titlecase }}</td>
                     <td>
                         <span class="badge badge--{{ r.gravedad }}">{{ r.gravedad }}</span>
                     </td>
@@ -103,5 +119,89 @@
         </table>
     </div>
     }
+</div>
+}
+
+<!-- Modal registro de convivencia -->
+@if (mostrarRegistroForm()) {
+<app-registro-form [registro]="registroSeleccionado" [estudiantePreseleccionado]="estudiante()?.id_estudiante"
+    (cerrar)="cerrarRegistroForm()" />
+}
+
+<!-- Modal edición estudiante -->
+@if (mostrarForm()) {
+<div class="modal-backdrop" (click)="cerrarForm()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+        <div class="modal__header">
+            <h3>
+                <i class="ti ti-user-plus"></i>
+                Editar estudiante
+            </h3>
+            <button class="modal__close" (click)="cerrarForm()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>RUN *</label>
+                    <input type="text" placeholder="12345678" [(ngModel)]="form.run" name="run" [disabled]="true" />
+                </div>
+                <div class="form-group">
+                    <label>DV *</label>
+                    <input type="text" placeholder="9" [(ngModel)]="form.dv" name="dv" maxlength="1"
+                        [disabled]="true" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" placeholder="Juan" [(ngModel)]="form.nombre" name="nombre" />
+                </div>
+                <div class="form-group">
+                    <label>Apellido *</label>
+                    <input type="text" placeholder="Pérez" [(ngModel)]="form.apellido" name="apellido" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Sexo *</label>
+                    <select [(ngModel)]="form.sexo" name="sexo">
+                        <option value="" disabled>Seleccione...</option>
+                        <option value="M">Masculino</option>
+                        <option value="F">Femenino</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Curso *</label>
+                    <select [(ngModel)]="form.id_curso" name="curso">
+                        <option [ngValue]="null" disabled>Seleccione...</option>
+                        @for (c of cursos(); track c.id_curso) {
+                        <option [ngValue]="c.id_curso">{{ c.nombre | cursoNombre }} — {{ c.grado }}</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+                <i class="ti ti-device-floppy"></i>
+                Guardar cambios
+            </button>
+        </div>
+
+    </div>
 </div>
 }

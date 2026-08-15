@@ -1,0 +1,21 @@
+@if (confirmService.state(); as state) {
+<div class="modal-backdrop" (click)="confirmService.resolver(false)">
+    <div class="modal modal--sm" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-alert-triangle"></i> Confirmar acción</h3>
+            <button class="modal__close" (click)="confirmService.resolver(false)">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        <div class="modal__body">
+            <p>{{ state.mensaje }}</p>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="confirmService.resolver(false)">Cancelar</button>
+            <button class="btn btn--danger" (click)="confirmService.resolver(true)">Confirmar</button>
+        </div>
+    </div>
+</div>
+}

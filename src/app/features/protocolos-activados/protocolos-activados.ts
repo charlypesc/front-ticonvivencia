@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.services';
+import { ConfirmService } from '../../core/services/confirm.service';
 
 @Component({
   selector: 'app-protocolos-activados',
@@ -25,7 +26,10 @@ export class ProtocolosActivados implements OnInit {
     id_registro: null as number | null,
   };
 
-  constructor(private api: ApiService) {}
+  constructor(
+    private api: ApiService,
+    private confirmService: ConfirmService,
+  ) {}
 
   ngOnInit() {
     this.cargar();
@@ -89,8 +93,11 @@ export class ProtocolosActivados implements OnInit {
     });
   }
 
-  eliminar(activado: any) {
-    if (!confirm(`¿Eliminar la activación del protocolo "${activado.nombre}"?`)) return;
+  async eliminar(activado: any) {
+    const confirmado = await this.confirmService.confirmarAccion(
+      `¿Eliminar la activación del protocolo "${activado.nombre}"?`,
+    );
+    if (!confirmado) return;
     this.error.set('');
     this.api.deleteProtocoloActivado(activado.id_protocolo_activado).subscribe({
       next: () => {

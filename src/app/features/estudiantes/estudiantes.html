@@ -4,17 +4,38 @@
 
 <div class="card">
     <!-- el style auto es por el scss general apila con flex -->
-    <div style="display:flex;">
+    <div class="toolbar">
         <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
             <i class="ti ti-plus"></i> Agregar
         </button>
-        <!-- todo : implementar busqueda -->
-        <!-- <div class="toolbar__search">
+        <div class="toolbar__search">
             <i class="ti ti-search"></i>
-            <input type="text" placeholder="Buscar por nombre o RUN..." [ngModel]="busqueda()"
-                (ngModelChange)="busqueda.set($event)" />
-        </div> -->
+            <input #buscarInput type="text" placeholder="Buscar por nombre..." [ngModel]="busqueda()"
+                (ngModelChange)="busqueda.set($event)" (focus)="mostrarSugerencias.set(true)"
+                (blur)="ocultarSugerenciasConDelay()" />
+
+            @if (mostrarSugerencias() && sugerencias().length > 0) {
+            <div class="autocomplete">
+                @for (e of sugerencias(); track e.id_estudiante) {
+                <div class="autocomplete__item" (mousedown)="seleccionarEstudiante(e)">
+                    <span class="autocomplete__nombre">{{ e.nombre }} {{ e.apellido }}</span>
+                    <span class="autocomplete__meta">{{ e.run }}-{{ e.dv }} · {{ e.curso_nombre | cursoNombre }}</span>
+                </div>
+                }
+            </div>
+            }
+        </div>
     </div>
+
+    @if (cursoFiltrado(); as curso) {
+    <div class="filtro-curso">
+        <i class="ti ti-filter"></i>
+        Mostrando solo: <strong>{{ curso.nombre | cursoNombre }}</strong>
+        <button class="btn-icon" title="Quitar filtro" (click)="limpiarFiltroCurso()">
+            <i class="ti ti-x"></i>
+        </button>
+    </div>
+    }
 
     @if (success()) {
     <div class="alert alert--success">
@@ -49,13 +70,18 @@
                 <tr>
                     <td>{{ e.run }}-{{ e.dv }}</td>
                     <td>{{ e.nombre }} {{ e.apellido }}</td>
-                    <td>{{ e.curso_nombre }}</td>
+                    <td>{{ e.curso_nombre | cursoNombre }}</td>
                     <td>
                         <span class="badge" [class.badge--validado]="e.activo" [class.badge--pendiente]="!e.activo">
                             {{ e.activo ? 'activo' : 'inactivo' }}
                         </span>
                     </td>
                     <td class="acciones">
+                        @if (e.n_registros > 0) {
+                        <button class="btn-icon btn-icon--warn" title="Ver en Consultar RUT" (click)="verEnConsultarRut(e)">
+                            <i class="ti ti-file-search"></i>
+                        </button>
+                        }
                         <button class="btn-icon" title="Editar" (click)="abrirForm(e)">
                             <i class="ti ti-pencil"></i>
                         </button>
@@ -134,7 +160,7 @@
                     <select [(ngModel)]="form.id_curso" name="curso">
                         <option [ngValue]="null" disabled>Seleccione...</option>
                         @for (c of cursos(); track c.id_curso) {
-                        <option [ngValue]="c.id_curso">{{ c.nombre }} — {{ c.grado }}</option>
+                        <option [ngValue]="c.id_curso">{{ c.nombre | cursoNombre }} — {{ c.grado }}</option>
                         }
                     </select>
                 </div>

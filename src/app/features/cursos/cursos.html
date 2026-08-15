@@ -1,0 +1,145 @@
+<div class="page-header">
+    <h2>Cursos</h2>
+</div>
+
+@if (success()) {
+<div class="alert alert--success">
+    <i class="ti ti-circle-check"></i> {{ success() }}
+</div>
+}
+
+@if (error()) {
+<div class="alert alert--error">
+    <i class="ti ti-alert-circle"></i> {{ error() }}
+</div>
+}
+
+<div class="card">
+    <div style="display:flex; gap:8px">
+        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
+            <i class="ti ti-plus"></i> Agregar curso
+        </button>
+        <label class="btn btn--outline btn--sm" style="width: auto; cursor:pointer;"
+            [class.btn--disabled]="importando()">
+            @if (importando()) {
+            <i class="ti ti-loader-2 spin"></i> Importando... {{ progresoPct() }}%
+            } @else {
+            <i class="ti ti-file-spreadsheet"></i> Importar Excel
+            }
+            <input type="file" accept=".xlsx,.xls" (change)="onSeleccionarExcel($event)" [disabled]="importando()"
+                hidden />
+        </label>
+    </div>
+
+    @if (importando()) {
+    <div class="import-progress">
+        <div class="import-progress__bar">
+            <div class="import-progress__fill" [style.width.%]="progresoPct()"></div>
+        </div>
+        @if (progreso(); as p) {
+        <p class="text-muted text-sm">{{ p.procesadas }} / {{ p.total }} filas procesadas</p>
+        }
+    </div>
+    }
+
+    @if (loading()) {
+    <div class="empty-state">
+        <i class="ti ti-loader-2 spin"></i>
+        <p>Cargando...</p>
+    </div>
+    } @else if (cursos().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-list-off"></i>
+        <p>No hay cursos registrados</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Grado</th>
+                    <th>Nivel</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (c of cursos(); track c.id_curso) {
+                <tr>
+                    <td>{{ c.nombre | cursoNombre }}</td>
+                    <td>{{ c.grado }}</td>
+                    <td>{{ c.nivel }}</td>
+                    <td class="acciones">
+                        <button class="btn btn--outline btn--sm" style="width:auto" title="Ver alumnos de este curso"
+                            [class.btn--warn-light]="c.tiene_registros" (click)="verAlumnos(c)">
+                            <i class="ti ti-users"></i> Ver alumnos
+                        </button>
+                        <button class="btn-icon" title="Editar" (click)="abrirForm(c)">
+                            <i class="ti ti-pencil"></i>
+                        </button>
+                        <button class="btn-icon btn-icon--danger" title="Eliminar" (click)="eliminar(c)">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+
+<!-- Modal -->
+@if (mostrarForm()) {
+<div class="modal-backdrop" (click)="cerrarForm()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+        <div class="modal__header">
+            <h3>
+                <i class="ti ti-school"></i>
+                {{ editando() ? 'Editar curso' : 'Agregar curso' }}
+            </h3>
+            <button class="modal__close" (click)="cerrarForm()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" placeholder="Ej: 1MedioA" [(ngModel)]="form.nombre" name="nombre" />
+                </div>
+                <div class="form-group">
+                    <label>Grado *</label>
+                    <input type="text" placeholder="Ej: 1° Medio" [(ngModel)]="form.grado" name="grado" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Nivel *</label>
+                <select [(ngModel)]="form.nivel" name="nivel">
+                    <option value="" disabled>Seleccione...</option>
+                    <option value="Básica">Básica</option>
+                    <option value="Media">Media</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+                <i class="ti ti-device-floppy"></i>
+                {{ editando() ? 'Guardar cambios' : 'Agregar curso' }}
+            </button>
+        </div>
+
+    </div>
+</div>
+}

@@ -1,0 +1,52 @@
+<div class="page-header">
+    <h2>Establecimiento</h2>
+</div>
+
+@if (success()) {
+<div class="alert alert--success">
+    <i class="ti ti-circle-check"></i> {{ success() }}
+</div>
+}
+
+@if (error()) {
+<div class="alert alert--error">
+    <i class="ti ti-alert-circle"></i> {{ error() }}
+</div>
+}
+
+<div class="card">
+    @if (loading()) {
+    <div class="empty-state">
+        <i class="ti ti-loader-2 spin"></i>
+        <p>Cargando...</p>
+    </div>
+    } @else {
+    <div class="form-row">
+        <div class="form-group">
+            <label>Nombre *</label>
+            <input type="text" placeholder="Ej: Liceo Bicentenario" [(ngModel)]="form.nombre" name="nombre" />
+        </div>
+        <div class="form-group">
+            <label>RBD *</label>
+            <input type="text" placeholder="Ej: 12345-6" [(ngModel)]="form.rbd" name="rbd" />
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label>Región</label>
+            <input type="text" placeholder="Ej: Metropolitana" [(ngModel)]="form.region" name="region" />
+        </div>
+        <div class="form-group">
+            <label>Comuna</label>
+            <input type="text" placeholder="Ej: Providencia" [(ngModel)]="form.comuna" name="comuna" />
+        </div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end">
+        <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+            <i class="ti ti-device-floppy"></i> Guardar cambios
+        </button>
+    </div>
+    }
+</div>

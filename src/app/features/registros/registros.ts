@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.services';
+import { ConfirmService } from '../../core/services/confirm.service';
 import { RegistroForm } from './registros-form/registro-form';
 
 @Component({
@@ -28,7 +29,10 @@ export class Registros implements OnInit {
     );
   });
 
-  constructor(private api: ApiService) {}
+  constructor(
+    private api: ApiService,
+    private confirmService: ConfirmService,
+  ) {}
 
   ngOnInit() {
     this.api.getRegistros().subscribe({
@@ -49,13 +53,11 @@ export class Registros implements OnInit {
     this.ngOnInit(); // recarga la lista
   }
 
-  eliminar(r: any) {
-    if (
-      !confirm(
-        `¿Eliminar el registro "${r.tematica}", esto eliminará los estudiantes asociados y el documento digitalizado asociado, estas seguro?`,
-      )
-    )
-      return;
+  async eliminar(r: any) {
+    const confirmado = await this.confirmService.confirmarAccion(
+      `¿Eliminar el registro "${r.tematica}", esto eliminará los estudiantes asociados y el documento digitalizado asociado, estas seguro?`,
+    );
+    if (!confirmado) return;
     this.error.set('');
     this.api.deleteRegistro(r.id_registro).subscribe({
       next: () => {
