@@ -3,15 +3,20 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.services';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { Permiso } from '../../core/constants/permisos';
+import { Puede } from '../../shared/directives/permiso.directive';
 
 @Component({
   selector: 'app-tipos-falta',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, Puede],
   templateUrl: './tipos-falta.html',
   styleUrl: './tipos-falta.scss',
 })
 export class TiposFalta implements OnInit {
+  /** El template no ve los imports del módulo: hay que exponerlo en la clase. */
+  protected readonly Permiso = Permiso;
+
   tiposFalta = signal<any[]>([]);
   loading = signal(true);
   mostrarForm = signal(false);

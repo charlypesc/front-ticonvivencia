@@ -141,3 +141,79 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { display: inline-block; animation: spin .8s linear infinite; }
+
+// ─── Alta de usuario desde la ficha de un establecimiento ──────────
+// Recuadro fijo con el colegio al que quedará asociado el usuario: es el dato
+// que no se puede cambiar en el formulario, así que tiene que estar a la vista.
+.usuario-est {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-radius: $radius;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 13px;
+
+  i { font-size: 16px; flex-shrink: 0; }
+}
+
+.check-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 14px;
+  cursor: pointer;
+
+  input { width: 16px; height: 16px; cursor: pointer; }
+}
+
+// Establecimiento que ya tiene usuarios: es de los pocos que operan el sistema
+// entre las miles de filas del directorio nacional, así que se destaca en verde.
+// Se pinta el fondo de las celdas y no de la fila porque el <tr> no acepta
+// background cuando las <td> traen el suyo del hover.
+.fila--activa {
+  td { background: #f0fdf4; }
+  &:hover td { background: #dcfce7; }
+
+  td:first-child {
+    box-shadow: inset 3px 0 0 $accent-ok;
+    font-weight: 500;
+  }
+}
+
+.badge-usuarios {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #d1fae5;
+  color: #065f46;
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: middle;
+
+  i { font-size: 12px; }
+}
+
+// El establecimiento al que se llegó por el buscador de RBD: queda fijo arriba
+// de la tabla. El realce es un borde y no un fondo de color para que no pelee
+// con el verde de .fila--activa, que puede aplicarse a la misma fila.
+.fila--destacada {
+  td {
+    border-top: 2px solid $primary;
+    border-bottom: 2px solid $primary;
+  }
+  td:first-child { border-left: 2px solid $primary; }
+  td:last-child  { border-right: 2px solid $primary; }
+}
+
+.destacado-marca {
+  color: $primary;
+  margin-right: 4px;
+  vertical-align: middle;
+}

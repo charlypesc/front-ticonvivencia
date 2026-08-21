@@ -7,6 +7,25 @@
   gap: 16px;
 }
 
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+
+  &--disabled {
+    color: $gray-400;
+    cursor: not-allowed;
+    i { font-size: 14px; }
+  }
+}
+
+.hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: $gray-400;
+}
+
 .toolbar__search {
   display: flex;
   align-items: center;

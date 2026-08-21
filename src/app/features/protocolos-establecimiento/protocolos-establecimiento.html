@@ -15,9 +15,17 @@
 }
 
 <div class="card">
-    <div style="display:flex">
-        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
+    <!-- Apagadas y no ocultas: la pantalla es la misma para todos, y el tooltip
+         dice qué permiso falta en vez de dejar una barra vacía sin explicación. -->
+    <div class="barra-acciones">
+        <button class="btn btn--primary btn--sm" style="width: auto;"
+            [appPuede]="Permiso.ProtocoloEstablecimientoCrear" (click)="abrirForm()">
             <i class="ti ti-plus"></i> Adoptar protocolo
+        </button>
+        <button class="btn-crear-propio" [appPuede]="Permiso.ProtocoloEstablecimientoCrearPropio"
+            (click)="abrirFormPropio()"
+            title="Redactar un protocolo que existe solo en este establecimiento">
+            <i class="ti ti-file-pencil"></i> Crear protocolo propio
         </button>
     </div>
     @if (loading()) {
@@ -42,14 +50,21 @@
             </thead>
             <tbody>
                 @for (p of protocolos(); track p.id_protocolo_establecimiento) {
-                <tr>
+                <tr class="fila-clickeable" (click)="abrirForm(p)">
                     <td>{{ p.nombre }}</td>
                     <td class="text-muted">{{ p.descripcion ?? '—' }}</td>
-                    <td class="acciones">
-                        <button class="btn-icon" title="Editar" (click)="abrirForm(p)">
+                    <td class="acciones" (click)="$event.stopPropagation()">
+                        @if (p.propio) {
+                        <span class="badge badge--propio" title="Creado por este establecimiento">propio</span>
+                        } @else if (p.personalizado) {
+                        <span class="badge badge--adaptado" title="Texto adaptado por el establecimiento">adaptado</span>
+                        }
+                        <button class="btn-icon" title="Editar"
+                            [appPuede]="Permiso.ProtocoloEstablecimientoEditar" (click)="abrirForm(p)">
                             <i class="ti ti-pencil"></i>
                         </button>
-                        <button class="btn-icon btn-icon--danger" title="Eliminar" (click)="eliminar(p)">
+                        <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            [appPuede]="Permiso.ProtocoloEstablecimientoEliminar" (click)="eliminar(p)">
                             <i class="ti ti-trash"></i>
                         </button>
                     </td>
@@ -63,13 +78,15 @@
 
 <!-- Modal -->
 @if (mostrarForm()) {
-<div class="modal-backdrop" (click)="cerrarForm()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
     <div class="modal" (click)="$event.stopPropagation()">
 
         <div class="modal__header">
             <h3>
                 <i class="ti ti-shield"></i>
-                {{ editando() ? 'Editar protocolo adoptado' : 'Adoptar protocolo' }}
+                @if (editando()) { Editar protocolo del establecimiento }
+                @else if (creandoPropio()) { Crear protocolo propio }
+                @else { Adoptar protocolo }
             </h3>
             <button class="modal__close" (click)="cerrarForm()">
                 <i class="ti ti-x"></i>
@@ -82,7 +99,45 @@
         </div>
         }
 
-        <div class="modal__body">
+        <!-- El permiso depende de para qué se abrió el modal: adaptar el texto de
+             uno ya adoptado, redactar uno propio o adoptar uno del catálogo. -->
+        <div class="modal__body" [appPuede]="permisoDelForm()">
+            @if (editando() || creandoPropio()) {
+            @if (creandoPropio()) {
+            <p class="text-muted" style="margin-bottom:16px">
+                Este protocolo existirá solo en tu establecimiento: no se agrega al catálogo genérico
+                ni lo verán otros colegios.
+            </p>
+            } @else if (editando().propio) {
+            <p class="text-muted" style="margin-bottom:16px">
+                Protocolo propio de tu establecimiento, sin origen en el catálogo genérico.
+            </p>
+            } @else {
+            <p class="text-muted" style="margin-bottom:16px">
+                Basado en el protocolo genérico <strong>{{ editando().nombre_generico }}</strong>.
+                Los cambios que hagas aquí valen solo para tu establecimiento.
+            </p>
+            }
+
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" placeholder="Ej: Protocolo de salidas a terreno" [(ngModel)]="form.nombre"
+                    name="nombre" />
+            </div>
+
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea appAutoAjustar placeholder="Descripción del protocolo..." [(ngModel)]="form.descripcion"
+                    name="descripcion" rows="8"></textarea>
+            </div>
+
+            @if (editando() && !editando().propio) {
+            <button class="btn btn--outline btn--sm" style="width:auto"
+                [appPuede]="Permiso.ProtocoloEstablecimientoEditar" (click)="restaurarGenerico()">
+                <i class="ti ti-rotate"></i> Restaurar texto del genérico
+            </button>
+            }
+            } @else {
             <div class="form-group">
                 <label>Protocolo genérico *</label>
                 <select [(ngModel)]="form.id_protocolo" name="id_protocolo">
@@ -91,14 +146,19 @@
                     <option [ngValue]="c.id_protocolo">{{ c.nombre }}</option>
                     }
                 </select>
+                <small class="text-muted">Después de adoptarlo podrás adaptar su texto a tu establecimiento.</small>
             </div>
+            }
         </div>
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
-            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+            <button class="btn btn--primary" style="width:auto" [appPuede]="permisoDelForm()"
+                (click)="guardar()">
                 <i class="ti ti-device-floppy"></i>
-                {{ editando() ? 'Guardar cambios' : 'Adoptar protocolo' }}
+                @if (editando()) { Guardar cambios }
+                @else if (creandoPropio()) { Crear protocolo }
+                @else { Adoptar protocolo }
             </button>
         </div>
 

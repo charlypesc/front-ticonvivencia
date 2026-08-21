@@ -29,7 +29,7 @@
             @if (resultadosBusquedaRbd().length === 0 && !buscandoRbd()) {
             <div class="autocomplete__item autocomplete__item--vacio">Sin resultados para "{{ busquedaRbd() }}"</div>
             } @else {
-            @for (est of resultadosBusquedaRbd(); track est.id_establecimiento_geo) {
+            @for (est of resultadosBusquedaRbd(); track est.id_establecimiento) {
             <div class="autocomplete__item" (mousedown)="irAEstablecimiento(est)">
                 <span class="autocomplete__nombre">{{ est.nombre }}</span>
                 <span class="autocomplete__meta">RBD {{ est.rbd }}</span>
@@ -54,12 +54,14 @@
 
     <div style="display:flex; gap:8px; margin-bottom:12px">
         @if (nivel() === 1) {
-        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirFormPais()">
+        <button class="btn btn--primary btn--sm" style="width: auto;" [appPuede]="Permiso.PaisCrear"
+            (click)="abrirFormPais()">
             <i class="ti ti-plus"></i> Agregar país
         </button>
         } @else if (nivel() === 2) {
+        <!-- <label>, no un control: la directiva lo bloquea con pointer-events. -->
         <label class="btn btn--outline btn--sm" style="width: auto; cursor:pointer;"
-            [class.btn--disabled]="importando()">
+            [appPuede]="Permiso.EstablecimientoImportar" [class.btn--disabled]="importando()">
             @if (importando()) {
             <i class="ti ti-loader-2 spin"></i> Importando... {{ progresoPct() }}%
             } @else {
@@ -69,7 +71,8 @@
                 hidden />
         </label>
         } @else if (nivel() === 5) {
-        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirFormEstablecimiento()">
+        <button class="btn btn--primary btn--sm" style="width: auto;" [appPuede]="Permiso.EstablecimientoCrear"
+            (click)="abrirFormEstablecimiento()">
             <i class="ti ti-plus"></i> Agregar establecimiento
         </button>
         }
@@ -116,10 +119,12 @@
                     <td>{{ p.nombre }}</td>
                     <td class="text-muted">{{ p.codigo ?? '—' }}</td>
                     <td class="acciones">
-                        <button class="btn-icon" title="Editar" (click)="$event.stopPropagation(); abrirFormPais(p)">
+                        <button class="btn-icon" title="Editar" [appPuede]="Permiso.PaisEditar"
+                            (click)="$event.stopPropagation(); abrirFormPais(p)">
                             <i class="ti ti-pencil"></i>
                         </button>
                         <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            [appPuede]="Permiso.PaisEliminar"
                             (click)="$event.stopPropagation(); eliminarPais(p)">
                             <i class="ti ti-trash"></i>
                         </button>
@@ -154,10 +159,12 @@
                     <td>{{ r.nombre }}</td>
                     <td class="acciones">
                         <button class="btn-icon" title="Editar"
+                            [appPuede]="Permiso.RegionEditar"
                             (click)="$event.stopPropagation(); abrirFormRegion(r)">
                             <i class="ti ti-pencil"></i>
                         </button>
                         <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            [appPuede]="Permiso.RegionEliminar"
                             (click)="$event.stopPropagation(); eliminarRegion(r)">
                             <i class="ti ti-trash"></i>
                         </button>
@@ -192,10 +199,12 @@
                     <td>{{ pr.nombre }}</td>
                     <td class="acciones">
                         <button class="btn-icon" title="Editar"
+                            [appPuede]="Permiso.ProvinciaEditar"
                             (click)="$event.stopPropagation(); abrirFormProvincia(pr)">
                             <i class="ti ti-pencil"></i>
                         </button>
                         <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            [appPuede]="Permiso.ProvinciaEliminar"
                             (click)="$event.stopPropagation(); eliminarProvincia(pr)">
                             <i class="ti ti-trash"></i>
                         </button>
@@ -232,17 +241,39 @@
                 </tr>
             </thead>
             <tbody>
-                @for (e of establecimientos(); track e.id_establecimiento_geo) {
-                <tr class="fila-clickeable" (click)="verDetalleEstablecimiento(e)">
-                    <td>{{ e.nombre }}</td>
+                @for (e of establecimientosOrdenados(); track e.id_establecimiento) {
+                <!-- En verde los que ya tienen usuarios: son los que operan el
+                     sistema, un puñado entre las miles de filas del directorio. -->
+                <tr class="fila-clickeable" [class.fila--activa]="tieneUsuarios(e)"
+                    [class.fila--destacada]="esDestacado(e)"
+                    (click)="verDetalleEstablecimiento(e)">
+                    <td>
+                        @if (esDestacado(e)) {
+                        <i class="ti ti-arrow-badge-right destacado-marca" title="Resultado de tu búsqueda"></i>
+                        }
+                        {{ e.nombre }}
+                        @if (tieneUsuarios(e)) {
+                        <span class="badge-usuarios" [title]="e.cantidad_usuarios + ' usuario(s)'">
+                            <i class="ti ti-users"></i> {{ e.cantidad_usuarios }}
+                        </span>
+                        }
+                    </td>
                     <td class="text-muted">{{ e.rbd }}</td>
                     <td class="text-muted">{{ e.tipo_dependencia ?? '—' }}</td>
                     <td class="acciones">
+                        @if (puedeIngresar(e)) {
+                        <button class="btn-icon btn-icon--ok" title="Ingresar a este establecimiento"
+                            (click)="$event.stopPropagation(); ingresarAEstablecimiento(e)">
+                            <i class="ti ti-login"></i>
+                        </button>
+                        }
                         <button class="btn-icon" title="Editar"
+                            [appPuede]="Permiso.EstablecimientoEditar"
                             (click)="$event.stopPropagation(); abrirFormEstablecimiento(e)">
                             <i class="ti ti-pencil"></i>
                         </button>
                         <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            [appPuede]="Permiso.EstablecimientoEliminar"
                             (click)="$event.stopPropagation(); eliminarEstablecimiento(e)">
                             <i class="ti ti-trash"></i>
                         </button>
@@ -277,10 +308,12 @@
                     <td>{{ c.nombre }}</td>
                     <td class="acciones">
                         <button class="btn-icon" title="Editar"
+                            [appPuede]="Permiso.ComunaEditar"
                             (click)="$event.stopPropagation(); abrirFormComuna(c)">
                             <i class="ti ti-pencil"></i>
                         </button>
                         <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            [appPuede]="Permiso.ComunaEliminar"
                             (click)="$event.stopPropagation(); eliminarComuna(c)">
                             <i class="ti ti-trash"></i>
                         </button>
@@ -298,7 +331,7 @@
 
 <!-- Modal Detalle Establecimiento -->
 @if (mostrarDetalleEstablecimiento() && detalleEstablecimiento(); as det) {
-<div class="modal-backdrop" (click)="cerrarDetalleEstablecimiento()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarDetalleEstablecimiento() : null">
     <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal__header">
             <h3><i class="ti ti-building"></i> {{ det.nombre }}</h3>
@@ -342,7 +375,18 @@
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarDetalleEstablecimiento()">Cerrar</button>
-            <button class="btn btn--primary" style="width:auto"
+            <button class="btn btn--outline" style="width:auto" [appPuede]="Permiso.UsuarioCrear"
+                (click)="cerrarDetalleEstablecimiento(); abrirFormUsuario(det)">
+                <i class="ti ti-user-plus"></i>
+                Crear usuario
+            </button>
+            @if (puedeIngresar(det)) {
+            <button class="btn btn--ok" style="width:auto" (click)="ingresarAEstablecimiento(det)">
+                <i class="ti ti-login"></i>
+                Ingresar
+            </button>
+            }
+            <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.EstablecimientoEditar"
                 (click)="cerrarDetalleEstablecimiento(); abrirFormEstablecimiento(det)">
                 <i class="ti ti-pencil"></i>
                 Editar
@@ -354,7 +398,7 @@
 
 <!-- Modal País -->
 @if (mostrarFormPais()) {
-<div class="modal-backdrop" (click)="cerrarFormPais()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarFormPais() : null">
     <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal__header">
             <h3><i class="ti ti-world"></i> {{ editandoPais() ? 'Editar país' : 'Agregar país' }}</h3>
@@ -382,7 +426,8 @@
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarFormPais()">Cancelar</button>
-            <button class="btn btn--primary" style="width:auto" (click)="guardarPais()">
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="editandoPais() ? Permiso.PaisEditar : Permiso.PaisCrear" (click)="guardarPais()">
                 <i class="ti ti-device-floppy"></i>
                 {{ editandoPais() ? 'Guardar cambios' : 'Agregar país' }}
             </button>
@@ -393,7 +438,7 @@
 
 <!-- Modal Región -->
 @if (mostrarFormRegion()) {
-<div class="modal-backdrop" (click)="cerrarFormRegion()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarFormRegion() : null">
     <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal__header">
             <h3><i class="ti ti-map-2"></i> {{ editandoRegion() ? 'Editar región' : 'Agregar región' }}</h3>
@@ -427,7 +472,8 @@
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarFormRegion()">Cancelar</button>
-            <button class="btn btn--primary" style="width:auto" (click)="guardarRegion()">
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="editandoRegion() ? Permiso.RegionEditar : Permiso.RegionCrear" (click)="guardarRegion()">
                 <i class="ti ti-device-floppy"></i>
                 {{ editandoRegion() ? 'Guardar cambios' : 'Agregar región' }}
             </button>
@@ -438,7 +484,7 @@
 
 <!-- Modal Provincia -->
 @if (mostrarFormProvincia()) {
-<div class="modal-backdrop" (click)="cerrarFormProvincia()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarFormProvincia() : null">
     <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal__header">
             <h3><i class="ti ti-map-2"></i> {{ editandoProvincia() ? 'Editar provincia' : 'Agregar provincia' }}</h3>
@@ -471,7 +517,8 @@
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarFormProvincia()">Cancelar</button>
-            <button class="btn btn--primary" style="width:auto" (click)="guardarProvincia()">
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="editandoProvincia() ? Permiso.ProvinciaEditar : Permiso.ProvinciaCrear" (click)="guardarProvincia()">
                 <i class="ti ti-device-floppy"></i>
                 {{ editandoProvincia() ? 'Guardar cambios' : 'Agregar provincia' }}
             </button>
@@ -482,7 +529,7 @@
 
 <!-- Modal Comuna -->
 @if (mostrarFormComuna()) {
-<div class="modal-backdrop" (click)="cerrarFormComuna()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarFormComuna() : null">
     <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal__header">
             <h3><i class="ti ti-map-pin"></i> {{ editandoComuna() ? 'Editar comuna' : 'Agregar comuna' }}</h3>
@@ -515,7 +562,8 @@
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarFormComuna()">Cancelar</button>
-            <button class="btn btn--primary" style="width:auto" (click)="guardarComuna()">
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="editandoComuna() ? Permiso.ComunaEditar : Permiso.ComunaCrear" (click)="guardarComuna()">
                 <i class="ti ti-device-floppy"></i>
                 {{ editandoComuna() ? 'Guardar cambios' : 'Agregar comuna' }}
             </button>
@@ -524,9 +572,71 @@
 </div>
 }
 
+<!-- Modal Crear usuario del establecimiento -->
+@if (mostrarFormUsuario() && establecimientoUsuario(); as est) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarFormUsuario() : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-user-plus"></i> Crear usuario</h3>
+            <button class="modal__close" (click)="cerrarFormUsuario()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <!-- A qué establecimiento va a quedar asociado. Se muestra fijo y no
+                 editable: se eligió al abrir la ficha, y dejarlo cambiar acá
+                 permitiría crear el usuario en otro colegio sin darse cuenta. -->
+            <div class="usuario-est">
+                <i class="ti ti-building"></i>
+                <span><strong>{{ est.nombre }}</strong> — RBD {{ est.rbd }}</span>
+            </div>
+
+            <div class="form-group">
+                <label>Correo *</label>
+                <input type="email" placeholder="Ej: encargado@colegio.cl" autocomplete="off"
+                    [(ngModel)]="formUsuario.correo" name="correo_usuario" />
+            </div>
+            <div class="form-group">
+                <label>Contraseña *</label>
+                <input type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"
+                    [(ngModel)]="formUsuario.password" name="password_usuario" />
+            </div>
+            <div class="form-group">
+                <label>Roles *</label>
+                @for (r of rolesUsuario(); track r.rol_id) {
+                <label class="check-inline">
+                    <input type="checkbox" [checked]="rolUsuarioMarcado(r.codigo)"
+                        (change)="alternarRolUsuario(r.codigo)" />
+                    {{ r.nombre }}
+                </label>
+                } @empty {
+                <p class="muted">No hay roles disponibles.</p>
+                }
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarFormUsuario()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.UsuarioCrear"
+                [disabled]="guardandoUsuario()" (click)="guardarUsuario()">
+                <i class="ti ti-device-floppy"></i>
+                {{ guardandoUsuario() ? 'Creando...' : 'Crear usuario' }}
+            </button>
+        </div>
+    </div>
+</div>
+}
+
 <!-- Modal Establecimiento -->
 @if (mostrarFormEstablecimiento()) {
-<div class="modal-backdrop" (click)="cerrarFormEstablecimiento()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarFormEstablecimiento() : null">
     <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal__header">
             <h3>
@@ -593,7 +703,9 @@
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarFormEstablecimiento()">Cancelar</button>
-            <button class="btn btn--primary" style="width:auto" (click)="guardarEstablecimiento()">
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="editandoEstablecimiento() ? Permiso.EstablecimientoEditar : Permiso.EstablecimientoCrear"
+                (click)="guardarEstablecimiento()">
                 <i class="ti ti-device-floppy"></i>
                 {{ editandoEstablecimiento() ? 'Guardar cambios' : 'Agregar establecimiento' }}
             </button>

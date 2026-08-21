@@ -1,11 +1,12 @@
 import { Component, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../core/services/auth.service';
+import { SelectorEstablecimiento } from '../selector-establecimiento/selector-establecimiento';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SelectorEstablecimiento],
   templateUrl: './navbar.html',
   styleUrl: './navbar.scss',
 })
@@ -18,7 +19,7 @@ export class Navbar {
     return correo.substring(0, 2).toUpperCase();
   });
 
-  constructor(private auth: AuthService) {}
+  constructor(public auth: AuthService) {}
 
   logout() {
     this.auth.logout();

@@ -59,6 +59,18 @@ export class ApiService {
   importarCursosExcel(archivo: FormData) {
     return this.http.post<{ job_id: string; total: number }>(`${this.base}/cursos/importar`, archivo);
   }
+  /** Qué se llevaría por delante el borrado masivo, para avisarlo con números reales. */
+  getResumenEliminacionCursos() {
+    return this.http.get<{
+      cursos: number;
+      estudiantes: number;
+      estudiantes_con_registros: number;
+    }>(`${this.base}/cursos/resumen-eliminacion`);
+  }
+  /** Deshace una importación: borra todos los cursos y estudiantes del establecimiento. */
+  eliminarTodosLosCursos() {
+    return this.http.delete<any>(`${this.base}/cursos`);
+  }
   getProgresoImportacion(jobId: string) {
     return this.http.get<any>(`${this.base}/cursos/importar/${jobId}/progreso`);
   }
@@ -70,6 +82,20 @@ export class ApiService {
   updateEstablecimiento(data: any) {
     return this.http.put(`${this.base}/establecimiento`, data);
   }
+  /**
+   * Tenants: solo los colegios que usan el sistema (es_tenant = TRUE), no las
+   * 7.847 filas del directorio nacional — para eso está getEstablecimientosGeo.
+   */
+  getEstablecimientos() {
+    return this.http.get<any[]>(`${this.base}/establecimientos`);
+  }
+  getEstablecimientoPorId(id: number) {
+    return this.http.get<any>(`${this.base}/establecimientos/${id}`);
+  }
+  /** Da de alta un tenant: marca como cliente un colegio ya existente del directorio. */
+  altaEstablecimiento(data: { id_establecimiento: number; correo: string; password: string }) {
+    return this.http.post(`${this.base}/establecimientos`, data);
+  }
   // Usuarios
   getUsuarios() {
     return this.http.get<any[]>(`${this.base}/usuarios`);
@@ -77,8 +103,53 @@ export class ApiService {
   createUsuario(data: any) {
     return this.http.post(`${this.base}/usuarios`, data);
   }
+
+  /**
+   * Crea un usuario en un establecimiento puntual, distinto del que el ADMIN
+   * tiene activo en el selector (se usa desde Geo).
+   *
+   * El id va como query param a propósito, no en el body: el backend le da
+   * prioridad al query, y el interceptor de establecimiento respeta el
+   * parámetro cuando ya viene puesto. Mandándolo en el body, el interceptor
+   * agregaría el establecimiento activo y el usuario terminaría creado en el
+   * colegio equivocado sin ningún error.
+   */
+  createUsuarioEn(idEstablecimiento: number, data: any) {
+    return this.http.post(`${this.base}/usuarios`, data, {
+      params: { id_establecimiento: String(idEstablecimiento) },
+    });
+  }
   toggleUsuario(id: number) {
     return this.http.patch(`${this.base}/usuarios/${id}/toggle`, {});
+  }
+  getRolesDeUsuario(id: number) {
+    return this.http.get<any[]>(`${this.base}/usuarios/${id}/roles`);
+  }
+  asignarRol(id: number, codigo: string) {
+    return this.http.post(`${this.base}/usuarios/${id}/roles`, { codigo });
+  }
+  quitarRol(id: number, rolId: number) {
+    return this.http.delete(`${this.base}/usuarios/${id}/roles/${rolId}`);
+  }
+
+  // Roles y permisos
+  getRoles() {
+    return this.http.get<any[]>(`${this.base}/roles`);
+  }
+  getCatalogoPermisos() {
+    return this.http.get<any[]>(`${this.base}/roles/permisos`);
+  }
+  getPermisosDeRol(rolId: number) {
+    return this.http.get<any[]>(`${this.base}/roles/${rolId}/permisos`);
+  }
+  createRol(data: any) {
+    return this.http.post(`${this.base}/roles`, data);
+  }
+  updateRol(rolId: number, data: any) {
+    return this.http.put(`${this.base}/roles/${rolId}`, data);
+  }
+  setPermisosDeRol(rolId: number, permisos: number[]) {
+    return this.http.put(`${this.base}/roles/${rolId}/permisos`, { permisos });
   }
 
   //Faltas
@@ -134,6 +205,10 @@ export class ApiService {
   }
   createProtocoloEstablecimiento(data: any) {
     return this.http.post(`${this.base}/protocolos-establecimiento`, data);
+  }
+  /** Protocolo propio del colegio, sin origen en el catálogo genérico. */
+  createProtocoloPropio(data: any) {
+    return this.http.post(`${this.base}/protocolos-establecimiento/propio`, data);
   }
   updateProtocoloEstablecimiento(id: number, data: any) {
     return this.http.put(`${this.base}/protocolos-establecimiento/${id}`, data);

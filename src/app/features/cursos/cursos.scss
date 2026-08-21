@@ -21,14 +21,6 @@
   &--danger:hover { color: $accent-danger; background: #fee2e2; }
 }
 
-.btn--warn-light {
-  background: #fef3e2;
-  border-color: #fde3b8;
-  color: #b45309;
-
-  &:hover { background: #fde3b8; }
-}
-
 .btn--disabled {
   opacity: .5;
   cursor: not-allowed;

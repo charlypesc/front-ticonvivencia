@@ -1,19 +1,25 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.services';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { ConfidencialService } from '../../core/services/confidencial.service';
 import { RegistroForm } from './registros-form/registro-form';
+import { Permiso } from '../../core/constants/permisos';
+import { Puede } from '../../shared/directives/permiso.directive';
 
 @Component({
   selector: 'app-registros',
   standalone: true,
-  imports: [CommonModule, FormsModule, RegistroForm],
+  imports: [CommonModule, FormsModule, RegistroForm, Puede],
   templateUrl: './registros.html',
   styleUrl: './registros.scss',
 })
 export class Registros implements OnInit {
+  /** El template no ve los imports del módulo: hay que exponerlo en la clase. */
+  protected readonly Permiso = Permiso;
+
   registros = signal<any[]>([]);
   loading = signal(true);
   busqueda = signal('');
@@ -32,9 +38,22 @@ export class Registros implements OnInit {
   constructor(
     private api: ApiService,
     private confirmService: ConfirmService,
+    private confidencial: ConfidencialService,
+    private route: ActivatedRoute,
+    private router: Router,
   ) {}
 
   ngOnInit() {
+    this.cargar();
+
+    // El dashboard abre un registro puntual navegando con ?abrir=<id>. Se abre
+    // sin esperar la lista: el formulario pide el detalle por su cuenta.
+    const abrir = Number(this.route.snapshot.queryParamMap.get('abrir'));
+    if (abrir) this.abrirForm({ id_registro: abrir });
+  }
+
+  private cargar() {
+    this.loading.set(true);
     this.api.getRegistros().subscribe({
       next: (data) => {
         this.registros.set(data);
@@ -44,13 +63,26 @@ export class Registros implements OnInit {
     });
   }
 
+  esConfidencialBloqueado(r: any) {
+    return this.confidencial.estaBloqueado(r);
+  }
+
   abrirForm(item: any = null) {
+    // Se avisa con el modal del proyecto en vez de abrir el formulario: el
+    // backend igual respondería 403, y así queda claro por qué no se abre.
+    if (item && this.confidencial.bloqueaApertura(item)) return;
+
     this.itemMove = item;
     this.mostrarForm.set(true);
   }
   cerrarForm() {
     this.mostrarForm.set(false);
-    this.ngOnInit(); // recarga la lista
+    this.itemMove = null;
+    // Sin limpiar ?abrir el registro se volvería a abrir solo al recargar.
+    if (this.route.snapshot.queryParamMap.has('abrir')) {
+      this.router.navigate([], { relativeTo: this.route, queryParams: {} });
+    }
+    this.cargar(); // recarga la lista
   }
 
   async eliminar(r: any) {

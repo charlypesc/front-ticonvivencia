@@ -1,0 +1,85 @@
+.roles-layout {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.roles-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rol-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border, #d0d5dd);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+
+  &--activo {
+    border-color: var(--primary, #2f6fed);
+    background: rgba(47, 111, 237, 0.06);
+  }
+
+  // Rol que este usuario no puede modificar. Se opaca en vez de deshabilitarlo:
+  // sigue siendo clickeable porque ver sus permisos (y asignárselo a alguien)
+  // está permitido; lo que no está es editarlo.
+  &--bloqueado {
+    opacity: 0.55;
+    border-style: dashed;
+
+    // Al seleccionarlo tiene que leerse igual, si no el detalle queda a la
+    // vista pero su ítem en la lista casi invisible.
+    &:hover,
+    &.rol-item--activo {
+      opacity: 0.85;
+    }
+  }
+
+  small { color: var(--muted, #667085); }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+  }
+}
+
+.permiso-grupo {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border, #eaecf0);
+
+  &__titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  &__items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    padding-left: 1.5rem;
+  }
+}
+
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+@media (max-width: 800px) {
+  .roles-layout { grid-template-columns: 1fr; }
+}

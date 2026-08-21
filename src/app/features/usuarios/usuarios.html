@@ -16,7 +16,8 @@
 
 <div class="card">
     <div style="display: flex;">
-        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
+        <button class="btn btn--primary btn--sm" style="width: auto;" [appPuede]="Permiso.UsuarioCrear"
+            (click)="abrirForm()">
             <i class="ti ti-user-plus"></i> Nuevo usuario
         </button>
     </div>
@@ -46,10 +47,15 @@
                 <tr>
                     <td>{{ u.correo }}</td>
                     <td>
-                        <span class="badge" [class.badge--validado]="u.rol === 'DIRECTOR'"
-                            [class.badge--leve]="u.rol === 'ENCARGADO'">
-                            {{ u.rol }}
+                        <!-- Un usuario puede tener varios roles: se listan todos -->
+                        @for (r of u.roles; track r) {
+                        <span class="badge" [class.badge--validado]="r === 'DIRECTOR'"
+                            [class.badge--leve]="r === 'ENCARGADO'" [class.badge--grave]="r === 'ADMIN'">
+                            {{ r }}
                         </span>
+                        } @empty {
+                        <span class="badge badge--pendiente">sin rol</span>
+                        }
                     </td>
                     <td>
                         <span class="badge" [class.badge--validado]="u.activo" [class.badge--pendiente]="!u.activo">
@@ -58,7 +64,8 @@
                     </td>
                     <td>
                         <button class="btn-icon" [class.btn-icon--danger]="u.activo"
-                            [title]="u.activo ? 'Desactivar' : 'Activar'" (click)="toggle(u)">
+                            [title]="u.activo ? 'Desactivar' : 'Activar'" [appPuede]="Permiso.UsuarioActivar"
+                            (click)="toggle(u)">
                             <i class="ti" [class.ti-user-off]="u.activo" [class.ti-user-check]="!u.activo"></i>
                         </button>
                     </td>
@@ -72,7 +79,7 @@
 
 <!-- Modal -->
 @if (mostrarForm()) {
-<div class="modal-backdrop" (click)="cerrarForm()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
     <div class="modal" (click)="$event.stopPropagation()">
 
         <div class="modal__header">
@@ -88,7 +95,7 @@
         </div>
         }
 
-        <div class="modal__body">
+        <div class="modal__body" [appPuede]="Permiso.UsuarioCrear">
             <div class="form-group">
                 <label><i class="ti ti-mail"></i> Correo electrónico *</label>
                 <input type="email" placeholder="usuario@colegio.cl" [(ngModel)]="form.correo" name="correo" />
@@ -100,18 +107,28 @@
             </div>
 
             <div class="form-group">
-                <label><i class="ti ti-shield"></i> Rol *</label>
-                <select [(ngModel)]="form.rol" name="rol">
-                    <option value="" disabled>Seleccione un rol...</option>
-                    <option value="ENCARGADO">Encargado de Convivencia</option>
-                    <option value="DIRECTOR">Director</option>
-                </select>
+                <label><i class="ti ti-shield"></i> Roles *</label>
+                <!-- Multi-rol: el catálogo llega del backend, no está hardcodeado,
+                     así que un rol nuevo aparece acá sin tocar el frontend. -->
+                <!-- Asignar roles es un permiso aparte de crear el usuario: se
+                     puede poder dar de alta a alguien y no decidir qué puede hacer. -->
+                @for (r of roles(); track r.rol_id) {
+                <label class="check-inline">
+                    <input type="checkbox" [checked]="estaSeleccionado(r.codigo)"
+                        [appPuede]="Permiso.UsuarioAsignarRol" (change)="toggleRolSeleccionado(r.codigo)" />
+                    {{ r.nombre }}
+                    @if (r.descripcion) { <small>— {{ r.descripcion }}</small> }
+                </label>
+                } @empty {
+                <p class="muted">No hay roles disponibles.</p>
+                }
             </div>
         </div>
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
-            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+            <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.UsuarioCrear"
+                (click)="guardar()">
                 <i class="ti ti-device-floppy"></i> Crear usuario
             </button>
         </div>

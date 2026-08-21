@@ -15,11 +15,36 @@
 }
 
 <div class="card">
-    <div style="display:flex">
-        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
+    <!-- Las acciones que la persona no tiene permitidas se muestran apagadas en
+         vez de desaparecer: así la pantalla es la misma para todos y se ve qué
+         permiso pedir, en lugar de una barra que cambia de forma según el rol. -->
+    <div class="barra-acciones">
+        <button class="btn btn--primary btn--sm" style="width: auto;"
+            [appPuede]="Permiso.ProtocoloGenericoCrear" (click)="abrirForm()">
             <i class="ti ti-plus"></i> Agregar protocolo
         </button>
+        @if (pendientes().length > 0) {
+        <button class="btn-adoptar-todos" [appPuede]="Permiso.ProtocoloEstablecimientoCrear"
+            [disabled]="adoptandoTodos()" (click)="adoptarTodos()"
+            title="Adoptar en mi establecimiento todos los protocolos que aún no tengo">
+            @if (adoptandoTodos()) {
+            <i class="ti ti-loader-2 spin"></i> Adoptando...
+            } @else {
+            <i class="ti ti-checks"></i> Adoptar todos
+            <span class="contador">{{ pendientes().length }}</span>
+            }
+        </button>
+        }
     </div>
+    @if (!puedeCrear()) {
+    <p class="text-muted" style="margin-bottom:16px">
+        Catálogo compartido, mantenido por el administrador.
+        @if (puedeAdoptar()) {
+        Adopta los que apliquen a tu establecimiento y luego adáptalos en
+        <strong>Protocolos del establecimiento</strong>.
+        }
+    </p>
+    }
     @if (loading()) {
     <div class="empty-state">
         <i class="ti ti-loader-2 spin"></i>
@@ -42,14 +67,32 @@
             </thead>
             <tbody>
                 @for (p of protocolos(); track p.id_protocolo) {
-                <tr>
+                <tr [class.fila-clickeable]="puedeEditar()" (click)="abrirForm(p)">
                     <td>{{ p.nombre }}</td>
                     <td class="text-muted">{{ p.descripcion ?? '—' }}</td>
-                    <td class="acciones">
-                        <button class="btn-icon" title="Editar" (click)="abrirForm(p)">
+                    <td class="acciones" (click)="$event.stopPropagation()">
+                        @if (!yaAdoptado(p)) {
+                        <button class="btn btn--primary btn--sm" style="width:auto" title="Adoptar en mi establecimiento"
+                            [appPuede]="Permiso.ProtocoloEstablecimientoCrear" (click)="adoptar(p)">
+                            <i class="ti ti-plus"></i> Adoptar
+                        </button>
+                        }
+                        @if (yaAdoptado(p)) {
+                        <span class="badge badge--adaptado" title="Ya adoptado por tu establecimiento">adoptado</span>
+                        }
+                        @if (yaAdoptado(p)) {
+                        <button class="btn btn--outline btn--sm" style="width:auto"
+                            title="Quitar de mi establecimiento" [appPuede]="Permiso.ProtocoloEstablecimientoEliminar"
+                            (click)="quitar(p)">
+                            <i class="ti ti-minus"></i> Quitar
+                        </button>
+                        }
+                        <button class="btn-icon" title="Editar" [appPuede]="Permiso.ProtocoloGenericoEditar"
+                            (click)="abrirForm(p)">
                             <i class="ti ti-pencil"></i>
                         </button>
-                        <button class="btn-icon btn-icon--danger" title="Eliminar" (click)="eliminar(p)">
+                        <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            [appPuede]="Permiso.ProtocoloGenericoEliminar" (click)="eliminar(p)">
                             <i class="ti ti-trash"></i>
                         </button>
                     </td>
@@ -63,7 +106,7 @@
 
 <!-- Modal -->
 @if (mostrarForm()) {
-<div class="modal-backdrop" (click)="cerrarForm()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
     <div class="modal" (click)="$event.stopPropagation()">
 
         <div class="modal__header">
@@ -82,7 +125,9 @@
         </div>
         }
 
-        <div class="modal__body">
+        <!-- Campos opacos si no puede guardar: la fila abre el modal igual. -->
+        <div class="modal__body"
+            [appPuede]="editando() ? Permiso.ProtocoloGenericoEditar : Permiso.ProtocoloGenericoCrear">
             <div class="form-group">
                 <label>Nombre *</label>
                 <input type="text" placeholder="Ej: Protocolo de acoso escolar" [(ngModel)]="form.nombre" name="nombre" />
@@ -90,14 +135,16 @@
 
             <div class="form-group">
                 <label>Descripción</label>
-                <textarea placeholder="Descripción del protocolo..." [(ngModel)]="form.descripcion"
+                <textarea appAutoAjustar placeholder="Descripción del protocolo..." [(ngModel)]="form.descripcion"
                     name="descripcion"></textarea>
             </div>
         </div>
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
-            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="editando() ? Permiso.ProtocoloGenericoEditar : Permiso.ProtocoloGenericoCrear"
+                (click)="guardar()">
                 <i class="ti ti-device-floppy"></i>
                 {{ editando() ? 'Guardar cambios' : 'Agregar protocolo' }}
             </button>

@@ -1,4 +1,4 @@
-<div class="modal-backdrop" (click)="cerrar.emit()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrar.emit() : null">
     <div class="modal" (click)="$event.stopPropagation()">
 
         <div class="modal__header">
@@ -25,7 +25,10 @@
         </div>
         }
 
-        <div class="modal__body">
+        <!-- Todo el formulario va opaco si la persona no puede guardarlo: este
+             modal también se abre desde la fila de la tabla y desde la ficha del
+             estudiante, o sea que se llega acá sin haber pasado por un botón. -->
+        <div class="modal__body" [appPuede]="registro ? Permiso.RegistroEditar : Permiso.RegistroCrear">
             <div class="form-row">
                 <div class="form-group">
                     <label>Fecha del incidente *</label>
@@ -49,6 +52,30 @@
                 <input type="text" placeholder="Ej: Agresión física en recreo" [(ngModel)]="form.tematica"
                     name="tematica" />
             </div>
+
+            <div class="form-group">
+                <label class="check-inline" [class.check-inline--disabled]="!puedeEditarConfidencialidad()">
+                    <input type="checkbox" [(ngModel)]="form.es_confidencial" name="es_confidencial"
+                        [disabled]="!puedeEditarConfidencialidad()" />
+                    Confidencial
+                    @if (!puedeEditarConfidencialidad()) {
+                    <i class="ti ti-lock" title="Solo quien registró el caso puede cambiar esto"></i>
+                    }
+                </label>
+                @if (!puedeEditarConfidencialidad()) {
+                <small class="hint">Solo quien registró el caso puede cambiar la confidencialidad.</small>
+                }
+            </div>
+
+            @if (form.es_confidencial) {
+            <div class="form-group">
+                <label>Nota de confidencialidad *</label>
+                <input type="text"
+                    placeholder="Motivo visible para el resto del equipo (el contenido del registro no lo verán)"
+                    [(ngModel)]="form.nota_confidencial" name="nota_confidencial"
+                    [disabled]="!puedeEditarConfidencialidad()" />
+            </div>
+            }
 
             <div class="form-group">
                 <label>Antecedentes *</label>
@@ -115,7 +142,9 @@
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrar.emit()">Cancelar</button>
             @if(registro ===null){
-            <button class="btn btn--primary" style="width:auto" (click)="guardar()" [disabled]="loading()">
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="registro ? Permiso.RegistroEditar : Permiso.RegistroCrear" (click)="guardar()"
+                [disabled]="loading()">
                 @if (loading()) {
                 <i class="ti ti-loader-2 spin"></i> Guardando...
                 } @else {
@@ -123,7 +152,9 @@
                 }
             </button>
             }@else{
-            <button class="btn btn--primary" style="width:auto" (click)="guardar()" [disabled]="loading()">
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="registro ? Permiso.RegistroEditar : Permiso.RegistroCrear" (click)="guardar()"
+                [disabled]="loading()">
                 @if (loading()) {
                 <i class="ti ti-loader-2 spin"></i> Actualizando...
                 } @else {

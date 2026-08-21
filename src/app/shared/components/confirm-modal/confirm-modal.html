@@ -1,20 +1,27 @@
 @if (confirmService.state(); as state) {
-<div class="modal-backdrop" (click)="confirmService.resolver(false)">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? confirmService.resolver(false) : null">
     <div class="modal modal--sm" (click)="$event.stopPropagation()">
         <div class="modal__header">
-            <h3><i class="ti ti-alert-triangle"></i> Confirmar acción</h3>
+            <h3>
+                <i class="ti {{ state.icono ?? 'ti-alert-triangle' }}"></i>
+                {{ state.titulo ?? 'Confirmar acción' }}
+            </h3>
             <button class="modal__close" (click)="confirmService.resolver(false)">
                 <i class="ti ti-x"></i>
             </button>
         </div>
 
         <div class="modal__body">
-            <p>{{ state.mensaje }}</p>
+            <p class="confirm-mensaje">{{ state.mensaje }}</p>
         </div>
 
         <div class="modal__footer">
+            @if (state.soloAviso) {
+            <button class="btn btn--primary" (click)="confirmService.resolver(false)">Entendido</button>
+            } @else {
             <button class="btn btn--outline" (click)="confirmService.resolver(false)">Cancelar</button>
             <button class="btn btn--danger" (click)="confirmService.resolver(true)">Confirmar</button>
+            }
         </div>
     </div>
 </div>

@@ -11,7 +11,10 @@
 }
 
 <div class="card">
-    <div class="dropzone" [class.dropzone--active]="dragging()" [class.dropzone--ready]="archivo()"
+    <!-- La zona entera va apagada sin documento.subir: si no, arrastrar el
+         archivo seguiría funcionando aunque el botón esté bloqueado. -->
+    <div class="dropzone" [appPuede]="Permiso.DocumentoSubir" [class.dropzone--active]="dragging()"
+        [class.dropzone--ready]="archivo()"
         (dragover)="onDragOver($event)" (dragleave)="onDragLeave()" (drop)="onDrop($event)">
         @if (archivo()) {
         <i class="ti ti-file-check dropzone__icon dropzone__icon--ok"></i>
@@ -20,7 +23,9 @@
         } @else {
         <i class="ti ti-cloud-upload dropzone__icon"></i>
         <p>Arrastra el archivo aquí</p>
-        <label class="btn-seleccionar">
+        <!-- El bloqueo va en el <label> y no en el <input>, que está oculto: lo
+             que la persona ve y aprieta es la etiqueta. -->
+        <label class="btn-seleccionar" [appPuede]="Permiso.DocumentoSubir">
             <i class="ti ti-folder-open"></i> Seleccionar archivo
             <input type="file" accept=".jpg,.jpeg,.png,.pdf" (change)="onFileSelect($event)" hidden />
         </label>
@@ -32,8 +37,8 @@
         <button class="btn btn--outline" [disabled]="loading()" (click)="archivo.set(null)">
             <i class="ti ti-x"></i> Cancelar
         </button>
-        <button class="btn btn--primary" style="width:auto" (click)="cargarDocumento()"
-            [disabled]="!archivo() || loading()">
+        <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.DocumentoSubir"
+            (click)="cargarDocumento()" [disabled]="!archivo() || loading()">
             @if (loading()) {
             <i class="ti ti-loader-2 spin"></i> Procesando...
             } @else {
@@ -137,10 +142,11 @@
 
 <!-- Acciones -->
 <div class="validacion-footer">
-    <button class="btn btn--outline" (click)="guardarPendiente()">
+    <button class="btn btn--outline" [appPuede]="Permiso.RegistroCrear" (click)="guardarPendiente()">
         <i class="ti ti-device-floppy"></i> Guardar como pendiente
     </button>
-    <button class="btn btn--primary" style="width:auto" (click)="confirmar()" [disabled]="loading()">
+    <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.RegistroCrear" (click)="confirmar()"
+        [disabled]="loading()">
         @if (loading()) {
         <i class="ti ti-loader-2 spin"></i> Confirmando...
         } @else {

@@ -10,7 +10,53 @@
 
 .acciones {
   display: flex;
+  align-items: center;
   gap: 8px;
+
+  // El badge trae margen propio para separarse del nombre; aquí el gap del flex
+  // ya se encarga de eso.
+  .badge { margin-left: 0; }
+}
+
+.barra-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+// Misma familia visual que "Adoptar todos" en el catálogo genérico: acción
+// secundaria tonal, que acompaña sin competir con el botón sólido principal.
+.btn-crear-propio {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba($primary-light, .25);
+  background: $primary-bg;
+  color: $primary;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .2s, border-color .2s, box-shadow .2s, transform .1s;
+
+  i { font-size: 15px; }
+
+  &:hover {
+    background: rgba($primary-light, .16);
+    border-color: rgba($primary-light, .45);
+    box-shadow: 0 2px 8px rgba($primary, .12);
+  }
+
+  &:active { transform: translateY(1px); }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba($primary-light, .3);
+  }
 }
 
 .btn-icon {
