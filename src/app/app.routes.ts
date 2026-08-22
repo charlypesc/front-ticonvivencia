@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
-import { roleGuard } from './core/guards/role.guard';
-import { RolesEnum } from './core/enum/roles.enum';
+import { permissionGuard } from './core/guards/permission.guard';
+import { Permiso } from './core/constants/permisos';
 export const routes: Routes = [
   {
     path: 'login',
@@ -24,55 +24,56 @@ export const routes: Routes = [
       },
       {
         path: 'registros',
-        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        canActivate: [permissionGuard(Permiso.RegistroVer)],
         loadComponent: () => import('./features/registros/registros').then((m) => m.Registros),
       },
       {
         path: 'estudiantes',
-        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        canActivate: [permissionGuard(Permiso.EstudianteVer)],
         loadComponent: () =>
           import('./features/estudiantes/estudiantes').then((m) => m.Estudiantes),
       },
       {
         path: 'consultar-rut',
-        canActivate: [roleGuard(RolesEnum.ENCARGADO, RolesEnum.DIRECTOR)],
+        canActivate: [permissionGuard(Permiso.EstudianteBuscar)],
         loadComponent: () =>
           import('./features/consultar-rut/consultar-rut').then((m) => m.ConsultarRut),
       },
       {
         path: 'tipos-falta',
-        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        canActivate: [permissionGuard(Permiso.TipoFaltaVer)],
         loadComponent: () => import('./features/tipos-falta/tipos-falta').then((m) => m.TiposFalta),
       },
       {
         path: 'cursos',
-        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        canActivate: [permissionGuard(Permiso.CursoVer)],
         loadComponent: () => import('./features/cursos/cursos').then((m) => m.Cursos),
       },
       {
         path: 'validaciones',
-        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        canActivate: [permissionGuard(Permiso.RegistroValidar)],
         loadComponent: () =>
           import('./features/validaciones/validaciones').then((m) => m.Validaciones),
       },
       {
         path: 'usuarios',
-        canActivate: [roleGuard(RolesEnum.DIRECTOR)],
+        canActivate: [permissionGuard(Permiso.UsuarioVer)],
         loadComponent: () => import('./features/usuarios/usuarios').then((m) => m.Usuarios),
       },
       {
-        path: 'tipos-falta',
-        loadComponent: () => import('./features/tipos-falta/tipos-falta').then((m) => m.TiposFalta),
+        path: 'roles',
+        canActivate: [permissionGuard(Permiso.RolAsignarPermiso)],
+        loadComponent: () => import('./features/roles/roles').then((m) => m.Roles),
       },
       {
         path: 'subir-documento',
-        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        canActivate: [permissionGuard(Permiso.DocumentoSubir)],
         loadComponent: () =>
           import('./features/subir-documento/subir-documento').then((m) => m.SubirDocumento),
       },
       {
         path: 'protocolos-genericos',
-        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        canActivate: [permissionGuard(Permiso.ProtocoloGenericoVer)],
         loadComponent: () =>
           import('./features/protocolos-genericos/protocolos-genericos').then(
             (m) => m.ProtocolosGenericos,
@@ -80,7 +81,7 @@ export const routes: Routes = [
       },
       {
         path: 'protocolos-establecimiento',
-        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        canActivate: [permissionGuard(Permiso.ProtocoloEstablecimientoVer)],
         loadComponent: () =>
           import('./features/protocolos-establecimiento/protocolos-establecimiento').then(
             (m) => m.ProtocolosEstablecimiento,
@@ -88,12 +89,12 @@ export const routes: Routes = [
       },
       {
         path: 'geo',
-        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        canActivate: [permissionGuard(Permiso.EstablecimientoVer)],
         loadComponent: () => import('./features/geo/geo').then((m) => m.Geo),
       },
       {
         path: 'protocolos-activados',
-        canActivate: [roleGuard(RolesEnum.ENCARGADO)],
+        canActivate: [permissionGuard(Permiso.ProtocoloActivadoVer)],
         loadComponent: () =>
           import('./features/protocolos-activados/protocolos-activados').then(
             (m) => m.ProtocolosActivados,

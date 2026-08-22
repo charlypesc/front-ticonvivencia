@@ -3,17 +3,22 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.services';
+import { Permiso } from '../../core/constants/permisos';
+import { Puede } from '../../shared/directives/permiso.directive';
 
 type Paso = 'upload' | 'validacion';
 
 @Component({
   selector: 'app-subir-documento',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, Puede],
   templateUrl: './subir-documento.html',
   styleUrl: './subir-documento.scss',
 })
 export class SubirDocumento {
+  /** El template no ve los imports del módulo: hay que exponerlo en la clase. */
+  protected readonly Permiso = Permiso;
+
   paso = signal<Paso>('upload');
   archivo = signal<File | null>(null);
   dragging = signal(false);

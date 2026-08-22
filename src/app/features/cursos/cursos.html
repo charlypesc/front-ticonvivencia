@@ -16,11 +16,14 @@
 
 <div class="card">
     <div style="display:flex; gap:8px">
-        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
+        <button class="btn btn--primary btn--sm" style="width: auto;" [appPuede]="Permiso.CursoCrear"
+            (click)="abrirForm()">
             <i class="ti ti-plus"></i> Agregar curso
         </button>
+        <!-- Es un <label>, no un control: no tiene `disabled` propio, así que
+             la directiva lo bloquea con pointer-events (ver .sin-permiso). -->
         <label class="btn btn--outline btn--sm" style="width: auto; cursor:pointer;"
-            [class.btn--disabled]="importando()">
+            [appPuede]="Permiso.CursoImportar" [class.btn--disabled]="importando()">
             @if (importando()) {
             <i class="ti ti-loader-2 spin"></i> Importando... {{ progresoPct() }}%
             } @else {
@@ -29,6 +32,14 @@
             <input type="file" accept=".xlsx,.xls" (change)="onSeleccionarExcel($event)" [disabled]="importando()"
                 hidden />
         </label>
+
+        <!-- Acción destructiva (hoy solo el ADMIN tiene curso.eliminar_masivo).
+             Sirve para deshacer una importación. Va apagado y no oculto, como
+             el resto: quien no puede usarlo igual entiende que existe. -->
+        <button class="btn btn--danger btn--sm" style="width:auto; margin-left:auto"
+            [appPuede]="Permiso.CursoEliminarMasivo" [disabled]="importando()" (click)="eliminarTodos()">
+            <i class="ti ti-trash"></i> Eliminar todos los cursos
+        </button>
     </div>
 
     @if (importando()) {
@@ -65,19 +76,21 @@
             </thead>
             <tbody>
                 @for (c of cursos(); track c.id_curso) {
-                <tr>
+                <tr class="fila-clickeable" (click)="verAlumnos(c)">
                     <td>{{ c.nombre | cursoNombre }}</td>
                     <td>{{ c.grado }}</td>
                     <td>{{ c.nivel }}</td>
-                    <td class="acciones">
+                    <td class="acciones" (click)="$event.stopPropagation()">
                         <button class="btn btn--outline btn--sm" style="width:auto" title="Ver alumnos de este curso"
                             [class.btn--warn-light]="c.tiene_registros" (click)="verAlumnos(c)">
                             <i class="ti ti-users"></i> Ver alumnos
                         </button>
-                        <button class="btn-icon" title="Editar" (click)="abrirForm(c)">
+                        <button class="btn-icon" title="Editar" [appPuede]="Permiso.CursoEditar"
+                            (click)="abrirForm(c)">
                             <i class="ti ti-pencil"></i>
                         </button>
-                        <button class="btn-icon btn-icon--danger" title="Eliminar" (click)="eliminar(c)">
+                        <button class="btn-icon btn-icon--danger" title="Eliminar" [appPuede]="Permiso.CursoEliminar"
+                            (click)="eliminar(c)">
                             <i class="ti ti-trash"></i>
                         </button>
                     </td>
@@ -91,7 +104,7 @@
 
 <!-- Modal -->
 @if (mostrarForm()) {
-<div class="modal-backdrop" (click)="cerrarForm()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
     <div class="modal" (click)="$event.stopPropagation()">
 
         <div class="modal__header">
@@ -110,7 +123,10 @@
         </div>
         }
 
-        <div class="modal__body">
+        <!-- Los campos van opacos y sin foco si la persona no puede guardar:
+             la fila de la tabla abre este modal igual, y un formulario editable
+             que después rebota con 403 es peor que uno claramente de lectura. -->
+        <div class="modal__body" [appPuede]="editando() ? Permiso.CursoEditar : Permiso.CursoCrear">
             <div class="form-row">
                 <div class="form-group">
                     <label>Nombre *</label>
@@ -134,7 +150,8 @@
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
-            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="editando() ? Permiso.CursoEditar : Permiso.CursoCrear" (click)="guardar()">
                 <i class="ti ti-device-floppy"></i>
                 {{ editando() ? 'Guardar cambios' : 'Agregar curso' }}
             </button>

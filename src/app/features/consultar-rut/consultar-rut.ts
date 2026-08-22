@@ -4,17 +4,23 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../core/services/api.services';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { ConfidencialService } from '../../core/services/confidencial.service';
 import { CursoNombrePipe } from '../../shared/pipes/curso-nombre.pipe';
 import { RegistroForm } from '../registros/registros-form/registro-form';
+import { Permiso } from '../../core/constants/permisos';
+import { Puede } from '../../shared/directives/permiso.directive';
 
 @Component({
   selector: 'app-consultar-rut',
   standalone: true,
-  imports: [CommonModule, FormsModule, CursoNombrePipe, RegistroForm],
+  imports: [CommonModule, FormsModule, CursoNombrePipe, RegistroForm, Puede],
   templateUrl: './consultar-rut.html',
   styleUrl: './consultar-rut.scss',
 })
 export class ConsultarRut implements OnInit {
+  /** El template no ve los imports del módulo: hay que exponerlo en la clase. */
+  protected readonly Permiso = Permiso;
+
   rut = '';
   loading = signal(false);
   error = signal('');
@@ -40,6 +46,7 @@ export class ConsultarRut implements OnInit {
   constructor(
     private api: ApiService,
     private confirmService: ConfirmService,
+    private confidencial: ConfidencialService,
     private route: ActivatedRoute,
   ) {}
 
@@ -97,7 +104,15 @@ export class ConsultarRut implements OnInit {
     this.registros.set([]);
   }
 
+  esConfidencialBloqueado(registro: any) {
+    return this.confidencial.estaBloqueado(registro);
+  }
+
   abrirRegistro(registro: any) {
+    // El backend responde 403 igual; acá se avisa con la nota en vez de abrir
+    // un formulario vacío.
+    if (this.confidencial.bloqueaApertura(registro)) return;
+
     this.registroSeleccionado = registro;
     this.mostrarRegistroForm.set(true);
   }

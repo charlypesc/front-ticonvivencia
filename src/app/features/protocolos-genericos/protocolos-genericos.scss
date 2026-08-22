@@ -10,7 +10,65 @@
 
 .acciones {
   display: flex;
+  align-items: center;
   gap: 8px;
+
+  // El badge trae margen propio para separarse del nombre; aquí el gap del flex
+  // ya se encarga de eso.
+  .badge { margin-left: 0; }
+}
+
+.barra-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+// Acción masiva: se distingue del "Agregar protocolo" sólido con un tratamiento
+// tonal (fondo claro de la marca) — presente pero sin competir con la acción
+// principal ni pesar como un segundo botón lleno.
+.btn-adoptar-todos {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba($primary-light, .25);
+  background: $primary-bg;
+  color: $primary;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .2s, border-color .2s, box-shadow .2s, transform .1s;
+
+  i { font-size: 15px; }
+
+  // El contador se lee de un vistazo sin agrandar el botón.
+  .contador {
+    background: rgba($primary-light, .16);
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba($primary-light, .16);
+    border-color: rgba($primary-light, .45);
+    box-shadow: 0 2px 8px rgba($primary, .12);
+  }
+
+  &:active:not(:disabled) { transform: translateY(1px); }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba($primary-light, .3);
+  }
+
+  &:disabled { opacity: .6; cursor: progress; }
 }
 
 .btn-icon {

@@ -53,16 +53,28 @@
     } @else {
     <div class="ultimos-list">
         @for (r of resumen().ultimos; track r.id_registro) {
-        <a class="ultimo-item">
+        <a class="ultimo-item" (click)="abrirRegistro(r)">
+            @if (esConfidencialBloqueado(r)) {
+            <div class="ultimo-item__info ultimo-item__info--confidencial">
+                <i class="ti ti-lock"></i>
+                <span>
+                    {{ r.alumno_nombre ?? 'Sin estudiante' }} —
+                    <strong>Confidencial</strong> — {{ r.tematica }}
+                </span>
+            </div>
+            <span class="badge badge--confidencial">reservado</span>
+            } @else {
             <div class="ultimo-item__info">
                 <i class="ti ti-user"></i>
                 <span>
+                    @if (r.es_confidencial) { <i class="ti ti-lock" title="Confidencial"></i> }
                     {{ r.alumno_nombre ?? 'Sin estudiante' }} — {{ r.tematica }}
                 </span>
             </div>
             <span class="badge badge--{{ r.estado_validacion }}">
                 {{ r.estado_validacion }}
             </span>
+            }
         </a>
         }
     </div>

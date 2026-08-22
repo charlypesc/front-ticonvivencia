@@ -1,1 +1,8 @@
 // Reutiliza .modal-backdrop / .modal (styles.scss)
+
+// Los mensajes largos (ej. el aviso de registro confidencial con su nota)
+// vienen con saltos de línea; sin pre-line se verían todos corridos.
+.confirm-mensaje {
+  white-space: pre-line;
+  line-height: 1.5;
+}

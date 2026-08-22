@@ -1,27 +1,45 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, effect, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.services';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { AuthService } from '../../core/services/auth.service';
+import { ImportacionService } from '../../core/services/importacion.service';
 import { CursoNombrePipe } from '../../shared/pipes/curso-nombre.pipe';
+import { Permiso } from '../../core/constants/permisos';
+import { Puede } from '../../shared/directives/permiso.directive';
 
 @Component({
   selector: 'app-cursos',
   standalone: true,
-  imports: [CommonModule, FormsModule, CursoNombrePipe],
+  imports: [CommonModule, FormsModule, CursoNombrePipe, Puede],
   templateUrl: './cursos.html',
   styleUrl: './cursos.scss',
 })
 export class Cursos implements OnInit {
+  /** El template no ve los imports del módulo: hay que exponerlo en la clase. */
+  protected readonly Permiso = Permiso;
+
   cursos = signal<any[]>([]);
   loading = signal(true);
   mostrarForm = signal(false);
   editando = signal<any | null>(null);
   error = signal('');
   success = signal('');
-  importando = signal(false);
-  progreso = signal<{ procesadas: number; total: number } | null>(null);
+  /** Ventana entre el clic y la respuesta del POST: todavía no hay job que seguir. */
+  private subiendo = signal(false);
+
+  // El progreso vive en el servicio global, así que la barra de esta pantalla y
+  // el widget flotante muestran siempre lo mismo, sin duplicar el polling.
+  private jobCursos = computed(
+    () => this.importacion.activas().find((a) => a.tipo === 'cursos' && a.estado === 'procesando') ?? null,
+  );
+  importando = computed(() => this.subiendo() || this.jobCursos() !== null);
+  progreso = computed(() => {
+    const j = this.jobCursos();
+    return j ? { procesadas: j.procesadas, total: j.total } : null;
+  });
   progresoPct = computed(() => {
     const p = this.progreso();
     return p && p.total > 0 ? Math.round((p.procesadas / p.total) * 100) : 0;
@@ -36,8 +54,30 @@ export class Cursos implements OnInit {
   constructor(
     private api: ApiService,
     private confirmService: ConfirmService,
+    private importacion: ImportacionService,
+    public auth: AuthService,
     private router: Router,
-  ) {}
+  ) {
+    // La lista se refresca cuando termina una importación de cursos, sin importar
+    // en qué pantalla estaba el usuario mientras corría.
+    effect(() => {
+      for (const imp of this.importacion.activas()) {
+        if (imp.tipo !== 'cursos' || imp.estado === 'procesando') continue;
+        if (this.jobsResueltos.has(imp.jobId)) continue;
+        this.jobsResueltos.add(imp.jobId);
+
+        if (imp.estado === 'completado') {
+          this.success.set(`Importación completada: ${imp.mensaje}`);
+          this.cargar();
+        } else {
+          this.error.set(imp.mensaje ?? 'Error al importar el archivo');
+        }
+      }
+    });
+  }
+
+  /** Evita reaccionar dos veces al mismo job cuando el effect se vuelve a correr. */
+  private jobsResueltos = new Set<string>();
 
   ngOnInit() {
     this.cargar();
@@ -111,7 +151,7 @@ export class Cursos implements OnInit {
 
     this.error.set('');
     this.success.set('');
-    this.importando.set(true);
+    this.subiendo.set(true);
     input.value = '';
 
     const formData = new FormData();
@@ -119,46 +159,62 @@ export class Cursos implements OnInit {
 
     this.api.importarCursosExcel(formData).subscribe({
       next: (res) => {
-        this.progreso.set({ procesadas: 0, total: res.total });
-        this.pollearProgreso(res.job_id);
+        this.subiendo.set(false);
+        // El seguimiento pasa al servicio global: la importación corre en el
+        // servidor y no se interrumpe si el usuario navega a otra pantalla, así
+        // que el progreso lo muestra el widget flotante del layout.
+        this.importacion.seguir(res.job_id, 'cursos', `Importando "${archivo.name}"`, res.total);
       },
       error: (err) => {
-        this.importando.set(false);
-        this.progreso.set(null);
+        this.subiendo.set(false);
         this.error.set(err.error?.message ?? 'Error al importar el archivo');
       },
     });
   }
 
-  private pollearProgreso(jobId: string) {
-    const intervalId = setInterval(() => {
-      this.api.getProgresoImportacion(jobId).subscribe({
-        next: (job) => {
-          this.progreso.set({ procesadas: job.procesadas, total: job.total });
+  /**
+   * Borrado masivo para deshacer una importación. Solo lo ve quien tenga
+   * curso.eliminar_masivo (hoy, únicamente el ADMIN).
+   *
+   * Se piden los números al backend antes de confirmar: un modal que diga
+   * "¿eliminar todos los cursos?" no le da al usuario forma de dimensionar lo
+   * que está por borrar.
+   */
+  async eliminarTodos() {
+    this.error.set('');
+    this.success.set('');
 
-          if (job.estado === 'completado') {
-            clearInterval(intervalId);
-            this.importando.set(false);
-            this.progreso.set(null);
-            this.success.set(
-              `Importación completada: ${job.cursos_creados} curso(s) creado(s), ${job.estudiantes_creados} estudiante(s) creado(s), ${job.estudiantes_omitidos} omitido(s) por RUN ya existente.`,
-            );
+    this.api.getResumenEliminacionCursos().subscribe({
+      next: async (r) => {
+        if (r.cursos === 0 && r.estudiantes === 0) {
+          this.error.set('No hay cursos ni estudiantes para eliminar');
+          return;
+        }
+
+        if (r.estudiantes_con_registros > 0) {
+          this.error.set(
+            `No se puede eliminar: ${r.estudiantes_con_registros} estudiante(s) están asociados a ` +
+              `registros de convivencia. Eliminá primero esos registros.`,
+          );
+          return;
+        }
+
+        const confirmado = await this.confirmService.confirmarAccion(
+          `Se eliminarán ${r.cursos} curso(s) y ${r.estudiantes} estudiante(s) del establecimiento. ` +
+            `Esta acción no se puede deshacer. ¿Continuar?`,
+        );
+        if (!confirmado) return;
+
+        this.api.eliminarTodosLosCursos().subscribe({
+          next: (res) => {
+            this.success.set(res.message);
             this.cargar();
-          } else if (job.estado === 'error') {
-            clearInterval(intervalId);
-            this.importando.set(false);
-            this.progreso.set(null);
-            this.error.set(job.message ?? 'Error al importar el archivo');
-          }
-        },
-        error: () => {
-          clearInterval(intervalId);
-          this.importando.set(false);
-          this.progreso.set(null);
-          this.error.set('Se perdió la conexión durante la importación');
-        },
-      });
-    }, 800);
+          },
+          error: (err) => this.error.set(err.error?.message ?? 'Error al eliminar'),
+        });
+      },
+      error: (err) => this.error.set(err.error?.message ?? 'Error al obtener el resumen'),
+    });
   }
 
   verAlumnos(curso: any) {

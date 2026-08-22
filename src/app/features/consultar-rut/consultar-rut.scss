@@ -4,6 +4,16 @@
   h2 { font-size: 1.25rem; font-weight: 700; }
 }
 
+// El caso confidencial se muestra apagado: existe en el historial, pero su
+// contenido no es de quien lo está mirando.
+.celda-confidencial {
+  color: $gray-600;
+  font-style: italic;
+
+  i { margin-right: 6px; }
+  strong { font-style: normal; }
+}
+
 .buscador {
   display: flex;
   align-items: center;

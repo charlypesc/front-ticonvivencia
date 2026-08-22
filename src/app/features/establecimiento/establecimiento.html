@@ -21,30 +21,73 @@
         <p>Cargando...</p>
     </div>
     } @else {
+    <!-- Sin mi_establecimiento.editar los campos van opacos uno por uno, y no el
+         bloque entero: la ubicación, la dependencia y la matrícula vienen del
+         directorio oficial y no las edita nadie, así que opacarlas no diría nada. -->
     <div class="form-row">
         <div class="form-group">
             <label>Nombre *</label>
-            <input type="text" placeholder="Ej: Liceo Bicentenario" [(ngModel)]="form.nombre" name="nombre" />
+            <input type="text" placeholder="Ej: Liceo Bicentenario" [(ngModel)]="form.nombre" name="nombre"
+                [appPuede]="Permiso.MiEstablecimientoEditar" />
         </div>
         <div class="form-group">
             <label>RBD *</label>
-            <input type="text" placeholder="Ej: 12345-6" [(ngModel)]="form.rbd" name="rbd" />
+            <input type="text" placeholder="Ej: 12345-6" [(ngModel)]="form.rbd" name="rbd"
+                [appPuede]="Permiso.MiEstablecimientoEditar" />
         </div>
     </div>
 
     <div class="form-row">
         <div class="form-group">
-            <label>Región</label>
-            <input type="text" placeholder="Ej: Metropolitana" [(ngModel)]="form.region" name="region" />
+            <label>Dirección</label>
+            <input type="text" placeholder="Ej: Av. Balmaceda 123" [(ngModel)]="form.direccion" name="direccion"
+                [appPuede]="Permiso.MiEstablecimientoEditar" />
         </div>
         <div class="form-group">
-            <label>Comuna</label>
-            <input type="text" placeholder="Ej: Providencia" [(ngModel)]="form.comuna" name="comuna" />
+            <label>Teléfono</label>
+            <input type="text" placeholder="Ej: 2321971" [(ngModel)]="form.telefono" name="telefono"
+                [appPuede]="Permiso.MiEstablecimientoEditar" />
         </div>
     </div>
 
+    <div class="form-row">
+        <div class="form-group">
+            <label>Correo</label>
+            <input type="email" placeholder="contacto@colegio.cl" [(ngModel)]="form.correo" name="correo"
+                [appPuede]="Permiso.MiEstablecimientoEditar" />
+        </div>
+        <div class="form-group">
+            <!-- La ubicación ya no se escribe a mano: viene del directorio oficial
+                 (id_comuna) y se muestra resuelta contra la jerarquía Geo. -->
+            <label>Ubicación</label>
+            <p class="muted" style="margin:0; padding:.5rem 0">
+                @if (ubicacion().comuna) {
+                {{ ubicacion().comuna }}, {{ ubicacion().provincia }} — {{ ubicacion().region }}
+                } @else { Sin comuna asignada }
+            </p>
+        </div>
+    </div>
+
+    @if (datosDirectorio().tipo_dependencia || datosDirectorio().matriculas) {
+    <div class="form-row">
+        <div class="form-group">
+            <label>Dependencia</label>
+            <p class="muted" style="margin:0; padding:.5rem 0">
+                {{ datosDirectorio().tipo_dependencia ?? '—' }}
+            </p>
+        </div>
+        <div class="form-group">
+            <label>Matrícula oficial</label>
+            <p class="muted" style="margin:0; padding:.5rem 0">
+                {{ datosDirectorio().matriculas ?? 'Sin dato' }}
+            </p>
+        </div>
+    </div>
+    }
+
     <div style="display:flex; justify-content:flex-end">
-        <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+        <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.MiEstablecimientoEditar"
+            (click)="guardar()">
             <i class="ti ti-device-floppy"></i> Guardar cambios
         </button>
     </div>

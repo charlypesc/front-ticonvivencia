@@ -16,7 +16,8 @@
 
 <div class="card">
     <div style="display:flex">
-        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
+        <button class="btn btn--primary btn--sm" style="width: auto;" [appPuede]="Permiso.TipoFaltaCrear"
+            (click)="abrirForm()">
             <i class="ti ti-plus"></i> Agregar tipo
         </button>
     </div>
@@ -43,17 +44,19 @@
             </thead>
             <tbody>
                 @for (t of tiposFalta(); track t.id_tipo_falta) {
-                <tr>
+                <tr class="fila-clickeable" (click)="abrirForm(t)">
                     <td>{{ t.nombre }}</td>
                     <td>
                         <span class="badge badge--{{ t.gravedad }}">{{ t.gravedad }}</span>
                     </td>
                     <td class="text-muted">{{ t.medida_sugerida ?? '—' }}</td>
-                    <td class="acciones">
-                        <button class="btn-icon" title="Editar" (click)="abrirForm(t)">
+                    <td class="acciones" (click)="$event.stopPropagation()">
+                        <button class="btn-icon" title="Editar" [appPuede]="Permiso.TipoFaltaEditar"
+                            (click)="abrirForm(t)">
                             <i class="ti ti-pencil"></i>
                         </button>
-                        <button class="btn-icon btn-icon--danger" title="Eliminar" (click)="eliminar(t)">
+                        <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            [appPuede]="Permiso.TipoFaltaEliminar" (click)="eliminar(t)">
                             <i class="ti ti-trash"></i>
                         </button>
                     </td>
@@ -67,7 +70,7 @@
 
 <!-- Modal -->
 @if (mostrarForm()) {
-<div class="modal-backdrop" (click)="cerrarForm()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
     <div class="modal" (click)="$event.stopPropagation()">
 
         <div class="modal__header">
@@ -86,7 +89,10 @@
         </div>
         }
 
-        <div class="modal__body">
+        <!-- Los campos van opacos y sin foco si la persona no puede guardar:
+             la fila de la tabla abre este modal igual, y un formulario editable
+             que después rebota con 403 es peor que uno claramente de lectura. -->
+        <div class="modal__body" [appPuede]="editando() ? Permiso.TipoFaltaEditar : Permiso.TipoFaltaCrear">
             <div class="form-row">
                 <div class="form-group">
                     <label>Nombre *</label>
@@ -118,7 +124,8 @@
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
-            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="editando() ? Permiso.TipoFaltaEditar : Permiso.TipoFaltaCrear" (click)="guardar()">
                 <i class="ti ti-device-floppy"></i>
                 {{ editando() ? 'Guardar cambios' : 'Agregar tipo' }}
             </button>

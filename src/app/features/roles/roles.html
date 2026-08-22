@@ -1,0 +1,165 @@
+<div class="page">
+    <div class="page__header">
+        <div>
+            <h1>Roles y permisos</h1>
+            <p class="muted">
+                Los permisos definen qué puede hacer cada rol. Un rol nuevo funciona sin desplegar
+                código: alcanza con marcarle los permisos acá.
+                <strong>Ojo:</strong> cambiar los permisos de un rol <em>global</em> afecta a todos
+                los establecimientos. Si un colegio necesita algo distinto, creale un rol propio.
+            </p>
+        </div>
+        <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.RolCrear" (click)="abrirForm()">
+            <i class="ti ti-plus"></i> Nuevo rol
+        </button>
+    </div>
+
+    @if (error()) { <div class="alert alert--error">{{ error() }}</div> }
+    @if (success()) { <div class="alert alert--success">{{ success() }}</div> }
+
+    @if (loading()) {
+    <p class="muted">Cargando…</p>
+    } @else {
+    <div class="roles-layout">
+        <aside class="roles-lista">
+            @for (r of roles(); track r.rol_id) {
+            <!--
+              Los roles que este usuario no puede editar (los globales, salvo
+              para el ADMIN) van opacos: siguen siendo consultables y
+              asignables, pero se ve de entrada que no son suyos para tocar.
+            -->
+            <button class="rol-item" [class.rol-item--activo]="seleccionado()?.rol_id === r.rol_id"
+                [class.rol-item--bloqueado]="!r.editable" (click)="seleccionar(r)">
+                <strong>{{ r.nombre }}</strong>
+                <small>{{ r.codigo }} · {{ r.cantidad_permisos }} permisos</small>
+                <span class="rol-item__tags">
+                    @if (!r.editable) {
+                    <span class="badge badge--leve" title="No puedes modificar este rol">
+                        <i class="ti ti-lock"></i> solo lectura
+                    </span>
+                    }
+                    @if (r.es_sistema) { <span class="badge badge--leve">sistema</span> }
+                    <!-- Global = sus permisos aplican a TODOS los colegios -->
+                    @if (r.id_establecimiento === null) {
+                    <span class="badge badge--pendiente">global</span>
+                    } @else {
+                    <span class="badge badge--validado">{{ r.nombre_establecimiento }}</span>
+                    }
+                </span>
+            </button>
+            }
+        </aside>
+
+        <section class="roles-detalle">
+            @if (!seleccionado()) {
+            <p class="muted">Seleccioná un rol para ver y editar sus permisos.</p>
+            } @else {
+            <div class="page__header">
+                <h2>
+                    {{ seleccionado()!.nombre }}
+                    @if (seleccionado()!.id_establecimiento === null) {
+                    <span class="badge badge--pendiente">global</span>
+                    } @else {
+                    <span class="badge badge--validado">{{ seleccionado()!.nombre_establecimiento }}</span>
+                    }
+                </h2>
+                <!-- Apagado, no escondido: al pararse en un rol global se ve que
+                     existe un botón de guardar y por qué no está disponible. -->
+                <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.RolAsignarPermiso"
+                    [appPuedeSi]="editable" [appPuedeMotivo]="motivoBloqueo()" (click)="guardarPermisos()">
+                    <i class="ti ti-device-floppy"></i> Guardar permisos
+                </button>
+            </div>
+
+            @if (!editable) {
+            <div class="alert alert--info">
+                @if (seleccionado()!.codigo === 'ADMIN') {
+                El ADMIN tiene acceso total por diseño: sus permisos no se editan.
+                } @else {
+                <i class="ti ti-lock"></i>
+                Este rol es global: lo comparten todos los establecimientos, así que solo un
+                administrador puede cambiarle los permisos. Podés asignárselo a tu gente, o crear
+                un rol propio de tu establecimiento con los permisos que necesites.
+                }
+            </div>
+            } @else if (seleccionado()!.id_establecimiento === null) {
+            <div class="alert alert--info">
+                Este rol es global: lo que cambies acá aplica a todos los establecimientos.
+            </div>
+            }
+
+            @for (g of porRecurso(); track g.recurso) {
+            <div class="permiso-grupo">
+                <label class="permiso-grupo__titulo">
+                    <input type="checkbox" [appPuede]="Permiso.RolAsignarPermiso" [appPuedeSi]="editable"
+                        [appPuedeMotivo]="motivoBloqueo()" (change)="alternarRecurso(g.permisos)" />
+                    {{ g.recurso }}
+                </label>
+                <div class="permiso-grupo__items">
+                    @for (p of g.permisos; track p.permiso_id) {
+                    <label class="check-inline" [title]="p.descripcion ?? p.codigo">
+                        <input type="checkbox" [checked]="tiene(p.permiso_id)"
+                            [appPuede]="Permiso.RolAsignarPermiso" [appPuedeSi]="editable"
+                            [appPuedeMotivo]="motivoBloqueo()" (change)="alternar(p.permiso_id)" />
+                        {{ p.accion }}
+                    </label>
+                    }
+                </div>
+            </div>
+            }
+            }
+        </section>
+    </div>
+    }
+</div>
+
+@if (mostrarForm()) {
+<div class="modal-backdrop">
+    <div class="modal modal-box-sm">
+        <div class="modal__header">
+            <h3>Nuevo rol</h3>
+        </div>
+        <div class="modal__body">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" placeholder="Ej: Inspector general" [(ngModel)]="form.nombre" name="nombre" />
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <input type="text" [(ngModel)]="form.descripcion" name="descripcion" />
+            </div>
+            <!--
+              El alcance solo se elige siendo ADMIN: un rol global lo heredan
+              todos los colegios. Al resto se le muestra fijado, no un selector
+              con una opción que el backend le va a ignorar.
+            -->
+            <div class="form-group">
+                <label>Alcance *</label>
+                @if (auth.esAdmin()) {
+                <select [(ngModel)]="form.ambito" name="ambito">
+                    <option value="global">Global — sirve para todos los establecimientos</option>
+                    <option value="establecimiento">Solo este establecimiento</option>
+                </select>
+                <small class="muted">
+                    Un rol de establecimiento permite darle permisos distintos a un colegio sin
+                    afectar a los demás.
+                </small>
+                } @else {
+                <input type="text" [value]="auth.usuario()?.nombre_establecimiento ?? 'Tu establecimiento'"
+                    disabled />
+                <small class="muted">
+                    El rol queda solo para tu establecimiento: los roles globales, que comparten
+                    todos los colegios, los crea un administrador.
+                </small>
+                }
+            </div>
+            <p class="muted">El rol se crea sin permisos: se le asignan después desde esta pantalla.</p>
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="mostrarForm.set(false)">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.RolCrear"
+                (click)="crearRol()">Crear rol</button>
+        </div>
+    </div>
+</div>
+}

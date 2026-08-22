@@ -22,7 +22,7 @@
             <button class="btn btn--outline btn--sm">
                 <i class="ti ti-filter"></i> Tipo de falta
             </button>
-            <button class="btn btn--primary btn--sm" (click)="abrirForm(null)">
+            <button class="btn btn--primary btn--sm" [appPuede]="Permiso.RegistroCrear" (click)="abrirForm(null)">
                 <i class="ti ti-plus"></i> Nuevo
             </button>
         </div>
@@ -52,20 +52,34 @@
             </thead>
             <tbody>
                 @for (r of filtrados(); track r.id_registro) {
-                <tr>
+                <tr class="fila-clickeable" (click)="abrirForm(r)">
                     <td>{{ r.fecha_incidente | date:'dd/MM/yyyy' }}</td>
-                    <td>{{ r.tematica }}</td>
-                    <td>{{ r.tipo_falta_nombre }}</td>
+                    @if (esConfidencialBloqueado(r)) {
+                    <td colspan="2" title="{{ r.nota_confidencial }}">
+                        <i class="ti ti-lock"></i>
+                        {{ r.alumno_nombre ?? 'Sin estudiante' }} —
+                        Confidencial — {{ r.nota_confidencial }}
+                    </td>
+                    } @else {
                     <td>
+                        @if (r.es_confidencial) { <i class="ti ti-lock" title="Confidencial: {{ r.nota_confidencial }}"></i> }
+                        {{ r.tematica }}
+                    </td>
+                    <td>{{ r.tipo_falta_nombre }}</td>
+                    }
+                    <td>
+                        @if (!esConfidencialBloqueado(r)) {
                         <span class="badge badge--{{ r.estado_validacion }}">
                             {{ r.estado_validacion }}
                         </span>
+                        }
                     </td>
-                    <td class="acciones">
+                    <td class="acciones" (click)="$event.stopPropagation()">
                         <a class="btn-ver" (click)="abrirForm(r)">
                             <i class="ti ti-eye"></i> Ver
                         </a>
-                        <button class="btn-icon" title="Eliminar" (click)="eliminar(r)">
+                        <button class="btn-icon" title="Eliminar" [appPuede]="Permiso.RegistroEliminar"
+                            (click)="eliminar(r)">
                             <i class="ti ti-trash"></i>
                         </button>
                     </td>

@@ -45,7 +45,8 @@
     <div class="perfil__info">
         <h3>
             {{ estudiante().nombre }} {{ estudiante().apellido }}
-            <button class="btn-icon" title="Editar estudiante" (click)="abrirForm()">
+            <button class="btn-icon" title="Editar estudiante" [appPuede]="Permiso.EstudianteEditar"
+                (click)="abrirForm()">
                 <i class="ti ti-pencil"></i>
             </button>
         </h3>
@@ -61,7 +62,8 @@
             </span>
         </div>
     </div>
-    <button class="perfil__agregar" title="Agregar registro" (click)="abrirNuevoRegistro()">
+    <button class="perfil__agregar" title="Agregar registro" [appPuede]="Permiso.RegistroCrear"
+        (click)="abrirNuevoRegistro()">
         <i class="ti ti-file-plus"></i>
     </button>
     <div class="perfil__stat">
@@ -99,6 +101,13 @@
                 @for (r of registros(); track r.id_registro) {
                 <tr class="fila-clickeable" (click)="abrirRegistro(r)">
                     <td>{{ r.fecha_incidente | date:'dd/MM/yyyy' }}</td>
+                    @if (esConfidencialBloqueado(r)) {
+                    <td colspan="4" class="celda-confidencial">
+                        <i class="ti ti-lock"></i>
+                        <strong>Confidencial</strong> — {{ r.nota_confidencial ?? 'Sin nota' }}
+                    </td>
+                    <td><span class="badge badge--confidencial">reservado</span></td>
+                    } @else {
                     <td>{{ r.tematica }}</td>
                     <td>{{ r.tipo_falta_nombre }}</td>
                     <td>{{ r.rol_en_incidente | titlecase }}</td>
@@ -108,6 +117,7 @@
                     <td>
                         <span class="badge badge--{{ r.estado_validacion }}">{{ r.estado_validacion }}</span>
                     </td>
+                    }
                     <!-- <td>
                         <a [routerLink]="['/registros', r.id_registro]" class="btn-ver">
                             <i class="ti ti-eye"></i> Ver
@@ -130,7 +140,7 @@
 
 <!-- Modal edición estudiante -->
 @if (mostrarForm()) {
-<div class="modal-backdrop" (click)="cerrarForm()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
     <div class="modal" (click)="$event.stopPropagation()">
 
         <div class="modal__header">
@@ -149,7 +159,10 @@
         </div>
         }
 
-        <div class="modal__body">
+        <!-- Opaco y sin foco si no puede guardar: el lápiz abre este modal igual
+             desde el perfil, y un formulario que rebota con 403 al final es peor
+             que uno que se ve de lectura desde el principio. -->
+        <div class="modal__body" [appPuede]="Permiso.EstudianteEditar">
             <div class="form-row">
                 <div class="form-group">
                     <label>RUN *</label>
@@ -195,8 +208,19 @@
         </div>
 
         <div class="modal__footer">
+            <!-- Mismo botón que en la ficha de Estudiantes: si tiene registros,
+                 desde la edición se llega a ellos. Acá el historial ya está en la
+                 pantalla de atrás, así que alcanza con cerrar el modal. -->
+            @if (registros().length > 0) {
+            <button class="btn btn--outline btn--warn-light" style="width:auto; margin-right:auto"
+                [appPuede]="Permiso.RegistroVer" (click)="cerrarForm()">
+                <i class="ti ti-file-search"></i>
+                Ver {{ registros().length }} {{ registros().length === 1 ? 'registro' : 'registros' }}
+            </button>
+            }
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
-            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+            <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.EstudianteEditar"
+                (click)="guardar()">
                 <i class="ti ti-device-floppy"></i>
                 Guardar cambios
             </button>

@@ -7,15 +7,20 @@ import { filter } from 'rxjs';
 import { ApiService } from '../../core/services/api.services';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { CursoNombrePipe } from '../../shared/pipes/curso-nombre.pipe';
+import { Permiso } from '../../core/constants/permisos';
+import { Puede } from '../../shared/directives/permiso.directive';
 
 @Component({
   selector: 'app-estudiantes',
   standalone: true,
-  imports: [CommonModule, FormsModule, CursoNombrePipe],
+  imports: [CommonModule, FormsModule, CursoNombrePipe, Puede],
   templateUrl: './estudiantes.html',
   styleUrl: './estudiantes.scss',
 })
 export class Estudiantes implements OnInit, AfterViewInit {
+  /** El template no ve los imports del módulo: hay que exponerlo en la clase. */
+  protected readonly Permiso = Permiso;
+
   @ViewChild('buscarInput') buscarInput!: ElementRef<HTMLInputElement>;
 
   estudiantes = signal<any[]>([]);

@@ -16,7 +16,8 @@
 
 <div class="card">
     <div style="display:flex">
-        <button class="btn btn--primary btn--sm" style="width: auto;" (click)="abrirForm()">
+        <button class="btn btn--primary btn--sm" style="width: auto;"
+            [appPuede]="Permiso.ProtocoloActivadoCrear" (click)="abrirForm()">
             <i class="ti ti-plus"></i> Activar protocolo
         </button>
     </div>
@@ -43,15 +44,17 @@
             </thead>
             <tbody>
                 @for (a of activados(); track a.id_protocolo_activado) {
-                <tr>
+                <tr class="fila-clickeable" (click)="abrirForm(a)">
                     <td>{{ a.nombre }}</td>
                     <td class="text-muted">#{{ a.id_registro }}</td>
                     <td>{{ a.fecha_activacion | date:'dd/MM/yyyy HH:mm' }}</td>
-                    <td class="acciones">
-                        <button class="btn-icon" title="Editar" (click)="abrirForm(a)">
+                    <td class="acciones" (click)="$event.stopPropagation()">
+                        <button class="btn-icon" title="Editar" [appPuede]="Permiso.ProtocoloActivadoEditar"
+                            (click)="abrirForm(a)">
                             <i class="ti ti-pencil"></i>
                         </button>
-                        <button class="btn-icon btn-icon--danger" title="Eliminar" (click)="eliminar(a)">
+                        <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            [appPuede]="Permiso.ProtocoloActivadoEliminar" (click)="eliminar(a)">
                             <i class="ti ti-trash"></i>
                         </button>
                     </td>
@@ -65,7 +68,7 @@
 
 <!-- Modal -->
 @if (mostrarForm()) {
-<div class="modal-backdrop" (click)="cerrarForm()">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
     <div class="modal" (click)="$event.stopPropagation()">
 
         <div class="modal__header">
@@ -84,7 +87,9 @@
         </div>
         }
 
-        <div class="modal__body">
+        <!-- Campos opacos si no puede guardar: la fila abre el modal igual. -->
+        <div class="modal__body"
+            [appPuede]="editando() ? Permiso.ProtocoloActivadoEditar : Permiso.ProtocoloActivadoCrear">
             <div class="form-group">
                 <label>Protocolo del establecimiento *</label>
                 <select [(ngModel)]="form.id_protocolo_establecimiento" name="id_protocolo_establecimiento">
@@ -110,7 +115,9 @@
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
-            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="editando() ? Permiso.ProtocoloActivadoEditar : Permiso.ProtocoloActivadoCrear"
+                (click)="guardar()">
                 <i class="ti ti-device-floppy"></i>
                 {{ editando() ? 'Guardar cambios' : 'Activar protocolo' }}
             </button>
