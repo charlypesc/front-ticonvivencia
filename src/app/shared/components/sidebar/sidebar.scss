@@ -6,6 +6,10 @@
   left: 0;
   width: $sidebar-w;
   height: calc(100vh - #{$navbar-h});
+  // Sobre el contenido (que puede traer elementos posicionados, como el
+  // diagrama de un protocolo) y bajo la navbar (100) y los modales (200). Sin
+  // esto el sidebar quedaba por debajo por simple orden en el DOM.
+  z-index: 90;
   background: #ffffff;
   border-right: 1px solid $gray-200;
   padding: 16px 12px;

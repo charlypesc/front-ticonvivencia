@@ -1,0 +1,43 @@
+<div class="campana">
+    <button class="navbar__icon-btn" (click)="alternar()" title="Notificaciones">
+        <i class="ti ti-bell"></i>
+        @if (sinLeer() > 0) { <span class="campana__badge">{{ badge() }}</span> }
+    </button>
+
+    @if (abierto()) {
+    <!-- Capa a pantalla completa para cerrar al hacer click fuera, sin tener
+         que escuchar el click de todo el documento. -->
+    <div class="campana__fuera" (click)="cerrar()"></div>
+
+    <div class="campana__panel">
+        <div class="campana__head">
+            <strong>Notificaciones</strong>
+            @if (sinLeer() > 0) {
+            <button class="campana__link" (click)="marcarTodas()">Marcar todas como leídas</button>
+            }
+        </div>
+
+        @if (cargando()) {
+        <div class="campana__vacio"><i class="ti ti-loader-2 spin"></i> Cargando...</div>
+        } @else if (items().length === 0) {
+        <div class="campana__vacio">
+            <i class="ti ti-bell-off"></i>
+            <p>Sin notificaciones</p>
+        </div>
+        } @else {
+        <ul class="campana__lista">
+            @for (n of items(); track n.id_notificacion) {
+            <li class="campana__item" [class.campana__item--nueva]="!n.leida" (click)="abrirNotificacion(n)">
+                <i class="ti campana__icono" [ngClass]="icono(n.tipo)"></i>
+                <div class="campana__texto">
+                    <strong>{{ n.titulo }}</strong>
+                    @if (n.mensaje) { <span class="text-sm text-muted">{{ n.mensaje }}</span> }
+                    <span class="text-sm text-muted">{{ n.fecha | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+            </li>
+            }
+        </ul>
+        }
+    </div>
+    }
+</div>

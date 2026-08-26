@@ -12,15 +12,23 @@
   gap: 12px;
   margin-bottom: 20px;
 
+  // Solo ancla el dropdown de sugerencias. El campo en sí es el label de abajo.
   &__search {
+    position: relative;
+    width: 320px;
+  }
+
+  // Todo el recuadro es zona de click: es un <label>, así que el padding y la
+  // lupa enfocan el input igual que la franja de texto. Antes solo respondía la
+  // altura de la línea de texto y había que apuntarle.
+  &__search-field {
     display: flex;
     align-items: center;
     gap: 8px;
-    width: 320px;
-    position: relative;
+    cursor: text;
     border: 1.5px solid $primary-light;
     border-radius: 8px;
-    padding: 8px 12px;
+    padding: 0 14px;
     background: $primary-bg;
     transition: border-color .15s, box-shadow .15s;
 
@@ -30,12 +38,19 @@
     }
 
     i { color: $primary; font-size: 16px; }
+
+    // El padding vertical va acá y no en el label a propósito: así el área
+    // real del input cubre todo el alto del recuadro. Con el padding en el
+    // label, el input medía solo la línea de texto (~19px) y había que
+    // acertarle a esa franja para poder escribir.
     input {
       border: none;
       outline: none;
       background: transparent;
       font-size: 14px;
       width: 100%;
+      padding: 10px 0;
+      cursor: text;
       &::placeholder { color: $gray-400; }
     }
   }
@@ -61,8 +76,14 @@
     padding: 8px 12px;
     cursor: pointer;
 
-    &:hover { background: $primary-bg; }
     & + & { border-top: 1px solid $gray-100; }
+
+    // El resaltado del teclado y el del mouse son el mismo: mouseenter mueve
+    // indiceActivo, así que alcanza con un solo estilo para los dos.
+    &--activo {
+      background: $primary-bg;
+      box-shadow: inset 3px 0 0 $primary;
+    }
   }
 
   &__nombre { font-size: 14px; font-weight: 600; color: $gray-900; }
@@ -87,6 +108,138 @@
   display: flex;
   gap: 8px;
 }
+
+// --- Ficha del estudiante (antes features/consultar-rut) ---
+
+.volver {
+  margin-top: 4px;
+}
+
+.perfil {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 16px;
+  padding: 20px 24px;
+
+  &__avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #eef2fb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    i { font-size: 24px; color: $primary; }
+  }
+
+  &__info {
+    flex: 1;
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  }
+
+  &__meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: $gray-400;
+
+    span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+
+  &__stat {
+    text-align: center;
+    padding: 12px 20px;
+    background: #eef2fb;
+    border-radius: 10px;
+
+    .stat-num {
+      display: block;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: $primary;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: $gray-400;
+    }
+  }
+
+  &__agregar {
+    width: 68px;
+    height: 68px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 10px;
+    background: $primary;
+    color: $white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s;
+
+    i { font-size: 24px; }
+
+    &:hover { background: $primary-light; }
+  }
+}
+
+.card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fila-clickeable {
+  cursor: pointer;
+  &:hover { background: #f9fafb; }
+}
+
+// El folio se lee de a números, no como texto: tabular-nums lo mantiene
+// alineado en columna aunque cambie la cantidad de dígitos.
+.celda-folio {
+  font-variant-numeric: tabular-nums;
+  color: $gray-600;
+  white-space: nowrap;
+}
+
+// El caso confidencial se muestra apagado: existe en el historial, pero su
+// contenido no es de quien lo está mirando.
+.celda-confidencial {
+  color: $gray-600;
+  font-style: italic;
+
+  i { margin-right: 6px; }
+  strong { font-style: normal; }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 0;
+  color: $gray-400;
+  i { font-size: 2rem; display: block; margin-bottom: 8px; }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spin .8s linear infinite; }
 
 .btn-icon {
   background: none;

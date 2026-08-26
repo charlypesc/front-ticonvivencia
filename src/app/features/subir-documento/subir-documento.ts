@@ -29,7 +29,7 @@ export class SubirDocumento {
   // Formulario editable con datos de la IA
   form = {
     fecha_incidente: '',
-    tematica: '',
+    asunto: '',
     antecedentes: '',
     acuerdos: '',
     id_tipo_falta: null as number | null,
@@ -111,7 +111,7 @@ export class SubirDocumento {
   poblarFormulario(res: any) {
     const d = res.datos_estructurados;
     this.form.fecha_incidente = d.fecha_incidente ?? '';
-    this.form.tematica = d.tematica ?? '';
+    this.form.asunto = d.asunto ?? '';
     this.form.antecedentes = d.antecedentes ?? '';
     this.form.acuerdos = d.acuerdos ?? '';
     this.form.id_tipo_falta = d.id_tipo_falta ?? null;
@@ -122,7 +122,7 @@ export class SubirDocumento {
     const c = res.nivel_confianza ?? 0;
     this.confianza.set({
       fecha_incidente: Math.min(c + 0.09, 1),
-      tematica: Math.min(c + 0.03, 1),
+      asunto: Math.min(c + 0.03, 1),
       antecedentes: Math.max(c - 0.09, 0),
       acuerdos: Math.max(c - 0.14, 0),
     });

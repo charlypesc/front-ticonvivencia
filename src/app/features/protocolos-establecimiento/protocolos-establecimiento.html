@@ -54,6 +54,11 @@
                     <td>{{ p.nombre }}</td>
                     <td class="text-muted">{{ p.descripcion ?? '—' }}</td>
                     <td class="acciones" (click)="$event.stopPropagation()">
+                        <button class="btn-icon" title="Ver el flujo de pasos"
+                            [appPuede]="Permiso.ProtocoloFlujoEstablecimientoVer"
+                            [routerLink]="['/protocolos-establecimiento', p.id_protocolo_establecimiento, 'flujo']">
+                            <i class="ti ti-git-branch"></i>
+                        </button>
                         @if (p.propio) {
                         <span class="badge badge--propio" title="Creado por este establecimiento">propio</span>
                         } @else if (p.personalizado) {

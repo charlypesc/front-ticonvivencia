@@ -1,4 +1,4 @@
-# TiConvivencia — Convenciones del proyecto
+# MiConvivencia — Convenciones del proyecto
 
 ## Patrón CRUD de mantenedores (feature simple)
 

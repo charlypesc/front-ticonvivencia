@@ -93,7 +93,7 @@
                 <label class="permiso-grupo__titulo">
                     <input type="checkbox" [appPuede]="Permiso.RolAsignarPermiso" [appPuedeSi]="editable"
                         [appPuedeMotivo]="motivoBloqueo()" (change)="alternarRecurso(g.permisos)" />
-                    {{ g.recurso }}
+                    {{ g.recurso | etiqueta:'recurso' }}
                 </label>
                 <div class="permiso-grupo__items">
                     @for (p of g.permisos; track p.permiso_id) {
@@ -101,7 +101,7 @@
                         <input type="checkbox" [checked]="tiene(p.permiso_id)"
                             [appPuede]="Permiso.RolAsignarPermiso" [appPuedeSi]="editable"
                             [appPuedeMotivo]="motivoBloqueo()" (change)="alternar(p.permiso_id)" />
-                        {{ p.accion }}
+                        {{ p.accion | etiqueta:'accion' }}
                     </label>
                     }
                 </div>

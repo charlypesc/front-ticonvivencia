@@ -6,11 +6,12 @@ import { AuthService } from '../../core/services/auth.service';
 import { Permiso as PermisoModel, Rol } from '../../core/models/usuario.model';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
+import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
 
 @Component({
   selector: 'app-roles',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede],
+  imports: [CommonModule, FormsModule, Puede, EtiquetaPipe],
   templateUrl: './roles.html',
   styleUrl: './roles.scss',
 })

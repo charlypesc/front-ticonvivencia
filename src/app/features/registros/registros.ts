@@ -8,11 +8,12 @@ import { ConfidencialService } from '../../core/services/confidencial.service';
 import { RegistroForm } from './registros-form/registro-form';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
+import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
 
 @Component({
   selector: 'app-registros',
   standalone: true,
-  imports: [CommonModule, FormsModule, RegistroForm, Puede],
+  imports: [CommonModule, FormsModule, RegistroForm, Puede, EtiquetaPipe],
   templateUrl: './registros.html',
   styleUrl: './registros.scss',
 })
@@ -31,7 +32,7 @@ export class Registros implements OnInit {
     const q = this.busqueda().toLowerCase();
     return this.registros().filter(
       (r) =>
-        r.tematica?.toLowerCase().includes(q) || r.tipo_falta_nombre?.toLowerCase().includes(q),
+        r.asunto?.toLowerCase().includes(q) || r.tipo_falta_nombre?.toLowerCase().includes(q),
     );
   });
 
@@ -87,7 +88,7 @@ export class Registros implements OnInit {
 
   async eliminar(r: any) {
     const confirmado = await this.confirmService.confirmarAccion(
-      `¿Eliminar el registro "${r.tematica}", esto eliminará los estudiantes asociados y el documento digitalizado asociado, estas seguro?`,
+      `¿Eliminar el registro "${r.asunto}", esto eliminará los estudiantes asociados y el documento digitalizado asociado, estas seguro?`,
     );
     if (!confirmado) return;
     this.error.set('');

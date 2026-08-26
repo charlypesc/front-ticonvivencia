@@ -3,14 +3,17 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.services';
 import { AuthService } from '../../core/services/auth.service';
-import { Rol } from '../../core/models/usuario.model';
+import { ConfirmService } from '../../core/services/confirm.service';
+import { Credenciales, Rol } from '../../core/models/usuario.model';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
+import { CredencialesModal } from '../../shared/components/credenciales-modal/credenciales-modal';
+import type { VarianteCredenciales } from '../../shared/utils/credenciales-pdf';
 
 @Component({
   selector: 'app-usuarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede],
+  imports: [CommonModule, FormsModule, Puede, CredencialesModal],
   templateUrl: './usuarios.html',
   styleUrl: './usuarios.scss',
 })
@@ -27,14 +30,25 @@ export class Usuarios implements OnInit {
   error = signal('');
   success = signal('');
 
-  form: { correo: string; password: string; roles: string[] } = {
-    correo: '',
-    password: '',
-    roles: [],
-  };
+  /**
+   * Credenciales recién emitidas (alta o restablecimiento). Vive solo en
+   * memoria y solo mientras el modal está abierto: la contraseña en claro no
+   * se guarda en ningún lado, ni acá ni en el servidor.
+   */
+  credenciales = signal<Credenciales | null>(null);
+  tituloCredenciales = signal('Usuario creado');
+  /** Qué hoja emitir: alta de cuenta o restablecimiento. */
+  varianteCredenciales = signal<VarianteCredenciales>('creacion');
+  /** Roles del usuario de esas credenciales, ya legibles, para el documento. */
+  rolCredenciales = signal('');
+
+  guardando = signal(false);
+
+  form: { correo: string; nombre: string; roles: string[] } = { correo: '', nombre: '', roles: [] };
 
   constructor(
     private api: ApiService,
+    private confirm: ConfirmService,
     public auth: AuthService,
   ) {}
 
@@ -62,7 +76,7 @@ export class Usuarios implements OnInit {
   abrirForm() {
     this.error.set('');
     this.success.set('');
-    this.form = { correo: '', password: '', roles: [] };
+    this.form = { correo: '', nombre: '', roles: [] };
     this.mostrarForm.set(true);
   }
 
@@ -82,21 +96,69 @@ export class Usuarios implements OnInit {
 
   guardar() {
     this.error.set('');
-    const { correo, password, roles } = this.form;
+    const { correo, nombre, roles } = this.form;
 
-    if (!correo || !password || roles.length === 0) {
-      this.error.set('Correo, contraseña y al menos un rol son requeridos');
+    if (!correo || !nombre.trim() || roles.length === 0) {
+      this.error.set('Nombre, correo y al menos un rol son requeridos');
       return;
     }
 
-    this.api.createUsuario({ correo, password, roles }).subscribe({
-      next: () => {
-        this.success.set('Usuario creado exitosamente');
-        this.cerrarForm();
-        this.cargar();
+    this.guardando.set(true);
+    this.api
+      .createUsuario({ correo, nombre: nombre.trim(), roles })
+      .subscribe({
+        // El modal de credenciales reemplaza al mensaje de éxito: la clave solo
+        // existe en esta respuesta, así que cerrar el formulario sin mostrarla
+        // obligaría a restablecerla antes de siquiera haberla entregado.
+        next: (cred) => {
+          this.cerrarForm();
+          this.tituloCredenciales.set('Usuario creado');
+          this.varianteCredenciales.set('creacion');
+          this.rolCredenciales.set(this.nombresDeRoles(roles));
+          this.credenciales.set(cred);
+          this.cargar();
+        },
+        error: (err) => this.error.set(err.error?.message ?? 'Error al crear usuario'),
+      })
+      .add(() => this.guardando.set(false));
+  }
+
+  async restablecer(u: any) {
+    this.error.set('');
+    this.success.set('');
+
+    const ok = await this.confirm.confirmarAccion(
+      `¿Restablecer la contraseña de ${u.correo}?\n\n` +
+        'Se generará una contraseña nueva y la actual dejará de funcionar de inmediato. ' +
+        'Tendrás que entregarle el documento con la clave nueva.',
+    );
+    if (!ok) return;
+
+    this.api.resetPasswordUsuario(u.id_usuario).subscribe({
+      next: (cred) => {
+        this.tituloCredenciales.set('Contraseña restablecida');
+        this.varianteCredenciales.set('restablecimiento');
+        this.rolCredenciales.set(this.nombresDeRoles(u.roles));
+        this.credenciales.set(cred);
       },
-      error: (err) => this.error.set(err.error?.message ?? 'Error al crear usuario'),
+      error: (err) =>
+        this.error.set(err.error?.message ?? 'Error al restablecer la contraseña'),
     });
+  }
+
+  cerrarCredenciales() {
+    this.credenciales.set(null);
+    this.rolCredenciales.set('');
+  }
+
+  /**
+   * Pasa los códigos de rol a los nombres del catálogo, para que el documento
+   * diga "Encargado de convivencia" y no "ENCARGADO". Si un código no está en
+   * el catálogo (rol propio de otro colegio) cae al código: es feo, pero es
+   * peor entregar la hoja con el campo en blanco.
+   */
+  private nombresDeRoles(codigos: string[] = []): string {
+    return codigos.map((c) => this.roles().find((r) => r.codigo === c)?.nombre ?? c).join(', ');
   }
 
   toggle(u: any) {

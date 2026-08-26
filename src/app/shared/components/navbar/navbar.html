@@ -1,7 +1,7 @@
 <header class="navbar">
     <div class="navbar__brand">
-        <i class="ti ti-school"></i>
-        <span>TiConvivencia</span>
+        <img src="logo.png" alt="MiConvivencia" class="navbar__logo" />
+        <span>MiConvivencia</span>
     </div>
 
     <!-- Solo se muestra para el ADMIN: es global y tiene que elegir en qué
@@ -9,17 +9,24 @@
     <app-selector-establecimiento />
 
     <div class="navbar__right">
-        <button class="navbar__icon-btn">
-            <i class="ti ti-bell"></i>
-        </button>
+        <app-campana-notificaciones />
 
         <div class="navbar__user">
             <div class="navbar__avatar">{{ iniciales() }}</div>
             <span class="navbar__correo">{{ usuario()?.correo }}</span>
         </div>
 
+        <button class="navbar__icon-btn" (click)="mostrarCambiarPassword.set(true)"
+            title="Cambiar contraseña">
+            <i class="ti ti-lock"></i>
+        </button>
+
         <button class="navbar__icon-btn" (click)="logout()" title="Cerrar sesión">
             <i class="ti ti-logout"></i>
         </button>
     </div>
 </header>
+
+@if (mostrarCambiarPassword()) {
+<app-cambiar-password-modal (cerrar)="mostrarCambiarPassword.set(false)" />
+}

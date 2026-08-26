@@ -36,6 +36,7 @@
         <table>
             <thead>
                 <tr>
+                    <th>Nombre</th>
                     <th>Correo</th>
                     <th>Rol</th>
                     <th>Estado</th>
@@ -45,6 +46,9 @@
             <tbody>
                 @for (u of usuarios(); track u.id_usuario) {
                 <tr>
+                    <!-- Los usuarios creados antes de que el alta pidiera el
+                         nombre no lo tienen: se marca en vez de dejar el hueco. -->
+                    <td>{{ u.nombre || '—' }}</td>
                     <td>{{ u.correo }}</td>
                     <td>
                         <!-- Un usuario puede tener varios roles: se listan todos -->
@@ -63,11 +67,20 @@
                         </span>
                     </td>
                     <td>
-                        <button class="btn-icon" [class.btn-icon--danger]="u.activo"
-                            [title]="u.activo ? 'Desactivar' : 'Activar'" [appPuede]="Permiso.UsuarioActivar"
-                            (click)="toggle(u)">
-                            <i class="ti" [class.ti-user-off]="u.activo" [class.ti-user-check]="!u.activo"></i>
-                        </button>
+                        <div class="acciones">
+                            <!-- Para el usuario que perdió su clave: emite una nueva
+                                 y abre el documento a entregar. -->
+                            <button class="btn-icon" title="Restablecer contraseña"
+                                [appPuede]="Permiso.UsuarioRestablecerPassword" (click)="restablecer(u)">
+                                <i class="ti ti-key"></i>
+                            </button>
+
+                            <button class="btn-icon" [class.btn-icon--danger]="u.activo"
+                                [title]="u.activo ? 'Desactivar' : 'Activar'" [appPuede]="Permiso.UsuarioActivar"
+                                (click)="toggle(u)">
+                                <i class="ti" [class.ti-user-off]="u.activo" [class.ti-user-check]="!u.activo"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 }
@@ -97,14 +110,23 @@
 
         <div class="modal__body" [appPuede]="Permiso.UsuarioCrear">
             <div class="form-group">
+                <label><i class="ti ti-user"></i> Nombre *</label>
+                <input type="text" placeholder="María González" [(ngModel)]="form.nombre" name="nombre" />
+            </div>
+
+            <div class="form-group">
                 <label><i class="ti ti-mail"></i> Correo electrónico *</label>
                 <input type="email" placeholder="usuario@colegio.cl" [(ngModel)]="form.correo" name="correo" />
             </div>
 
-            <div class="form-group">
-                <label><i class="ti ti-lock"></i> Contraseña *</label>
-                <input type="password" placeholder="Mínimo 8 caracteres" [(ngModel)]="form.password" name="password" />
-            </div>
+            <!-- No hay campo de contraseña: la genera el servidor y se muestra
+                 una sola vez, en el documento que se entrega en mano. Así
+                 ninguna cuenta nace con una clave débil o reutilizada. -->
+            <p class="hint-clave">
+                <i class="ti ti-key"></i>
+                La contraseña se genera automáticamente al guardar y se muestra
+                una sola vez, en un documento listo para imprimir y entregar.
+            </p>
 
             <div class="form-group">
                 <label><i class="ti ti-shield"></i> Roles *</label>
@@ -128,11 +150,21 @@
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
             <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.UsuarioCrear"
-                (click)="guardar()">
-                <i class="ti ti-device-floppy"></i> Crear usuario
+                [disabled]="guardando()" (click)="guardar()">
+                <i class="ti" [class.ti-device-floppy]="!guardando()" [class.ti-loader-2]="guardando()"
+                    [class.spin]="guardando()"></i>
+                {{ guardando() ? 'Creando...' : 'Crear usuario' }}
             </button>
         </div>
 
     </div>
 </div>
+}
+
+<!-- Se muestra tanto al crear como al restablecer: en los dos casos hay una
+     clave en claro que existe solo en este momento. -->
+@if (credenciales(); as cred) {
+<app-credenciales-modal [credenciales]="cred" [titulo]="tituloCredenciales()"
+    [establecimiento]="auth.usuario()?.nombre_establecimiento ?? ''" [rol]="rolCredenciales()"
+    [variante]="varianteCredenciales()" (cerrar)="cerrarCredenciales()" />
 }

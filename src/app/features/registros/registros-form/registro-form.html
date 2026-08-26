@@ -48,9 +48,9 @@
             </div>
 
             <div class="form-group">
-                <label>Temática *</label>
-                <input type="text" placeholder="Ej: Agresión física en recreo" [(ngModel)]="form.tematica"
-                    name="tematica" />
+                <label>Asunto *</label>
+                <input type="text" placeholder="Ej: Agresión física en recreo" [(ngModel)]="form.asunto"
+                    name="asunto" />
             </div>
 
             <div class="form-group">
@@ -137,6 +137,45 @@
                     }
                 </div>
             </div>
+
+            <!-- Activar protocolo sobre el caso. El protocolo se activa sobre el
+                 registro, que es lo que ya tiene a los estudiantes involucrados. -->
+            @if (puedeActivarProtocolo) {
+            <div class="form-group">
+                @if (protocolosActivados().length > 0) {
+                <label>Protocolos ya activados</label>
+                <div class="estudiantes-list">
+                    @for (p of protocolosActivados(); track p.id_protocolo_activado) {
+                    <div class="estudiante-item">
+                        <span class="estudiante-check">
+                            <i class="ti ti-shield-check"></i> {{ p.nombre }} — {{ p.estado }}
+                        </span>
+                    </div>
+                    }
+                </div>
+                }
+
+                <label class="check-inline">
+                    <input type="checkbox" [(ngModel)]="activarProtocolo" name="activar_protocolo"
+                        [disabled]="protocolosDisponibles().length === 0" />
+                    Activar un protocolo para este caso
+                </label>
+
+                @if (protocolosDisponibles().length === 0) {
+                <small class="hint">No hay protocolos disponibles para activar en este registro.</small>
+                }
+
+                @if (activarProtocolo) {
+                <select [(ngModel)]="idProtocoloEstablecimiento" name="id_protocolo_establecimiento">
+                    <option [ngValue]="null" disabled>Seleccione el protocolo...</option>
+                    @for (p of protocolosDisponibles(); track p.id_protocolo_establecimiento) {
+                    <option [ngValue]="p.id_protocolo_establecimiento">{{ p.nombre }}</option>
+                    }
+                </select>
+                <small class="hint">Se activará al guardar el registro y arrancará en su primer paso.</small>
+                }
+            </div>
+            }
         </div>
 
         <div class="modal__footer">

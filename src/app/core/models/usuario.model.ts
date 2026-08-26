@@ -1,6 +1,8 @@
 export interface Usuario {
   id: number;
   correo: string;
+  /** null en los usuarios creados antes de que el alta pidiera el nombre. */
+  nombre: string | null;
   /**
    * Rol principal. Se conserva por compatibilidad, pero un usuario puede tener
    * varios: para decidir qué mostrar usar `permisos`, no este campo.
@@ -14,6 +16,27 @@ export interface Usuario {
   /** null en el ADMIN, que es global y no pertenece a ningún establecimiento. */
   id_establecimiento: number | null;
   nombre_establecimiento?: string;
+}
+
+/**
+ * Lo que devuelve el backend al crear un usuario o al restablecerle la clave.
+ *
+ * `password` viaja en claro y existe solo en esta respuesta: el servidor guarda
+ * el hash y no hay forma de volver a leerla. Es el material del documento que
+ * se entrega en mano; si se pierde, el único camino es restablecerla otra vez.
+ * Por lo mismo no se guarda en localStorage ni en ningún signal persistente.
+ */
+export interface Credenciales {
+  id_usuario: number;
+  correo: string;
+  /**
+   * Nombre de la persona, para encabezar el documento. Puede venir null en los
+   * usuarios creados antes de que existiera la columna: en ese caso el
+   * documento cae al correo.
+   */
+  nombre: string | null;
+  password: string;
+  message: string;
 }
 
 export interface AuthResponse {

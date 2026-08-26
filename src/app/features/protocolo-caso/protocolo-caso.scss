@@ -1,0 +1,134 @@
+@use '../../../styles/variables' as *;
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+}
+
+.volver {
+  color: $gray-400;
+  display: inline-flex;
+
+  &:hover { color: $gray-900; }
+}
+
+.resumen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+// El paso en curso se destaca del resto: es lo único sobre lo que se puede
+// actuar, y en una pantalla llena de historial tiene que saltar a la vista.
+.paso-actual {
+  border-left: 3px solid $primary;
+
+  &--vencido { border-left-color: $accent-danger; }
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+.req { color: $accent-danger; }
+
+.acciones-paso {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+// ─── LÍNEA DE TIEMPO ──────────────────────────────
+.timeline {
+  list-style: none;
+  position: relative;
+  padding-left: 8px;
+
+  &__item {
+    display: flex;
+    gap: 12px;
+    padding-bottom: 18px;
+    position: relative;
+
+    // El hilo que une los pasos. En el último sobra, y se corta con el :after
+    // del propio item en vez de con una clase extra en el template.
+    &:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 13px;
+      top: 28px;
+      bottom: 0;
+      width: 2px;
+      background: $gray-200;
+    }
+
+    &[data-estado='completado'] .timeline__icono { background: #d1fae5; color: #065f46; }
+    &[data-estado='en_curso']   .timeline__icono { background: #dbeafe; color: #1e40af; }
+    &[data-estado='vencido']    .timeline__icono { background: #fee2e2; color: #991b1b; }
+    &[data-estado='omitido']    .timeline__icono { background: $gray-100; color: $gray-400; }
+  }
+
+  &__icono {
+    flex: 0 0 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: $gray-100;
+    color: $gray-400;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    z-index: 1;
+  }
+
+  &__cuerpo { flex: 1; min-width: 0; }
+}
+
+.respuestas {
+  list-style: none;
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 12px;
+}
+
+.bitacora {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  li {
+    display: flex;
+    gap: 12px;
+  }
+
+  &__fecha {
+    flex: 0 0 110px;
+    font-size: 12px;
+    color: $gray-400;
+  }
+}

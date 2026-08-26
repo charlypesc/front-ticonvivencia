@@ -23,6 +23,10 @@ export const permissionGuard =
 
     if (auth.canAny(...permisos)) return true;
 
-    router.navigate(['/no-autorizado']);
+   const volver = router.url;
+
+router.navigate(['/no-autorizado'], {
+  queryParams: volver && volver !== '/' ? { volver } : {},
+});
     return false;
   };

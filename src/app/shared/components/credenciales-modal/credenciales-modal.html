@@ -1,0 +1,77 @@
+<!-- Sin cierre por backdrop a propósito: la contraseña no se puede recuperar
+     después, así que salir tiene que ser una decisión, no un clic al costado. -->
+<div class="modal-backdrop">
+    <div class="modal">
+
+        <div class="modal__header">
+            <h3><i class="ti ti-key"></i> {{ titulo }}</h3>
+            <button class="modal__close" (click)="cerrar.emit()" title="Cerrar">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        <div class="modal__body">
+            <div class="cred-aviso">
+                <i class="ti ti-alert-triangle"></i>
+                <p>
+                    Esta es la <strong>única vez</strong> que se muestra la contraseña.
+                    Imprímela o descárgala antes de cerrar: después solo se puede restablecer.
+                </p>
+            </div>
+
+            <dl class="cred-campos">
+                @if (credenciales.nombre) {
+                <div>
+                    <dt>Nombre</dt>
+                    <dd>{{ credenciales.nombre }}</dd>
+                </div>
+                }
+                <div>
+                    <dt>Usuario</dt>
+                    <dd>{{ credenciales.correo }}</dd>
+                </div>
+                @if (rol) {
+                <div>
+                    <dt>Rol</dt>
+                    <dd>{{ rol }}</dd>
+                </div>
+                }
+                <div>
+                    <dt>Contraseña</dt>
+                    <dd class="cred-clave">{{ credenciales.password }}</dd>
+                </div>
+            </dl>
+
+            <button class="btn btn--outline btn--sm cred-copiar" (click)="copiar()">
+                <i class="ti" [class.ti-copy]="!copiado()" [class.ti-check]="copiado()"></i>
+                {{ copiado() ? 'Copiado' : 'Copiar usuario y contraseña' }}
+            </button>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrar.emit()">Cerrar</button>
+
+            <!-- Popover en vez de descarga directa: quien entrega la clave en
+                 mano imprime, quien la manda a otra sede descarga. -->
+            <div class="cred-exportar">
+                <button class="btn btn--primary" style="width:auto"
+                    (click)="mostrarExportar.set(!mostrarExportar())">
+                    <i class="ti ti-file-text"></i> Generar documento
+                    <i class="ti ti-chevron-up"></i>
+                </button>
+
+                @if (mostrarExportar()) {
+                <div class="cred-popover">
+                    <button (click)="imprimir()">
+                        <i class="ti ti-printer"></i> Imprimir
+                    </button>
+                    <button (click)="descargar()">
+                        <i class="ti ti-download"></i> Descargar
+                    </button>
+                </div>
+                }
+            </div>
+        </div>
+
+    </div>
+</div>

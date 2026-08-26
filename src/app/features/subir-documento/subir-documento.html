@@ -83,15 +83,15 @@
 
         <div class="form-group">
             <label>
-                <i class="ti ti-alert-triangle"></i> Tipo de falta
-                <span class="confianza-badge" [class]="getBarClass('tematica')">
-                    {{ getPct('tematica') }}%
+                <i class="ti ti-tag"></i> Asunto
+                <span class="confianza-badge" [class]="getBarClass('asunto')">
+                    {{ getPct('asunto') }}%
                 </span>
             </label>
-            <input type="text" [(ngModel)]="form.tematica" name="tematica" />
+            <input type="text" [(ngModel)]="form.asunto" name="asunto" />
             <div class="confidence-bar">
-                <div class="confidence-bar__fill" [class]="getBarClass('tematica')"
-                    [style.width.%]="getPct('tematica')"></div>
+                <div class="confidence-bar__fill" [class]="getBarClass('asunto')"
+                    [style.width.%]="getPct('asunto')"></div>
             </div>
         </div>
 

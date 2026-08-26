@@ -59,7 +59,7 @@
                 <i class="ti ti-lock"></i>
                 <span>
                     {{ r.alumno_nombre ?? 'Sin estudiante' }} —
-                    <strong>Confidencial</strong> — {{ r.tematica }}
+                    <strong>Confidencial</strong> — {{ r.asunto }}
                 </span>
             </div>
             <span class="badge badge--confidencial">reservado</span>
@@ -68,11 +68,11 @@
                 <i class="ti ti-user"></i>
                 <span>
                     @if (r.es_confidencial) { <i class="ti ti-lock" title="Confidencial"></i> }
-                    {{ r.alumno_nombre ?? 'Sin estudiante' }} — {{ r.tematica }}
+                    {{ r.alumno_nombre ?? 'Sin estudiante' }} — {{ r.asunto }}
                 </span>
             </div>
             <span class="badge badge--{{ r.estado_validacion }}">
-                {{ r.estado_validacion }}
+                {{ r.estado_validacion | etiqueta:'estado_validacion' }}
             </span>
             }
         </a>

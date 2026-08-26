@@ -71,6 +71,11 @@
                     <td>{{ p.nombre }}</td>
                     <td class="text-muted">{{ p.descripcion ?? '—' }}</td>
                     <td class="acciones" (click)="$event.stopPropagation()">
+                        <button class="btn-icon" title="Ver el flujo de pasos"
+                            [appPuede]="Permiso.ProtocoloFlujoVer"
+                            [routerLink]="['/protocolos-genericos', p.id_protocolo, 'flujo']">
+                            <i class="ti ti-git-branch"></i>
+                        </button>
                         @if (!yaAdoptado(p)) {
                         <button class="btn btn--primary btn--sm" style="width:auto" title="Adoptar en mi establecimiento"
                             [appPuede]="Permiso.ProtocoloEstablecimientoCrear" (click)="adoptar(p)">

@@ -38,20 +38,24 @@
                 <tr>
                     <th>Protocolo</th>
                     <th>Registro</th>
+                    <th>Estado</th>
                     <th>Fecha activación</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 @for (a of activados(); track a.id_protocolo_activado) {
-                <tr class="fila-clickeable" (click)="abrirForm(a)">
+                <tr class="fila-clickeable" (click)="abrirCaso(a)">
                     <td>{{ a.nombre }}</td>
                     <td class="text-muted">#{{ a.id_registro }}</td>
+                    <td>
+                        <span class="badge badge--{{ a.estado === 'cerrado' ? 'validado' : a.estado === 'anulado' ?
+                            'confidencial' : 'pendiente' }}">{{ a.estado | etiqueta:'estado_caso' }}</span>
+                    </td>
                     <td>{{ a.fecha_activacion | date:'dd/MM/yyyy HH:mm' }}</td>
                     <td class="acciones" (click)="$event.stopPropagation()">
-                        <button class="btn-icon" title="Editar" [appPuede]="Permiso.ProtocoloActivadoEditar"
-                            (click)="abrirForm(a)">
-                            <i class="ti ti-pencil"></i>
+                        <button class="btn-icon" title="Abrir el caso" (click)="abrirCaso(a)">
+                            <i class="ti ti-arrow-right"></i>
                         </button>
                         <button class="btn-icon btn-icon--danger" title="Eliminar"
                             [appPuede]="Permiso.ProtocoloActivadoEliminar" (click)="eliminar(a)">
@@ -74,7 +78,7 @@
         <div class="modal__header">
             <h3>
                 <i class="ti ti-shield-check"></i>
-                {{ editando() ? 'Editar activación' : 'Activar protocolo' }}
+                Activar protocolo
             </h3>
             <button class="modal__close" (click)="cerrarForm()">
                 <i class="ti ti-x"></i>
@@ -87,9 +91,7 @@
         </div>
         }
 
-        <!-- Campos opacos si no puede guardar: la fila abre el modal igual. -->
-        <div class="modal__body"
-            [appPuede]="editando() ? Permiso.ProtocoloActivadoEditar : Permiso.ProtocoloActivadoCrear">
+        <div class="modal__body" [appPuede]="Permiso.ProtocoloActivadoCrear">
             <div class="form-group">
                 <label>Protocolo del establecimiento *</label>
                 <select [(ngModel)]="form.id_protocolo_establecimiento" name="id_protocolo_establecimiento">
@@ -106,7 +108,7 @@
                     <option [ngValue]="null" disabled>Seleccione un registro...</option>
                     @for (r of registros(); track r.id_registro) {
                     <option [ngValue]="r.id_registro">
-                        #{{ r.id_registro }} — {{ r.tematica }} ({{ r.fecha_incidente | date:'dd/MM/yyyy' }})
+                        #{{ r.id_registro }} — {{ r.asunto }} ({{ r.fecha_incidente | date:'dd/MM/yyyy' }})
                     </option>
                     }
                 </select>
@@ -116,10 +118,9 @@
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
             <button class="btn btn--primary" style="width:auto"
-                [appPuede]="editando() ? Permiso.ProtocoloActivadoEditar : Permiso.ProtocoloActivadoCrear"
-                (click)="guardar()">
+                [appPuede]="Permiso.ProtocoloActivadoCrear" (click)="guardar()">
                 <i class="ti ti-device-floppy"></i>
-                {{ editando() ? 'Guardar cambios' : 'Activar protocolo' }}
+                Activar protocolo
             </button>
         </div>
 

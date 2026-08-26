@@ -1,0 +1,150 @@
+@use '../../../styles/variables' as *;
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+}
+
+.volver {
+  color: $gray-400;
+  display: inline-flex;
+
+  &:hover { color: $gray-900; }
+}
+
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.problemas {
+  margin: 6px 0 0 18px;
+  font-weight: 400;
+}
+
+.pasos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+// Cada paso es una tarjeta con sus tres bloques (responsables, campos,
+// salidas). El grafo se lee de arriba a abajo siguiendo los "continúa en",
+// que es como lo describe el reglamento de un colegio.
+.paso {
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+}
+
+.bloque {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid $gray-100;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  &__titulo {
+    font-size: 12px;
+    font-weight: 600;
+    color: $gray-400;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+}
+
+.lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13px;
+  }
+}
+
+code {
+  background: $gray-100;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+}
+
+// Antes era un <code> con la condición cruda; ahora lleva la etiqueta del
+// campo, así que necesita el relleno que daba el estilo por defecto de <code>.
+.cond {
+  background: $primary-bg;
+  color: $primary;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+.req { color: $accent-danger; }
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 400;
+
+  input { width: auto; }
+}
+
+// Los dos botones de vista van juntos, separados del resto de la barra.
+.vista-toggle {
+  display: flex;
+  gap: 4px;
+  margin-right: auto;
+}
+
+// El identificador del campo: detalle técnico al pie del modal, no un dato
+// que la persona tenga que inventar.
+.avanzado {
+  border-top: 1px solid $gray-100;
+  padding-top: 12px;
+
+  code {
+    background: $gray-50;
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+}
+
+.como-enlace {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-left: 8px;
+  color: $primary;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

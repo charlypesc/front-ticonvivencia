@@ -10,15 +10,31 @@
             <i class="ti ti-plus"></i> Agregar
         </button>
         <div class="toolbar__search">
-            <i class="ti ti-search"></i>
-            <input #buscarInput type="text" placeholder="Buscar por nombre..." [ngModel]="busqueda()"
-                (ngModelChange)="busqueda.set($event)" (focus)="mostrarSugerencias.set(true)"
-                (blur)="ocultarSugerenciasConDelay()" />
+            <!-- El campo es un <label> y no un <div>: clickear el borde, el
+                 padding o la lupa enfoca el input, en vez de obligar a acertarle
+                 a la franja de texto. -->
+            <label class="toolbar__search-field">
+                <i class="ti ti-search"></i>
+                <input #buscarInput type="text" placeholder="Buscar por nombre..." [ngModel]="busqueda()"
+                    (ngModelChange)="alEscribir($event)" (focus)="mostrarSugerencias.set(true)"
+                    (blur)="ocultarSugerenciasConDelay()" (keydown.arrowdown)="moverSeleccion(1, $event)"
+                    (keydown.arrowup)="moverSeleccion(-1, $event)" (keydown.enter)="confirmarSeleccion($event)"
+                    (keydown.escape)="cerrarSugerencias()" role="combobox" aria-autocomplete="list"
+                    [attr.aria-expanded]="mostrarSugerencias() && sugerencias().length > 0"
+                    [attr.aria-activedescendant]="indiceActivo() >= 0 ? 'sugerencia-' + indiceActivo() : null" />
+            </label>
 
+            <!-- El dropdown va fuera del <label> a propósito: adentro, clickear
+                 una sugerencia también dispararía el focus del input. -->
             @if (mostrarSugerencias() && sugerencias().length > 0) {
-            <div class="autocomplete">
-                @for (e of sugerencias(); track e.id_estudiante) {
-                <div class="autocomplete__item" (mousedown)="seleccionarEstudiante(e)">
+            <div class="autocomplete" role="listbox">
+                @for (e of sugerencias(); track e.id_estudiante; let i = $index) {
+                <!-- mouseenter mueve el resaltado además del teclado: si no, el
+                     mouse marca una fila con el hover y el teclado otra con la
+                     clase, y Enter abre la que no se está mirando. -->
+                <div class="autocomplete__item" [class.autocomplete__item--activo]="i === indiceActivo()"
+                    [id]="'sugerencia-' + i" role="option" [attr.aria-selected]="i === indiceActivo()"
+                    (mouseenter)="indiceActivo.set(i)" (mousedown)="seleccionarEstudiante(e)">
                     <span class="autocomplete__nombre">{{ e.nombre }} {{ e.apellido }}</span>
                     <span class="autocomplete__meta">{{ e.run }}-{{ e.dv }} · {{ e.curso_nombre | cursoNombre }}</span>
                 </div>
@@ -28,7 +44,7 @@
         </div>
     </div>
 
-    @if (cursoFiltrado(); as curso) {
+    @if (!seleccionado() && cursoFiltrado(); as curso) {
     <div class="filtro-curso">
         <i class="ti ti-filter"></i>
         Mostrando solo: <strong>{{ curso.nombre | cursoNombre }}</strong>
@@ -44,7 +60,24 @@
     </div>
     }
 
-    @if (loading()) {
+    @if (error() && !mostrarForm()) {
+    <div class="alert alert--error">
+        <i class="ti ti-alert-circle"></i> {{ error() }}
+    </div>
+    }
+
+    @if (cargandoFicha()) {
+    <div class="empty-state">
+        <i class="ti ti-loader-2 spin"></i>
+        <p>Cargando ficha...</p>
+    </div>
+    } @else if (seleccionado()) {
+    <!-- La tabla se reemplaza por la ficha, pero el buscador de arriba sigue
+         vivo: se puede saltar de un estudiante a otro sin volver al listado. -->
+    <button class="btn btn--outline btn--sm volver" style="width:auto" (click)="volverAlListado()">
+        <i class="ti ti-arrow-left"></i> Volver al listado
+    </button>
+    } @else if (loading()) {
     <div class="empty-state">
         <i class="ti ti-loader-2 spin"></i>
         <p>Cargando estudiantes...</p>
@@ -68,7 +101,7 @@
             </thead>
             <tbody>
                 @for (e of filtrados(); track e.id_estudiante) {
-                <tr class="fila-clickeable" (click)="abrirForm(e)">
+                <tr class="fila-clickeable" (click)="abrirFicha(e)">
                     <td>{{ e.run }}-{{ e.dv }}</td>
                     <td>{{ e.nombre }} {{ e.apellido }}</td>
                     <td>{{ e.curso_nombre | cursoNombre }}</td>
@@ -79,8 +112,8 @@
                     </td>
                     <td class="acciones" (click)="$event.stopPropagation()">
                         @if (e.n_registros > 0) {
-                        <button class="btn-icon btn-icon--warn" title="Ver en Consultar RUT"
-                            [appPuede]="Permiso.RegistroVer" (click)="verEnConsultarRut(e)">
+                        <button class="btn-icon btn-icon--warn" title="Ver historial de registros"
+                            [appPuede]="Permiso.RegistroVer" (click)="abrirFicha(e)">
                             <i class="ti ti-file-search"></i>
                         </button>
                         }
@@ -104,6 +137,104 @@
     </div>
     }
 </div>
+
+<!-- Ficha del estudiante: perfil + historial de convivencia. Es lo que antes
+     vivía en la pantalla "Consultar por RUT". -->
+@if (seleccionado(); as est) {
+<div class="card perfil">
+    <div class="perfil__avatar">
+        <i class="ti ti-user"></i>
+    </div>
+    <div class="perfil__info">
+        <h3>
+            {{ est.nombre }} {{ est.apellido }}
+            <button class="btn-icon" title="Editar estudiante" [appPuede]="Permiso.EstudianteEditar"
+                (click)="abrirForm(est)">
+                <i class="ti ti-pencil"></i>
+            </button>
+        </h3>
+        <div class="perfil__meta">
+            <span><i class="ti ti-id-badge"></i> {{ est.run }}-{{ est.dv }}</span>
+            <span><i class="ti ti-school"></i> {{ est.curso_nombre | cursoNombre }}</span>
+            <span>
+                <i class="ti ti-circle"></i>
+                <span class="badge" [class.badge--validado]="est.activo" [class.badge--pendiente]="!est.activo">
+                    {{ est.activo ? 'Activo' : 'Inactivo' }}
+                </span>
+            </span>
+        </div>
+    </div>
+    <button class="perfil__agregar" title="Agregar registro" [appPuede]="Permiso.RegistroCrear"
+        (click)="abrirNuevoRegistro()">
+        <i class="ti ti-file-plus"></i>
+    </button>
+    <div class="perfil__stat">
+        <span class="stat-num">{{ registros().length }}</span>
+        <span class="stat-label">registros totales</span>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card__header">
+        <h3><i class="ti ti-history"></i> Historial de Registros</h3>
+    </div>
+
+    @if (registros().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-mood-happy"></i>
+        <p>Este estudiante no tiene registros de convivencia</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Asunto</th>
+                    <th>Registro</th>
+                    <th>Tipo de falta</th>
+                    <th>Rol</th>
+                    <th>Gravedad</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (r of registros(); track r.id_registro) {
+                <tr class="fila-clickeable" (click)="abrirRegistro(r)">
+                    <td>{{ r.fecha_incidente | date:'dd/MM/yyyy' }}</td>
+                    @if (esConfidencialBloqueado(r)) {
+                    <td colspan="5" class="celda-confidencial">
+                        <i class="ti ti-lock"></i>
+                        <strong>Confidencial</strong> — {{ r.nota_confidencial ?? 'Sin nota' }}
+                    </td>
+                    <td><span class="badge badge--confidencial">reservado</span></td>
+                    } @else {
+                    <td>{{ r.asunto }}</td>
+                    <td class="celda-folio">#{{ r.id_registro }}</td>
+                    <td>{{ r.tipo_falta_nombre }}</td>
+                    <td>{{ r.rol_en_incidente | titlecase }}</td>
+                    <td>
+                        <span class="badge badge--{{ r.gravedad }}">{{ r.gravedad }}</span>
+                    </td>
+                    <td>
+                        <span class="badge badge--{{ r.estado_validacion }}">{{ r.estado_validacion |
+                            etiqueta:'estado_validacion' }}</span>
+                    </td>
+                    }
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+}
+
+<!-- Modal registro de convivencia -->
+@if (mostrarRegistroForm()) {
+<app-registro-form [registro]="registroSeleccionado" [estudiantePreseleccionado]="seleccionado()?.id_estudiante"
+    (cerrar)="cerrarRegistroForm()" />
+}
 
 <!-- Modal -->
 @if (mostrarForm()) {
@@ -182,7 +313,7 @@
                  fila y volver a empezar. -->
             @if (editando()?.n_registros > 0) {
             <button class="btn btn--outline btn--warn-light" style="width:auto; margin-right:auto"
-                [appPuede]="Permiso.RegistroVer" (click)="verEnConsultarRut(editando())">
+                [appPuede]="Permiso.RegistroVer" (click)="cerrarForm(); abrirFicha(editando())">
                 <i class="ti ti-file-search"></i>
                 Ver {{ editando().n_registros }}
                 {{ editando().n_registros === 1 ? 'registro' : 'registros' }}

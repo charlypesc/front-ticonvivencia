@@ -33,12 +33,10 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/estudiantes/estudiantes').then((m) => m.Estudiantes),
       },
-      {
-        path: 'consultar-rut',
-        canActivate: [permissionGuard(Permiso.EstudianteBuscar)],
-        loadComponent: () =>
-          import('./features/consultar-rut/consultar-rut').then((m) => m.ConsultarRut),
-      },
+      // 'consultar-rut' ya no existe: su ficha vive dentro de /estudiantes, que
+      // quedó como único buscador. El redirect mantiene vivos los enlaces
+      // viejos — /estudiantes lee el mismo ?rut= y abre la ficha.
+      { path: 'consultar-rut', redirectTo: 'estudiantes' },
       {
         path: 'tipos-falta',
         canActivate: [permissionGuard(Permiso.TipoFaltaVer)],
@@ -80,12 +78,29 @@ export const routes: Routes = [
           ),
       },
       {
+        // El grafo de la plantilla global. Va como ruta hija del catálogo
+        // porque un flujo no existe sin su protocolo.
+        path: 'protocolos-genericos/:id/flujo',
+        canActivate: [permissionGuard(Permiso.ProtocoloFlujoVer)],
+        loadComponent: () =>
+          import('./features/protocolo-flujo/protocolo-flujo').then((m) => m.ProtocoloFlujo),
+      },
+      {
         path: 'protocolos-establecimiento',
         canActivate: [permissionGuard(Permiso.ProtocoloEstablecimientoVer)],
         loadComponent: () =>
           import('./features/protocolos-establecimiento/protocolos-establecimiento').then(
             (m) => m.ProtocolosEstablecimiento,
           ),
+      },
+      {
+        // Mismo componente que el flujo genérico: `establecimiento: true` es lo
+        // que le dice contra qué endpoints trabajar.
+        path: 'protocolos-establecimiento/:id/flujo',
+        canActivate: [permissionGuard(Permiso.ProtocoloFlujoEstablecimientoVer)],
+        data: { establecimiento: true },
+        loadComponent: () =>
+          import('./features/protocolo-flujo/protocolo-flujo').then((m) => m.ProtocoloFlujo),
       },
       {
         path: 'geo',
@@ -99,6 +114,12 @@ export const routes: Routes = [
           import('./features/protocolos-activados/protocolos-activados').then(
             (m) => m.ProtocolosActivados,
           ),
+      },
+      {
+        path: 'protocolos-activados/:id',
+        canActivate: [permissionGuard(Permiso.ProtocoloActivadoVer)],
+        loadComponent: () =>
+          import('./features/protocolo-caso/protocolo-caso').then((m) => m.ProtocoloCaso),
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],

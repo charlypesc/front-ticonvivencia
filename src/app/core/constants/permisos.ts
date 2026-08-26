@@ -99,11 +99,29 @@ export const Permiso = {
   ProtocoloEstablecimientoEliminar   : 58,
   ProtocoloEstablecimientoCrearPropio: 77,
 
+  // protocolo_flujo (grafo de la plantilla global: pasos, transiciones, roles y campos)
+  ProtocoloFlujoVer     : 79,
+  ProtocoloFlujoEditar  : 80,
+  ProtocoloFlujoPublicar: 81,
+
+  // protocolo_flujo_establecimiento (copia espejo del grafo, por colegio)
+  ProtocoloFlujoEstablecimientoVer         : 82,
+  ProtocoloFlujoEstablecimientoPersonalizar: 83,
+  ProtocoloFlujoEstablecimientoEditar      : 84,
+  ProtocoloFlujoEstablecimientoRestaurar   : 85,
+
   // protocolo_activado
-  ProtocoloActivadoVer     : 59,
-  ProtocoloActivadoCrear   : 60,
-  ProtocoloActivadoEditar  : 61,
-  ProtocoloActivadoEliminar: 62,
+  ProtocoloActivadoVer          : 59,
+  ProtocoloActivadoCrear        : 60,
+  ProtocoloActivadoEditar       : 61,
+  ProtocoloActivadoEliminar     : 62,
+  ProtocoloActivadoCompletarPaso: 86,
+  ProtocoloActivadoAprobarPaso  : 87,
+  ProtocoloActivadoOmitirPaso   : 88,
+  ProtocoloActivadoReasignarPaso: 89,
+  ProtocoloActivadoCerrar       : 90,
+  ProtocoloActivadoAnular       : 91,
+  ProtocoloActivadoVerBitacora  : 92,
 
   // documento
   DocumentoVer  : 63,
@@ -113,10 +131,11 @@ export const Permiso = {
   DashboardVer: 65,
 
   // usuario
-  UsuarioVer       : 66,
-  UsuarioCrear     : 67,
-  UsuarioActivar   : 68,
-  UsuarioAsignarRol: 69,
+  UsuarioVer                : 66,
+  UsuarioCrear              : 67,
+  UsuarioActivar            : 68,
+  UsuarioAsignarRol         : 69,
+  UsuarioRestablecerPassword: 78,
 
   // rol
   RolVer           : 70,
@@ -207,4 +226,19 @@ export const CODIGO_POR_ID: Record<number, string> = {
   75: 'registro.ver_confidencial',
   76: 'registro.editar_confidencialidad',
   77: 'protocolo_establecimiento.crear_propio',
+  78: 'usuario.restablecer_password',
+  79: 'protocolo_flujo.ver',
+  80: 'protocolo_flujo.editar',
+  81: 'protocolo_flujo.publicar',
+  82: 'protocolo_flujo_establecimiento.ver',
+  83: 'protocolo_flujo_establecimiento.personalizar',
+  84: 'protocolo_flujo_establecimiento.editar',
+  85: 'protocolo_flujo_establecimiento.restaurar',
+  86: 'protocolo_activado.completar_paso',
+  87: 'protocolo_activado.aprobar_paso',
+  88: 'protocolo_activado.omitir_paso',
+  89: 'protocolo_activado.reasignar_paso',
+  90: 'protocolo_activado.cerrar',
+  91: 'protocolo_activado.anular',
+  92: 'protocolo_activado.ver_bitacora',
 };

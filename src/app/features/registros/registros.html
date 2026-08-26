@@ -10,11 +10,12 @@
     <div class="alert alert--error">{{ error() }}</div>
     }
     <div class="toolbar">
-        <div class="toolbar__search">
+        <!-- <label> y no <div>: clickear el padding o la lupa enfoca el input. -->
+        <label class="toolbar__search">
             <i class="ti ti-search"></i>
-            <input type="text" placeholder="Buscar por temática o tipo de falta..." [ngModel]="busqueda()"
+            <input type="text" placeholder="Buscar por asunto o tipo de falta..." [ngModel]="busqueda()"
                 (ngModelChange)="busqueda.set($event)" />
-        </div>
+        </label>
         <div class="toolbar__actions">
             <button class="btn btn--outline btn--sm">
                 <i class="ti ti-calendar"></i> Fecha
@@ -44,7 +45,7 @@
             <thead>
                 <tr>
                     <th>Fecha</th>
-                    <th>Temática</th>
+                    <th>Asunto</th>
                     <th>Tipo de falta</th>
                     <th>Estado</th>
                     <th></th>
@@ -63,14 +64,14 @@
                     } @else {
                     <td>
                         @if (r.es_confidencial) { <i class="ti ti-lock" title="Confidencial: {{ r.nota_confidencial }}"></i> }
-                        {{ r.tematica }}
+                        {{ r.asunto }}
                     </td>
                     <td>{{ r.tipo_falta_nombre }}</td>
                     }
                     <td>
                         @if (!esConfidencialBloqueado(r)) {
                         <span class="badge badge--{{ r.estado_validacion }}">
-                            {{ r.estado_validacion }}
+                            {{ r.estado_validacion | etiqueta:'estado_validacion' }}
                         </span>
                         }
                     </td>

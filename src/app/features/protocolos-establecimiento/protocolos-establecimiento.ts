@@ -1,6 +1,7 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.services';
 import { AuthService } from '../../core/services/auth.service';
 import { ConfirmService } from '../../core/services/confirm.service';
@@ -11,7 +12,7 @@ import { Puede } from '../../shared/directives/permiso.directive';
 @Component({
   selector: 'app-protocolos-establecimiento',
   standalone: true,
-  imports: [CommonModule, FormsModule, AutoAjustarTextarea, Puede],
+  imports: [CommonModule, FormsModule, RouterLink, AutoAjustarTextarea, Puede],
   templateUrl: './protocolos-establecimiento.html',
   styleUrl: './protocolos-establecimiento.scss',
 })

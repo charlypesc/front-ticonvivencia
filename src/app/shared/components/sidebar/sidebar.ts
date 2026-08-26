@@ -24,7 +24,9 @@ export class Sidebar {
   // administración ve automáticamente lo que le corresponde, sin desplegar.
   private allItems: NavItem[] = [
     { label: 'Inicio',        icon: 'ti-home',   route: '/dashboard',     permiso: Permiso.DashboardVer },
-    { label: 'Consultar RUT', icon: 'ti-search', route: '/consultar-rut', permiso: Permiso.EstudianteBuscar },
+    // "Consultar RUT" se fusionó con Estudiantes: era un segundo buscador para
+    // la misma persona, y obligaba a elegir de antemano si se la iba a buscar
+    // por nombre o por RUT.
     { label: 'Estudiantes',   icon: 'ti-users',  route: '/estudiantes',   permiso: Permiso.EstudianteVer },
     { label: 'Cursos',        icon: 'ti-school', route: '/cursos',        permiso: Permiso.CursoVer },
     { label: 'Registros',     icon: 'ti-folder', route: '/registros',     permiso: Permiso.RegistroVer },

@@ -1,15 +1,17 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.services';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
+import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
 
 @Component({
   selector: 'app-protocolos-activados',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede],
+  imports: [CommonModule, FormsModule, Puede, EtiquetaPipe],
   templateUrl: './protocolos-activados.html',
   styleUrl: './protocolos-activados.scss',
 })
@@ -33,8 +35,14 @@ export class ProtocolosActivados implements OnInit {
 
   constructor(
     private api: ApiService,
+    private router: Router,
     private confirmService: ConfirmService,
   ) {}
+
+  /** El caso se abre en su propia pantalla: es donde se ejecuta el protocolo. */
+  abrirCaso(activado: any) {
+    this.router.navigate(['/protocolos-activados', activado.id_protocolo_activado]);
+  }
 
   ngOnInit() {
     this.cargar();
@@ -57,19 +65,11 @@ export class ProtocolosActivados implements OnInit {
     });
   }
 
-  abrirForm(activado?: any) {
+  abrirForm() {
     this.error.set('');
     this.success.set('');
-    if (activado) {
-      this.editando.set(activado);
-      this.form = {
-        id_protocolo_establecimiento: activado.id_protocolo_establecimiento,
-        id_registro: activado.id_registro,
-      };
-    } else {
-      this.editando.set(null);
-      this.form = { id_protocolo_establecimiento: null, id_registro: null };
-    }
+    this.editando.set(null);
+    this.form = { id_protocolo_establecimiento: null, id_registro: null };
     this.mostrarForm.set(true);
   }
 
@@ -84,17 +84,20 @@ export class ProtocolosActivados implements OnInit {
       return;
     }
 
-    const request = this.editando()
-      ? this.api.updateProtocoloActivado(this.editando().id_protocolo_activado, this.form)
-      : this.api.createProtocoloActivado(this.form);
-
-    request.subscribe({
-      next: () => {
-        this.success.set(this.editando() ? 'Protocolo actualizado' : 'Protocolo activado');
+    // Activar materializa el grafo del protocolo sobre el caso, así que la
+    // respuesta trae el id: se entra directo a ejecutarlo en vez de dejar al
+    // usuario buscándolo en la lista.
+    this.api.createProtocoloActivado(this.form).subscribe({
+      next: (r: any) => {
         this.cerrarForm();
-        this.cargar();
+        this.router.navigate(['/protocolos-activados', r.id_protocolo_activado]);
       },
-      error: (err) => this.error.set(err.error?.message ?? 'Error al guardar'),
+      error: (err) => {
+        this.error.set(err.error?.message ?? 'Error al activar');
+        // El backend responde qué está mal en el grafo cuando no es publicable.
+        if (err.error?.problemas?.length)
+          this.error.set(`${err.error.message}: ${err.error.problemas.join(' · ')}`);
+      },
     });
   }
 

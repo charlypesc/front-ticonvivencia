@@ -1,0 +1,73 @@
+@if (nodos().length === 0) {
+<div class="empty-state">
+    <i class="ti ti-git-branch"></i>
+    <p>Sin pasos que diagramar</p>
+</div>
+} @else {
+<div class="lienzo">
+    <!-- La capa existe para poder poner botones HTML encima del SVG: en SVG los
+         iconos de Tabler (una tipografía) no se pueden usar como <i>. -->
+    <div class="capa" [style.width.px]="ancho()" [style.height.px]="alto()">
+    <svg [attr.width]="ancho()" [attr.height]="alto()" [attr.viewBox]="'0 0 ' + ancho() + ' ' + alto()">
+        <defs>
+            <marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"
+                orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" class="punta" />
+            </marker>
+            <marker id="punta-atras" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"
+                orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" class="punta punta--atras" />
+            </marker>
+        </defs>
+
+        <!-- Primero las aristas: las cajas van encima -->
+        @for (a of dibujadas(); track $index) {
+        <path [attr.d]="a.d" class="arista" [class.arista--atras]="a.atras"
+            [attr.marker-end]="a.atras ? 'url(#punta-atras)' : 'url(#punta)'" />
+        @if (a.texto) {
+        <text [attr.x]="a.lx" [attr.y]="a.ly" class="etiqueta" [class.etiqueta--atras]="a.atras">{{ a.texto }}
+            <title>{{ a.titulo }}</title>
+        </text>
+        }
+        }
+
+        @for (n of ubicados(); track n.id) {
+        <g class="nodo" [ngClass]="clase(n)" [class.nodo--seleccionado]="n.id === seleccionado()"
+            (click)="seleccionar.emit(n)">
+            <rect [attr.x]="n.x" [attr.y]="n.y" [attr.width]="ANCHO" [attr.height]="ALTO()" rx="8" />
+            <title>{{ n.nombre }}</title>
+            @for (linea of n.lineas; track $index) {
+            <text [attr.x]="n.x + 12" [attr.y]="yNombre(n, $index)" class="nodo__nombre">{{ linea }}</text>
+            }
+            <text [attr.x]="n.x + 12" [attr.y]="yMeta(n)" class="nodo__meta">{{ n.meta }}</text>
+            @if (n.es_paso_inicial) {
+            <circle [attr.cx]="n.x + ANCHO - 14" [attr.cy]="n.y + 16" r="5" class="marca marca--inicial" />
+            }
+            @if (n.es_paso_final) {
+            <circle [attr.cx]="n.x + ANCHO - 14" [attr.cy]="n.y + 16" r="5" class="marca marca--final" />
+            }
+        </g>
+        }
+    </svg>
+
+        @if (acciones()) {
+        @for (n of ubicados(); track n.id) {
+        <div class="nodo-acciones" [style.left.px]="n.x + 8" [style.top.px]="n.y + ALTO() - 34">
+            @for (b of BOTONES; track b.accion) {
+            <button type="button" class="btn-icon" [class.btn-icon--danger]="b.peligro" [title]="b.titulo"
+                (click)="accion.emit({ nodo: n, accion: b.accion })">
+                <i class="ti" [ngClass]="b.icono"></i>
+            </button>
+            }
+        </div>
+        }
+        }
+    </div>
+</div>
+
+<p class="text-sm text-muted leyenda">
+    <span class="punto punto--inicial"></span> inicial
+    <span class="punto punto--final"></span> final
+    · las flechas grises que bajan son retrocesos (por ejemplo, volver a la investigación)
+</p>
+}

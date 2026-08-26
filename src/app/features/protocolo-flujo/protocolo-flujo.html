@@ -1,0 +1,531 @@
+<div class="page-header">
+    <h2>
+        <a [routerLink]="esEstablecimiento ? '/protocolos-establecimiento' : '/protocolos-genericos'" class="volver"
+            title="Volver">
+            <i class="ti ti-arrow-left"></i>
+        </a>
+        Flujo: {{ grafo()?.protocolo?.nombre ?? '' }}
+    </h2>
+
+    <div class="flex gap-2 items-center">
+        @if (!esEstablecimiento && grafo()?.protocolo) {
+        <span class="badge" [class.badge--validado]="grafo().protocolo.estado_flujo === 'publicado'"
+            [class.badge--pendiente]="grafo().protocolo.estado_flujo === 'borrador'">
+            {{ grafo().protocolo.estado_flujo | etiqueta:'estado_flujo' }}
+        </span>
+        }
+        @if (esEstablecimiento && grafo()) {
+        <span class="badge" [class.badge--propio]="grafo().origen === 'propio'"
+            [class.badge--confidencial]="grafo().origen !== 'propio'">
+            {{ grafo().origen === 'propio' ? 'personalizado' : grafo().origen === 'vacio' ? 'sin flujo' : 'heredado del
+            catálogo' }}
+        </span>
+        }
+    </div>
+</div>
+
+@if (success()) {
+<div class="alert alert--success"><i class="ti ti-circle-check"></i> {{ success() }}</div>
+}
+@if (error()) {
+<div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+}
+
+@if (problemas().length) {
+<div class="alert alert--error">
+    <div>
+        <strong><i class="ti ti-alert-triangle"></i> El flujo todavía no está listo:</strong>
+        <ul class="problemas">
+            @for (p of problemas(); track p) { <li>{{ p }}</li> }
+        </ul>
+    </div>
+</div>
+}
+
+@if (loading()) {
+<div class="empty-state"><i class="ti ti-loader-2 spin"></i>
+    <p>Cargando...</p>
+</div>
+} @else if (!grafo()) {
+<div class="empty-state"><i class="ti ti-list-off"></i>
+    <p>No se encontró el protocolo</p>
+</div>
+} @else {
+
+<div class="card mb-4">
+    <div class="barra">
+        <button class="btn btn--primary btn--sm" style="width:auto" [appPuede]="permisoEditar()"
+            [appPuedeSi]="editable()" appPuedeMotivo="Personaliza el flujo antes de poder editarlo"
+            (click)="abrirPaso()">
+            <i class="ti ti-plus"></i> Nuevo paso
+        </button>
+
+        <div class="vista-toggle">
+            <button class="btn btn--sm" [class.btn--primary]="vista() === 'diagrama'"
+                [class.btn--outline]="vista() !== 'diagrama'" style="width:auto" (click)="vista.set('diagrama')">
+                <i class="ti ti-sitemap"></i> Diagrama
+            </button>
+            <button class="btn btn--sm" [class.btn--primary]="vista() === 'lista'"
+                [class.btn--outline]="vista() !== 'lista'" style="width:auto" (click)="vista.set('lista')">
+                <i class="ti ti-list"></i> Detalle
+            </button>
+        </div>
+
+        <button class="btn btn--outline btn--sm" style="width:auto" (click)="validar()">
+            <i class="ti ti-checkup-list"></i> Validar flujo
+        </button>
+
+        @if (!esEstablecimiento) {
+        <button class="btn btn--outline btn--sm" style="width:auto" [appPuede]="Permiso.ProtocoloFlujoPublicar"
+            (click)="publicar()">
+            <i class="ti ti-send"></i> Publicar
+        </button>
+        } @else if (grafo().origen === 'catalogo') {
+        <button class="btn btn--outline btn--sm" style="width:auto"
+            [appPuede]="Permiso.ProtocoloFlujoEstablecimientoPersonalizar" (click)="personalizar()">
+            <i class="ti ti-copy"></i> Personalizar para este colegio
+        </button>
+        } @else if (grafo().origen === 'propio' && grafo().protocolo?.id_protocolo) {
+        <button class="btn btn--outline btn--sm" style="width:auto"
+            [appPuede]="Permiso.ProtocoloFlujoEstablecimientoRestaurar" (click)="restaurar()">
+            <i class="ti ti-rotate"></i> Volver al flujo del catálogo
+        </button>
+        }
+    </div>
+
+    @if (esEstablecimiento && grafo().origen === 'catalogo') {
+    <p class="text-sm text-muted mt-4">
+        <i class="ti ti-info-circle"></i>
+        Este protocolo usa el flujo del catálogo: las correcciones del administrador llegan solas.
+        Al personalizarlo se copia tal como está ahora y deja de heredarlas.
+    </p>
+    }
+</div>
+
+@if (pasos().length === 0) {
+<div class="card">
+    <div class="empty-state">
+        <i class="ti ti-git-branch"></i>
+        <p>Este protocolo todavía no tiene pasos.</p>
+    </div>
+</div>
+} @else if (vista() === 'diagrama') {
+<div class="card">
+    <app-grafo-protocolo [nodos]="nodosGrafo()" [aristas]="aristasGrafo()" [acciones]="puedeEditar()"
+        [seleccionado]="pasoSeleccionadoId()" (seleccionar)="seleccionarDelGrafo($event)"
+        (accion)="accionDesdeGrafo($event)" />
+    @if (puedeEditar()) {
+    <p class="text-sm text-muted">
+        Haz click en un paso para ver su detalle, o usa los botones de la caja:
+        <i class="ti ti-pencil"></i> el paso ·
+        <i class="ti ti-users"></i> responsables ·
+        <i class="ti ti-forms"></i> agregar campo ·
+        <i class="ti ti-arrow-ramp-right"></i> agregar salida ·
+        <i class="ti ti-trash"></i> eliminar.
+    </p>
+    } @else {
+    <p class="text-sm text-muted">Haz click en un paso para ver su detalle.</p>
+    }
+</div>
+} @else {
+<div class="pasos">
+    @for (p of pasos(); track idPaso(p)) {
+    <div class="card paso">
+        <ng-container *ngTemplateOutlet="detallePaso; context: { $implicit: p }" />
+    </div>
+    }
+</div>
+}
+}
+
+<!-- El detalle de un paso se dibuja igual en la lista y en el panel del
+     diagrama: es la misma información con las mismas acciones, así que vive en
+     un solo template en vez de en dos copias que se van separando. -->
+<ng-template #detallePaso let-p>
+        <div class="paso__head">
+            <div class="flex gap-2 items-center">
+                <strong>{{ p.nombre }}</strong>
+                <span class="badge badge--leve">{{ p.tipo_paso | etiqueta:'tipo_paso' }}</span>
+                @if (p.es_paso_inicial) { <span class="badge badge--validado">inicial</span> }
+                @if (p.es_paso_final) { <span class="badge badge--propio">final</span> }
+            </div>
+            <div class="acciones">
+                <button class="btn-icon" title="Editar paso" [appPuede]="permisoEditar()" [appPuedeSi]="editable()"
+                    (click)="abrirPaso(p)"><i class="ti ti-pencil"></i></button>
+                <button class="btn-icon btn-icon--danger" title="Eliminar paso" [appPuede]="permisoEditar()"
+                    [appPuedeSi]="editable()" (click)="eliminarPaso(p)"><i class="ti ti-trash"></i></button>
+            </div>
+        </div>
+
+        @if (p.descripcion) { <p class="text-sm text-muted">{{ p.descripcion }}</p> }
+
+        <p class="text-sm text-muted">
+            <i class="ti ti-clock"></i> {{ plazoTexto(p) }}
+            @if (p.plazo_valor) { · al vencer: {{ p.accion_al_vencer | etiqueta:'accion_al_vencer' }} }
+        </p>
+
+        <!-- Roles -->
+        <div class="bloque">
+            <div class="bloque__head">
+                <span class="bloque__titulo">Responsables</span>
+                <button class="btn-icon" title="Editar roles" [appPuede]="permisoEditar()" [appPuedeSi]="editable()"
+                    (click)="abrirRoles(p)"><i class="ti ti-users"></i></button>
+            </div>
+            @if ((p.roles ?? []).length === 0) {
+            <p class="text-sm text-muted">Sin responsables asignados</p>
+            } @else {
+            <p class="text-sm">
+                @if (rolesDe(p, 'ejecutor')) { <span class="text-muted">Ejecuta:</span> {{ rolesDe(p, 'ejecutor') }} }
+                @if (rolesDe(p, 'aprobador')) { <span class="text-muted"> · Aprueba:</span> {{ rolesDe(p, 'aprobador')
+                }} }
+                @if (rolesDe(p, 'notificado')) { <span class="text-muted"> · Se notifica a:</span> {{ rolesDe(p,
+                'notificado') }} }
+            </p>
+            }
+        </div>
+
+        <!-- Campos -->
+        <div class="bloque">
+            <div class="bloque__head">
+                <span class="bloque__titulo">Campos que se llenan</span>
+                <button class="btn-icon" title="Agregar campo" [appPuede]="permisoEditar()" [appPuedeSi]="editable()"
+                    (click)="abrirCampo(p)"><i class="ti ti-plus"></i></button>
+            </div>
+            @if ((p.campos ?? []).length === 0) {
+            <p class="text-sm text-muted">Sin campos</p>
+            } @else {
+            <ul class="lista">
+                @for (c of p.campos; track idCampo(c)) {
+                <li>
+                    <span><code>{{ c.codigo }}</code> — {{ c.etiqueta }}
+                        <span class="text-muted">({{ c.tipo_campo | etiqueta:'tipo_campo' }}@if (opciones(c).length) {: {{
+                            opciones(c).join(' / ') }}})</span>
+                        @if (c.es_obligatorio) { <span class="req">*</span> }
+                    </span>
+                    <span class="acciones">
+                        <button class="btn-icon" title="Editar campo" [appPuede]="permisoEditar()"
+                            [appPuedeSi]="editable()" (click)="abrirCampo(p, c)"><i class="ti ti-pencil"></i></button>
+                        <button class="btn-icon btn-icon--danger" title="Eliminar campo" [appPuede]="permisoEditar()"
+                            [appPuedeSi]="editable()" (click)="eliminarCampo(p, c)"><i
+                                class="ti ti-trash"></i></button>
+                    </span>
+                </li>
+                }
+            </ul>
+            }
+        </div>
+
+        <!-- Salidas -->
+        <div class="bloque">
+            <div class="bloque__head">
+                <span class="bloque__titulo">Continúa en</span>
+                <button class="btn-icon" title="Agregar transición" [appPuede]="permisoEditar()"
+                    [appPuedeSi]="editable()" (click)="abrirTransicion(p)"><i class="ti ti-plus"></i></button>
+            </div>
+            @if (salidasDe(p).length === 0) {
+            <p class="text-sm text-muted">
+                {{ p.es_paso_final ? 'Es el paso final: aquí termina el protocolo.' : 'Sin salidas — el caso quedaría
+                detenido aquí.' }}
+            </p>
+            } @else {
+            <ul class="lista">
+                @for (t of salidasDe(p); track idTransicion(t)) {
+                <li>
+                    <span>
+                        <i class="ti ti-arrow-narrow-right"></i>
+                        <strong>{{ nombrePaso(t.id_paso_destino) }}</strong>
+                        @if (t.condicion) { <span class="cond" [title]="t.condicion">{{ condicionLegible(t.condicion) }}</span> }
+                        @else if (t.es_default) { <span class="badge badge--pendiente">por defecto</span> }
+                        @if (t.etiqueta) { <span class="text-muted">— {{ t.etiqueta }}</span> }
+                    </span>
+                    <span class="acciones">
+                        <button class="btn-icon" title="Editar transición" [appPuede]="permisoEditar()"
+                            [appPuedeSi]="editable()" (click)="abrirTransicion(p, t)"><i
+                                class="ti ti-pencil"></i></button>
+                        <button class="btn-icon btn-icon--danger" title="Eliminar transición"
+                            [appPuede]="permisoEditar()" [appPuedeSi]="editable()" (click)="eliminarTransicion(t)"><i
+                                class="ti ti-trash"></i></button>
+                    </span>
+                </li>
+                }
+            </ul>
+            }
+        </div>
+</ng-template>
+
+<!-- Detalle del paso elegido en el diagrama -->
+@if (mostrarDetalle()) {
+@if (pasoSeleccionado(); as p) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarDetalle.set(false) : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-git-branch"></i> {{ p.nombre }}</h3>
+            <button class="modal__close" (click)="mostrarDetalle.set(false)"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal__body paso">
+            <ng-container *ngTemplateOutlet="detallePaso; context: { $implicit: p }" />
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="mostrarDetalle.set(false)">Cerrar</button>
+        </div>
+    </div>
+</div>
+}
+}
+
+<!-- Modal paso -->
+@if (mostrarPaso()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarPaso.set(false) : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-git-branch"></i> {{ editando ? 'Editar paso' : 'Nuevo paso' }}</h3>
+            <button class="modal__close" (click)="mostrarPaso.set(false)"><i class="ti ti-x"></i></button>
+        </div>
+        @if (error()) {
+        <div class="alert alert--error" style="margin:16px 24px 0"><i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+        <div class="modal__body">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" [(ngModel)]="formPaso.nombre" name="nombre" />
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea rows="2" [(ngModel)]="formPaso.descripcion" name="descripcion"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tipo de paso</label>
+                    <select [(ngModel)]="formPaso.tipo_paso" name="tipo_paso">
+                        @for (t of TIPOS_PASO; track t) { <option [value]="t">{{ t | etiqueta:'tipo_paso' }}</option> }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Al vencer el plazo</label>
+                    <select [(ngModel)]="formPaso.accion_al_vencer" name="accion_al_vencer">
+                        @for (a of ACCIONES; track a) { <option [value]="a">{{ a | etiqueta:'accion_al_vencer' }}</option> }
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Plazo</label>
+                    <input type="number" min="1" [(ngModel)]="formPaso.plazo_valor" name="plazo_valor"
+                        placeholder="sin plazo" />
+                </div>
+                <div class="form-group">
+                    <label>Unidad</label>
+                    <select [(ngModel)]="formPaso.plazo_unidad" name="plazo_unidad"
+                        [disabled]="!formPaso.plazo_valor">
+                        <option [ngValue]="null">—</option>
+                        @for (u of UNIDADES; track u) { <option [value]="u">{{ u | etiqueta:'plazo_unidad' }}</option> }
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <label class="check"><input type="checkbox" [(ngModel)]="formPaso.es_paso_inicial"
+                        name="es_paso_inicial" /> Es el paso inicial</label>
+                <label class="check"><input type="checkbox" [(ngModel)]="formPaso.es_paso_final" name="es_paso_final" />
+                    Es un paso final</label>
+            </div>
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="mostrarPaso.set(false)">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarPaso()">
+                <i class="ti ti-device-floppy"></i> Guardar
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Modal transición -->
+@if (mostrarTransicion()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarTransicion.set(false) : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-arrow-narrow-right"></i> Salida desde "{{ pasoActivo?.nombre }}"</h3>
+            <button class="modal__close" (click)="mostrarTransicion.set(false)"><i class="ti ti-x"></i></button>
+        </div>
+        @if (error()) {
+        <div class="alert alert--error" style="margin:16px 24px 0"><i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+        <div class="modal__body">
+            <div class="form-group">
+                <label>Continúa en *</label>
+                <select [(ngModel)]="formTransicion.id_paso_destino" name="id_paso_destino">
+                    <option [ngValue]="null" disabled>Seleccione un paso...</option>
+                    @for (p of pasos(); track idPaso(p)) {
+                    <option [ngValue]="idPaso(p)">{{ p.nombre }}</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Condición</label>
+                @if (camposDecidibles().length === 0) {
+                <p class="text-sm text-muted">
+                    Este paso no tiene campos de selección, así que la salida no puede ser condicional.
+                </p>
+                } @else {
+                <div class="form-row">
+                    <select [(ngModel)]="condicionCampo" name="condicionCampo" (ngModelChange)="condicionValor = ''">
+                        <option value="">— sin condición —</option>
+                        @for (c of camposDecidibles(); track c.codigo) {
+                        <option [value]="c.codigo">{{ c.etiqueta }}</option>
+                        }
+                    </select>
+                    <select [(ngModel)]="condicionValor" name="condicionValor" [disabled]="!condicionCampo"
+                        (ngModelChange)="aplicarCondicion()">
+                        <option value="">valor...</option>
+                        @for (o of opcionesDe(condicionCampo); track o) { <option [value]="o">{{ o |
+                            etiqueta:'opcion_campo' }}</option> }
+                    </select>
+                </div>
+                @if (formTransicion.condicion) {
+                <p class="text-sm text-muted">Se tomará esta salida cuando <strong>{{ condicionLegible(formTransicion.condicion) }}</strong>.
+                </p>
+                }
+                }
+            </div>
+
+            <div class="form-group">
+                <label class="check">
+                    <input type="checkbox" [(ngModel)]="formTransicion.es_default" name="es_default"
+                        [disabled]="!!formTransicion.condicion" />
+                    Es la rama por defecto (se toma si ninguna condición se cumple)
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>Etiqueta</label>
+                <input type="text" [(ngModel)]="formTransicion.etiqueta" name="etiqueta"
+                    placeholder="Ej: Reviste delito" />
+            </div>
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="mostrarTransicion.set(false)">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarTransicion()">
+                <i class="ti ti-device-floppy"></i> Guardar
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Modal campo -->
+@if (mostrarCampo()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarCampo.set(false) : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-forms"></i> {{ editando ? 'Editar campo' : 'Nuevo campo' }}</h3>
+            <button class="modal__close" (click)="mostrarCampo.set(false)"><i class="ti ti-x"></i></button>
+        </div>
+        @if (error()) {
+        <div class="alert alert--error" style="margin:16px 24px 0"><i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+        <div class="modal__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Pregunta o dato a completar *</label>
+                    <input type="text" [(ngModel)]="formCampo.etiqueta" name="etiqueta"
+                        (ngModelChange)="onEtiquetaCampo()" placeholder="¿El hecho reviste delito?" />
+                    <span class="text-sm text-muted">Es el texto que va a ver quien complete este paso.</span>
+                </div>
+                <div class="form-group">
+                    <label>Tipo *</label>
+                    <select [(ngModel)]="formCampo.tipo_campo" name="tipo_campo">
+                        @for (t of TIPOS_CAMPO; track t) { <option [value]="t">{{ t | etiqueta:'tipo_campo' }}</option> }
+                    </select>
+                </div>
+            </div>
+            @if (formCampo.tipo_campo === 'seleccion') {
+            <div class="form-group">
+                <label>Opciones *</label>
+                <input type="text" [(ngModel)]="opcionesTexto" name="opciones" placeholder="leve, grave, gravisima" />
+                <span class="text-sm text-muted">Separadas por coma. Solo los campos de selección y booleanos pueden
+                    decidir una rama.</span>
+            </div>
+            }
+            <div class="form-group">
+                <label class="check"><input type="checkbox" [(ngModel)]="formCampo.es_obligatorio"
+                        name="es_obligatorio" /> Es obligatorio</label>
+            </div>
+
+            <!-- El código no se pide: sale solo de la pregunta. Se muestra
+                 igual porque es lo que aparece escrito en las condiciones de
+                 las salidas, y quien las lea tiene que poder reconocerlo. -->
+            <div class="form-group avanzado">
+                @if (!codigoManual()) {
+                <p class="text-sm text-muted">
+                    Identificador interno: <code>{{ formCampo.codigo || '—' }}</code>
+                    <button type="button" class="como-enlace" (click)="codigoManual.set(true)">cambiar</button>
+                </p>
+                } @else {
+                <label>Identificador interno *</label>
+                <input type="text" [(ngModel)]="formCampo.codigo" name="codigo" placeholder="reviste_delito" />
+                <span class="text-sm text-muted">
+                    Sin espacios ni tildes: es lo que usan las condiciones de las salidas.
+                    @if (editando) { Si lo cambias, las salidas que lo usaban dejan de encontrarlo. }
+                </span>
+                }
+            </div>
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="mostrarCampo.set(false)">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarCampo()">
+                <i class="ti ti-device-floppy"></i> Guardar
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Modal roles -->
+@if (mostrarRoles()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarRoles.set(false) : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-users"></i> Responsables de "{{ pasoActivo?.nombre }}"</h3>
+            <button class="modal__close" (click)="mostrarRoles.set(false)"><i class="ti ti-x"></i></button>
+        </div>
+        @if (error()) {
+        <div class="alert alert--error" style="margin:16px 24px 0"><i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+        <div class="modal__body">
+            @if (rolesSeleccionados.length === 0) {
+            <p class="text-sm text-muted">Sin responsables. Todo paso necesita al menos un ejecutor.</p>
+            }
+            @for (r of rolesSeleccionados; track $index) {
+            <div class="form-row items-center">
+                <select [(ngModel)]="r.rol_id" [name]="'rol' + $index">
+                    <option [ngValue]="null" disabled>Rol...</option>
+                    @for (rol of rolesDisponibles(); track rol.rol_id) {
+                    <option [ngValue]="rol.rol_id">{{ rol.nombre }}</option>
+                    }
+                </select>
+                <select [(ngModel)]="r.tipo_participacion" [name]="'part' + $index">
+                    @for (p of PARTICIPACIONES; track p) { <option [value]="p">{{ p | etiqueta:'tipo_participacion' }}</option> }
+                </select>
+                <button class="btn-icon btn-icon--danger" title="Quitar" (click)="quitarRol($index)">
+                    <i class="ti ti-trash"></i>
+                </button>
+            </div>
+            }
+            <button class="btn btn--outline btn--sm" style="width:auto" (click)="agregarRol()">
+                <i class="ti ti-plus"></i> Agregar rol
+            </button>
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="mostrarRoles.set(false)">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarRoles()">
+                <i class="ti ti-device-floppy"></i> Guardar
+            </button>
+        </div>
+    </div>
+</div>
+}

@@ -599,15 +599,23 @@
             </div>
 
             <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" placeholder="Ej: María González" autocomplete="off"
+                    [(ngModel)]="formUsuario.nombre" name="nombre_usuario" />
+            </div>
+
+            <div class="form-group">
                 <label>Correo *</label>
                 <input type="email" placeholder="Ej: encargado@colegio.cl" autocomplete="off"
                     [(ngModel)]="formUsuario.correo" name="correo_usuario" />
             </div>
-            <div class="form-group">
-                <label>Contraseña *</label>
-                <input type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"
-                    [(ngModel)]="formUsuario.password" name="password_usuario" />
-            </div>
+            <!-- Sin campo de contraseña: la genera el servidor y se muestra una
+                 sola vez, en el documento a entregar. -->
+            <p class="hint-clave">
+                <i class="ti ti-key"></i>
+                La contraseña se genera automáticamente y se muestra una sola vez,
+                en un documento listo para imprimir y entregar.
+            </p>
             <div class="form-group">
                 <label>Roles *</label>
                 @for (r of rolesUsuario(); track r.rol_id) {
@@ -712,4 +720,11 @@
         </div>
     </div>
 </div>
+}
+
+<!-- Documento con las credenciales del usuario recién creado. -->
+@if (credenciales(); as cred) {
+<app-credenciales-modal [credenciales]="cred" titulo="Usuario creado"
+    [establecimiento]="establecimientoCredenciales()" [rol]="rolCredenciales()"
+    (cerrar)="cerrarCredenciales()" />
 }

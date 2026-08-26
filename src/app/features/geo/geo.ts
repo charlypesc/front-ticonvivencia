@@ -7,6 +7,8 @@ import { ImportacionService } from '../../core/services/importacion.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
+import { CredencialesModal } from '../../shared/components/credenciales-modal/credenciales-modal';
+import { Credenciales } from '../../core/models/usuario.model';
 
 /**
  * Rol con el que se precarga el alta de usuario desde la ficha de un
@@ -19,7 +21,7 @@ const ROL_POR_DEFECTO = 'ENCARGADO';
 @Component({
   selector: 'app-geo',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede],
+  imports: [CommonModule, FormsModule, Puede, CredencialesModal],
   templateUrl: './geo.html',
   styleUrl: './geo.scss',
 })
@@ -153,7 +155,18 @@ export class Geo implements OnInit {
   mostrarFormUsuario = signal(false);
   establecimientoUsuario = signal<any | null>(null);
   rolesUsuario = signal<any[]>([]);
-  formUsuario = { correo: '', password: '', roles: [] as string[] };
+  formUsuario = { correo: '', nombre: '', roles: [] as string[] };
+
+  /**
+   * Credenciales del usuario recién creado. La clave la genera el backend y
+   * vuelve una sola vez en la respuesta del alta: si este modal no la muestra,
+   * se pierde y hay que restablecerla desde Usuarios.
+   */
+  credenciales = signal<Credenciales | null>(null);
+  /** Colegio al que pertenece la clave emitida, para encabezar el documento. */
+  establecimientoCredenciales = signal('');
+  /** Roles del usuario de esas credenciales, ya legibles, para el documento. */
+  rolCredenciales = signal('');
   guardandoUsuario = signal(false);
 
   mostrarFormEstablecimiento = signal(false);
@@ -564,7 +577,7 @@ export class Geo implements OnInit {
   abrirFormUsuario(est: any) {
     this.error.set('');
     this.establecimientoUsuario.set(est);
-    this.formUsuario = { correo: '', password: '', roles: [ROL_POR_DEFECTO] };
+    this.formUsuario = { correo: '', nombre: '', roles: [ROL_POR_DEFECTO] };
     this.mostrarFormUsuario.set(true);
 
     // El catálogo se pide cada vez que se abre: un rol creado hace un minuto
@@ -583,6 +596,11 @@ export class Geo implements OnInit {
       },
       error: () => this.error.set('No se pudo cargar el catálogo de roles'),
     });
+  }
+
+  cerrarCredenciales() {
+    this.credenciales.set(null);
+    this.rolCredenciales.set('');
   }
 
   cerrarFormUsuario() {
@@ -605,28 +623,38 @@ export class Geo implements OnInit {
     const est = this.establecimientoUsuario();
     if (!est) return;
 
-    const { correo, password, roles } = this.formUsuario;
-    if (!correo || !password || roles.length === 0) {
-      this.error.set('Correo, contraseña y al menos un rol son requeridos');
-      return;
-    }
-    if (password.length < 6) {
-      this.error.set('La contraseña debe tener al menos 6 caracteres');
+    const { correo, nombre, roles } = this.formUsuario;
+    if (!correo || !nombre.trim() || roles.length === 0) {
+      this.error.set('Nombre, correo y al menos un rol son requeridos');
       return;
     }
 
     this.guardandoUsuario.set(true);
-    this.api.createUsuarioEn(est.id_establecimiento, { correo, password, roles }).subscribe({
-      next: () => {
-        this.success.set(`Usuario creado en ${est.nombre} (RBD ${est.rbd})`);
-        this.cerrarFormUsuario();
-        // Refresca para que la fila pase a verde y aparezca "Ingresar": el
-        // conteo de usuarios lo calcula el backend, no se puede ajustar a mano
-        // acá sin arriesgar que muestre algo distinto de lo que quedó guardado.
-        this.recargarEstablecimientos();
-      },
-      error: (err) => this.error.set(err.error?.message ?? 'Error al crear el usuario'),
-    }).add(() => this.guardandoUsuario.set(false));
+    this.api
+      .createUsuarioEn(est.id_establecimiento, { correo, nombre: nombre.trim(), roles })
+      .subscribe({
+        next: (cred) => {
+          this.success.set(`Usuario creado en ${est.nombre} (RBD ${est.rbd})`);
+          this.cerrarFormUsuario();
+          // El documento con la clave se abre en el acto: es la única vez que la
+          // contraseña se puede ver.
+          this.establecimientoCredenciales.set(est.nombre);
+          // Los nombres se resuelven contra el catálogo para que el documento
+          // diga "Director" y no "DIRECTOR".
+          this.rolCredenciales.set(
+            roles
+              .map((c) => this.rolesUsuario().find((r) => r.codigo === c)?.nombre ?? c)
+              .join(', '),
+          );
+          this.credenciales.set(cred);
+          // Refresca para que la fila pase a verde y aparezca "Ingresar": el
+          // conteo de usuarios lo calcula el backend, no se puede ajustar a mano
+          // acá sin arriesgar que muestre algo distinto de lo que quedó guardado.
+          this.recargarEstablecimientos();
+        },
+        error: (err) => this.error.set(err.error?.message ?? 'Error al crear el usuario'),
+      })
+      .add(() => this.guardandoUsuario.set(false));
   }
 
   private recargarEstablecimientos() {

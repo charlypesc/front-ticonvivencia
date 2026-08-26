@@ -4,11 +4,12 @@ import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.services';
 import { AuthService } from '../../core/services/auth.service';
 import { ConfidencialService } from '../../core/services/confidencial.service';
+import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, EtiquetaPipe],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })

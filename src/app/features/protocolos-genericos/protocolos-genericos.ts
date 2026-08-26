@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/services/api.services';
 import { AuthService } from '../../core/services/auth.service';
@@ -12,7 +13,7 @@ import { Puede } from '../../shared/directives/permiso.directive';
 @Component({
   selector: 'app-protocolos-genericos',
   standalone: true,
-  imports: [CommonModule, FormsModule, AutoAjustarTextarea, Puede],
+  imports: [CommonModule, FormsModule, RouterLink, AutoAjustarTextarea, Puede],
   templateUrl: './protocolos-genericos.html',
   styleUrl: './protocolos-genericos.scss',
 })

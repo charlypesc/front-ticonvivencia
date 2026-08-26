@@ -1,0 +1,113 @@
+@use '../../../../styles/variables' as *;
+
+.campana {
+  position: relative;
+
+  &__badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: $accent-danger;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+  }
+
+  // Tapa la pantalla para capturar el click de afuera. Va bajo el panel pero
+  // sobre el resto de la app; sin z-index quedaría detrás del sidebar (90) y
+  // los clicks sobre el menú no cerrarían la campana.
+  &__fuera {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+  }
+
+  &__panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 360px;
+    max-width: calc(100vw - 24px);
+    max-height: 70vh;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid $gray-200;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+    // Sobre la capa de cierre, o el primer click sobre el panel lo cerraría.
+    z-index: 120;
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 1px solid $gray-100;
+    position: sticky;
+    top: 0;
+    background: #fff;
+  }
+
+  &__link {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: $primary;
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  &__lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  &__item {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid $gray-100;
+    cursor: pointer;
+
+    &:hover { background: $gray-50; }
+
+    // Lo no leído se marca con fondo y una barra, no solo con negrita: en una
+    // lista corta la negrita sola no se distingue de un título largo.
+    &--nueva {
+      background: $primary-bg;
+      box-shadow: inset 3px 0 0 $primary;
+    }
+  }
+
+  &__icono {
+    font-size: 18px;
+    color: $gray-400;
+    margin-top: 2px;
+  }
+
+  &__texto {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__vacio {
+    padding: 28px 14px;
+    text-align: center;
+    color: $gray-400;
+
+    i { font-size: 24px; display: block; margin-bottom: 6px; }
+    p { margin: 0; }
+  }
+}

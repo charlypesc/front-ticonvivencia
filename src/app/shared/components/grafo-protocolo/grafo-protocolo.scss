@@ -1,0 +1,125 @@
+@use '../../../../styles/variables' as *;
+
+// El diagrama no se achica para caber: un grafo de nueve pasos ilegible no
+// sirve de nada. Se desplaza en horizontal dentro de su contenedor.
+.lienzo {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+}
+
+// El SVG y los botones de cada nodo se apilan acá: la capa tiene el mismo
+// tamaño que el dibujo, así que las coordenadas del layout sirven tal cual
+// para posicionar los botones en HTML.
+.capa {
+  position: relative;
+}
+
+// Ojo con el pointer-events: el contenedor no debe tapar el click sobre la
+// caja del nodo (que abre el paso); solo los botones reciben clicks.
+.nodo-acciones {
+  position: absolute;
+  display: flex;
+  gap: 2px;
+  pointer-events: none;
+
+  .btn-icon {
+    pointer-events: auto;
+    width: 26px;
+    height: 26px;
+    font-size: 14px;
+  }
+}
+
+.arista {
+  fill: none;
+  stroke: $gray-400;
+  stroke-width: 1.5;
+
+  &--atras {
+    stroke: $gray-200;
+    stroke-dasharray: 4 3;
+  }
+}
+
+.punta {
+  fill: $gray-400;
+
+  &--atras { fill: $gray-200; }
+}
+
+.etiqueta {
+  font-size: 11px;
+  fill: $primary;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: $white;
+  stroke-width: 3px;
+
+  &--atras { fill: $gray-400; }
+}
+
+.nodo {
+  cursor: pointer;
+
+  rect {
+    fill: $white;
+    stroke: $gray-200;
+    stroke-width: 1.5;
+  }
+
+  &:hover rect { stroke: $primary; }
+
+  &__nombre {
+    font-size: 13px;
+    font-weight: 600;
+    fill: $gray-900;
+  }
+
+  &__meta {
+    font-size: 11px;
+    fill: $gray-400;
+  }
+
+  // Plantilla: se marca de dónde arranca y dónde cierra.
+  &--inicial rect { stroke: $accent-ok; }
+  &--final rect   { stroke: $primary; }
+
+  // Ejecución: el color dice por dónde va el caso.
+  &--completado rect { fill: #ecfdf5; stroke: $accent-ok; }
+  &--en_curso rect   { fill: $primary-bg; stroke: $primary; stroke-width: 2.5; }
+  &--vencido rect    { fill: #fef2f2; stroke: $accent-danger; stroke-width: 2.5; }
+  &--omitido rect    { fill: $gray-50; stroke: $gray-200; }
+  &--omitido .nodo__nombre { fill: $gray-400; }
+
+  // El que se está mirando en el panel de detalle. Va último a propósito: con
+  // la misma especificidad gana la regla de más abajo, así que la marca de
+  // selección se impone sobre el color de estado sin subirle el peso.
+  &--seleccionado rect {
+    stroke: $primary;
+    stroke-width: 3;
+  }
+}
+
+.marca {
+  &--inicial { fill: $accent-ok; }
+  &--final   { fill: $primary; }
+}
+
+.leyenda {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+
+  &--inicial { background: $accent-ok; }
+  &--final   { background: $primary; margin-left: 8px; }
+}

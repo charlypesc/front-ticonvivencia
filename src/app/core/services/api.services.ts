@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { Credenciales } from '../models/usuario.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -100,8 +101,14 @@ export class ApiService {
   getUsuarios() {
     return this.http.get<any[]>(`${this.base}/usuarios`);
   }
-  createUsuario(data: any) {
-    return this.http.post(`${this.base}/usuarios`, data);
+  /**
+   * La contraseña la genera el backend y vuelve en la respuesta, en claro y una
+   * sola vez: no hay endpoint que la relea. Quien llame a esto tiene que hacer
+   * algo con `password` en el mismo momento (mostrarla, imprimirla), o queda
+   * perdida y hay que restablecerla.
+   */
+  createUsuario(data: { correo: string; nombre: string; roles: string[] }) {
+    return this.http.post<Credenciales>(`${this.base}/usuarios`, data);
   }
 
   /**
@@ -114,13 +121,27 @@ export class ApiService {
    * agregaría el establecimiento activo y el usuario terminaría creado en el
    * colegio equivocado sin ningún error.
    */
-  createUsuarioEn(idEstablecimiento: number, data: any) {
-    return this.http.post(`${this.base}/usuarios`, data, {
+  createUsuarioEn(idEstablecimiento: number, data: { correo: string; nombre: string; roles: string[] }) {
+    return this.http.post<Credenciales>(`${this.base}/usuarios`, data, {
       params: { id_establecimiento: String(idEstablecimiento) },
     });
   }
   toggleUsuario(id: number) {
     return this.http.patch(`${this.base}/usuarios/${id}/toggle`, {});
+  }
+
+  /**
+   * Emite una contraseña nueva para otro usuario y la devuelve en claro. Es el
+   * camino para cuando alguien perdió la suya: la anterior queda invalidada en
+   * el acto, así que no se llama "por si acaso".
+   */
+  resetPasswordUsuario(id: number) {
+    return this.http.patch<Credenciales>(`${this.base}/usuarios/${id}/password`, {});
+  }
+
+  /** Cambia la contraseña del usuario de la sesión. Exige la actual. */
+  cambiarPassword(actual: string, nueva: string) {
+    return this.http.patch<{ message: string }>(`${this.base}/auth/password`, { actual, nueva });
   }
   getRolesDeUsuario(id: number) {
     return this.http.get<any[]>(`${this.base}/usuarios/${id}/roles`);
@@ -306,5 +327,140 @@ export class ApiService {
   }
   deleteProtocoloActivado(id: number) {
     return this.http.delete(`${this.base}/protocolos-activados/${id}`);
+  }
+
+  // Flujo del catálogo global (grafo del protocolo: pasos, transiciones, roles y campos)
+  getFlujoGenerico(idProtocolo: number) {
+    return this.http.get<any>(`${this.base}/protocolos-genericos/${idProtocolo}/flujo`);
+  }
+  validarFlujoGenerico(idProtocolo: number) {
+    return this.http.get<{ publicable: boolean; problemas: string[] }>(
+      `${this.base}/protocolos-genericos/${idProtocolo}/flujo/validar`,
+    );
+  }
+  publicarFlujoGenerico(idProtocolo: number) {
+    return this.http.post(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/publicar`, {});
+  }
+  createPasoGenerico(idProtocolo: number, data: any) {
+    return this.http.post(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/pasos`, data);
+  }
+  updatePasoGenerico(idProtocolo: number, idPaso: number, data: any) {
+    return this.http.put(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/pasos/${idPaso}`, data);
+  }
+  deletePasoGenerico(idProtocolo: number, idPaso: number) {
+    return this.http.delete(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/pasos/${idPaso}`);
+  }
+  createTransicionGenerica(idProtocolo: number, data: any) {
+    return this.http.post(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/transiciones`, data);
+  }
+  updateTransicionGenerica(idProtocolo: number, idTransicion: number, data: any) {
+    return this.http.put(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/transiciones/${idTransicion}`, data);
+  }
+  deleteTransicionGenerica(idProtocolo: number, idTransicion: number) {
+    return this.http.delete(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/transiciones/${idTransicion}`);
+  }
+  /** Reemplaza el set completo de roles del paso, no agrega de a uno. */
+  setRolesPasoGenerico(idProtocolo: number, idPaso: number, roles: any[]) {
+    return this.http.put(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/pasos/${idPaso}/roles`, { roles });
+  }
+  createCampoGenerico(idProtocolo: number, idPaso: number, data: any) {
+    return this.http.post(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/pasos/${idPaso}/campos`, data);
+  }
+  updateCampoGenerico(idProtocolo: number, idPaso: number, idCampo: number, data: any) {
+    return this.http.put(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/pasos/${idPaso}/campos/${idCampo}`, data);
+  }
+  deleteCampoGenerico(idProtocolo: number, idPaso: number, idCampo: number) {
+    return this.http.delete(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/pasos/${idPaso}/campos/${idCampo}`);
+  }
+
+  // Flujo del establecimiento (el grafo vigente: heredado del catálogo o copia propia)
+  getFlujoEstablecimiento(idPE: number) {
+    return this.http.get<any>(`${this.base}/protocolos-establecimiento/${idPE}/flujo`);
+  }
+  validarFlujoEstablecimiento(idPE: number) {
+    return this.http.get<any>(`${this.base}/protocolos-establecimiento/${idPE}/flujo/validar`);
+  }
+  /** Clona el grafo del catálogo: desde aquí el colegio deja de heredar. */
+  personalizarFlujoEstablecimiento(idPE: number) {
+    return this.http.post(`${this.base}/protocolos-establecimiento/${idPE}/flujo/personalizar`, {});
+  }
+  restaurarFlujoEstablecimiento(idPE: number) {
+    return this.http.delete(`${this.base}/protocolos-establecimiento/${idPE}/flujo/personalizar`);
+  }
+  createPasoEstablecimiento(idPE: number, data: any) {
+    return this.http.post(`${this.base}/protocolos-establecimiento/${idPE}/flujo/pasos`, data);
+  }
+  updatePasoEstablecimiento(idPE: number, idPaso: number, data: any) {
+    return this.http.put(`${this.base}/protocolos-establecimiento/${idPE}/flujo/pasos/${idPaso}`, data);
+  }
+  deletePasoEstablecimiento(idPE: number, idPaso: number) {
+    return this.http.delete(`${this.base}/protocolos-establecimiento/${idPE}/flujo/pasos/${idPaso}`);
+  }
+  createTransicionEstablecimiento(idPE: number, data: any) {
+    return this.http.post(`${this.base}/protocolos-establecimiento/${idPE}/flujo/transiciones`, data);
+  }
+  updateTransicionEstablecimiento(idPE: number, idTransicion: number, data: any) {
+    return this.http.put(`${this.base}/protocolos-establecimiento/${idPE}/flujo/transiciones/${idTransicion}`, data);
+  }
+  deleteTransicionEstablecimiento(idPE: number, idTransicion: number) {
+    return this.http.delete(`${this.base}/protocolos-establecimiento/${idPE}/flujo/transiciones/${idTransicion}`);
+  }
+  setRolesPasoEstablecimiento(idPE: number, idPaso: number, roles: any[]) {
+    return this.http.put(`${this.base}/protocolos-establecimiento/${idPE}/flujo/pasos/${idPaso}/roles`, { roles });
+  }
+  createCampoEstablecimiento(idPE: number, idPaso: number, data: any) {
+    return this.http.post(`${this.base}/protocolos-establecimiento/${idPE}/flujo/pasos/${idPaso}/campos`, data);
+  }
+  updateCampoEstablecimiento(idPE: number, idPaso: number, idCampo: number, data: any) {
+    return this.http.put(`${this.base}/protocolos-establecimiento/${idPE}/flujo/pasos/${idPaso}/campos/${idCampo}`, data);
+  }
+  deleteCampoEstablecimiento(idPE: number, idPaso: number, idCampo: number) {
+    return this.http.delete(`${this.base}/protocolos-establecimiento/${idPE}/flujo/pasos/${idPaso}/campos/${idCampo}`);
+  }
+
+  // Ejecución de un caso (motor de protocolos)
+  /** Cabecera + grafo congelado + estado de cada paso. */
+  getProtocoloActivado(id: number) {
+    return this.http.get<any>(`${this.base}/protocolos-activados/${id}`);
+  }
+  getBitacoraProtocolo(id: number) {
+    return this.http.get<any[]>(`${this.base}/protocolos-activados/${id}/bitacora`);
+  }
+  completarPaso(id: number, idPaso: number, datos_salida: any) {
+    return this.http.post(`${this.base}/protocolos-activados/${id}/pasos/${idPaso}/completar`, { datos_salida });
+  }
+  aprobarPaso(id: number, idPaso: number, data: any) {
+    return this.http.post(`${this.base}/protocolos-activados/${id}/pasos/${idPaso}/aprobar`, data);
+  }
+  omitirPaso(id: number, idPaso: number, motivo: string) {
+    return this.http.post(`${this.base}/protocolos-activados/${id}/pasos/${idPaso}/omitir`, { motivo });
+  }
+  reasignarPaso(id: number, idPaso: number, id_usuario: number) {
+    return this.http.post(`${this.base}/protocolos-activados/${id}/pasos/${idPaso}/reasignar`, { id_usuario });
+  }
+  cerrarProtocoloActivado(id: number, motivo?: string) {
+    return this.http.post(`${this.base}/protocolos-activados/${id}/cerrar`, { motivo });
+  }
+  anularProtocoloActivado(id: number, motivo: string) {
+    return this.http.post(`${this.base}/protocolos-activados/${id}/anular`, { motivo });
+  }
+  agregarNotaProtocolo(id: number, descripcion: string) {
+    return this.http.post(`${this.base}/protocolos-activados/${id}/nota`, { descripcion });
+  }
+
+  // Notificaciones (la campana de la barra superior)
+  /** Las últimas 30 del usuario en sesión, sin leer primero. */
+  getNotificaciones() {
+    return this.http.get<any[]>(`${this.base}/notificaciones`);
+  }
+  /** Solo el número del badge: se pide seguido, así que no trae el listado. */
+  getContadorNotificaciones() {
+    return this.http.get<{ sin_leer: number }>(`${this.base}/notificaciones/contador`);
+  }
+  marcarNotificacionLeida(id: number) {
+    return this.http.put(`${this.base}/notificaciones/${id}/leer`, {});
+  }
+  marcarTodasNotificacionesLeidas() {
+    return this.http.put(`${this.base}/notificaciones/leer-todas`, {});
   }
 }

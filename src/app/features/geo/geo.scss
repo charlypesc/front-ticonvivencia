@@ -217,3 +217,20 @@
   margin-right: 4px;
   vertical-align: middle;
 }
+
+// Explica por qué el alta de usuario no pide contraseña. Sin esto, la ausencia
+// del campo se lee como un bug y no como una decisión.
+.hint-clave {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: $primary-bg;
+  border-radius: $radius;
+  padding: 11px 13px;
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: $gray-600;
+
+  i { color: $primary; font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+}

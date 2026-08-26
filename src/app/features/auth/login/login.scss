@@ -37,6 +37,12 @@
   color: #1e3a6e;
 }
 
+.login-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }

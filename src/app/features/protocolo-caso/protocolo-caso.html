@@ -1,0 +1,332 @@
+<div class="page-header">
+    <h2>
+        <a routerLink="/protocolos-activados" class="volver" title="Volver a protocolos activados">
+            <i class="ti ti-arrow-left"></i>
+        </a>
+        {{ caso()?.nombre ?? 'Protocolo' }}
+    </h2>
+    @if (caso()) {
+    <span class="badge" [class.badge--validado]="caso().estado === 'cerrado'"
+        [class.badge--pendiente]="caso().estado === 'activo'"
+        [class.badge--confidencial]="caso().estado === 'anulado'">
+        {{ caso().estado | etiqueta:'estado_caso' }}
+    </span>
+    }
+</div>
+
+@if (success()) {
+<div class="alert alert--success"><i class="ti ti-circle-check"></i> {{ success() }}</div>
+}
+@if (error()) {
+<div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+}
+
+@if (loading()) {
+<div class="empty-state"><i class="ti ti-loader-2 spin"></i>
+    <p>Cargando...</p>
+</div>
+} @else if (!caso()) {
+<div class="empty-state"><i class="ti ti-list-off"></i>
+    <p>No se encontró el protocolo</p>
+</div>
+} @else {
+
+<div class="card mb-4">
+    <div class="resumen">
+        <div><span class="text-sm text-muted">Registro</span><strong>#{{ caso().id_registro }}</strong></div>
+        <div><span class="text-sm text-muted">Activado</span><strong>{{ caso().fecha_activacion |
+                date:'dd/MM/yyyy HH:mm' }}</strong></div>
+        @if (caso().fecha_cierre) {
+        <div><span class="text-sm text-muted">Cerrado</span><strong>{{ caso().fecha_cierre | date:'dd/MM/yyyy HH:mm'
+                }}</strong></div>
+        }
+        <div><span class="text-sm text-muted">Avance</span><strong>{{ avance }}</strong></div>
+    </div>
+</div>
+
+<!-- Paso en curso: lo primero que se ve, porque es lo único accionable -->
+@if (activo() && pasoActual(); as paso) {
+<div class="card paso-actual mb-4" [class.paso-actual--vencido]="paso.estado === 'vencido'">
+    <div class="card__header">
+        <h3><i class="ti" [ngClass]="icono(paso)"></i> {{ paso.nombre }}</h3>
+        <div class="flex gap-2 items-center">
+            <span class="badge badge--leve">{{ paso.tipo_paso | etiqueta:'tipo_paso' }}</span>
+            @if (paso.fecha_limite) {
+            <span class="badge" [class.badge--gravísima]="paso.estado === 'vencido'"
+                [class.badge--pendiente]="paso.estado !== 'vencido'">
+                <i class="ti ti-clock"></i>
+                {{ paso.estado === 'vencido' ? 'Venció' : 'Vence' }} {{ paso.fecha_limite | date:'dd/MM HH:mm' }}
+            </span>
+            }
+        </div>
+    </div>
+
+    @if (paso.descripcion) { <p class="text-muted">{{ paso.descripcion }}</p> }
+
+    <p class="text-sm text-muted">
+        <i class="ti ti-users"></i> Ejecuta: {{ rolesDe(paso, 'ejecutor') || '—' }}
+        @if (rolesDe(paso, 'aprobador')) { · Aprueba: {{ rolesDe(paso, 'aprobador') }} }
+        @if (paso.responsable_correo) { · Responsable: {{ paso.responsable_correo }} }
+    </p>
+
+    @for (campo of camposEditables(); track campo.codigo) {
+    <div class="form-group">
+        <label>{{ campo.etiqueta }} @if (campo.es_obligatorio) {<span class="req">*</span>}</label>
+        @if (campo.tipo_campo === 'seleccion') {
+        <select [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo">
+            <option value="" disabled>Seleccione...</option>
+            <!-- El value va crudo: es lo que evalúan las condiciones del flujo. -->
+            @for (o of opciones(campo); track o) { <option [value]="o">{{ o | etiqueta:'opcion_campo' }}</option> }
+        </select>
+        } @else if (campo.tipo_campo === 'booleano') {
+        <select [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo">
+            <option value="" disabled>Seleccione...</option>
+            <option value="si">Sí</option>
+            <option value="no">No</option>
+        </select>
+        } @else if (campo.tipo_campo === 'fecha') {
+        <input type="date" [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo" />
+        } @else if (campo.tipo_campo === 'numero') {
+        <input type="number" [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo" />
+        } @else {
+        <input type="text" [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo" />
+        }
+    </div>
+    }
+
+    <div class="form-group">
+        <label>Comentario <span class="text-muted text-sm">(obligatorio para omitir, cerrar anticipado o
+                anular)</span></label>
+        <textarea rows="2" [(ngModel)]="comentario" name="comentario"></textarea>
+    </div>
+
+    <div class="acciones-paso">
+        @if (paso.tipo_paso === 'aprobacion') {
+        <button class="btn btn--primary" style="width:auto" [disabled]="guardando()"
+            [appPuede]="Permiso.ProtocoloActivadoAprobarPaso" (click)="aprobar(true)">
+            <i class="ti ti-check"></i> Aprobar
+        </button>
+        <button class="btn btn--outline" style="width:auto" [disabled]="guardando()"
+            [appPuede]="Permiso.ProtocoloActivadoAprobarPaso" (click)="aprobar(false)">
+            <i class="ti ti-x"></i> Rechazar
+        </button>
+        } @else {
+        <button class="btn btn--primary" style="width:auto" [disabled]="guardando()"
+            [appPuede]="Permiso.ProtocoloActivadoCompletarPaso" (click)="completar()">
+            <i class="ti ti-check"></i> Completar paso
+        </button>
+        }
+        <button class="btn btn--outline" style="width:auto" [disabled]="guardando()"
+            [appPuede]="Permiso.ProtocoloActivadoOmitirPaso" (click)="omitir()">
+            <i class="ti ti-player-skip-forward"></i> Omitir
+        </button>
+        <button class="btn btn--outline" style="width:auto" [appPuede]="Permiso.ProtocoloActivadoReasignarPaso"
+            (click)="mostrarReasignar.set(true)">
+            <i class="ti ti-user-share"></i> Reasignar
+        </button>
+    </div>
+</div>
+} @else if (activo()) {
+<div class="card mb-4">
+    <div class="empty-state"><i class="ti ti-hourglass"></i>
+        <p>No hay ningún paso en curso.</p>
+    </div>
+</div>
+}
+
+<!-- Línea de tiempo -->
+<div class="card mb-4">
+    <div class="card__header">
+        <h3>Pasos del protocolo</h3>
+        <div class="flex gap-2">
+            <button class="btn btn--outline btn--sm" style="width:auto" (click)="mostrarGrafo.set(!mostrarGrafo())">
+                <i class="ti ti-sitemap"></i> {{ mostrarGrafo() ? 'Ver lista' : 'Ver diagrama' }}
+            </button>
+            <button class="btn btn--outline btn--sm" style="width:auto"
+                [appPuede]="Permiso.ProtocoloActivadoVerBitacora" (click)="verBitacora()">
+                <i class="ti ti-history"></i> Bitácora
+            </button>
+            <button class="btn btn--outline btn--sm" style="width:auto" [appPuede]="Permiso.ProtocoloActivadoCerrar"
+                [appPuedeSi]="activo()" appPuedeMotivo="El protocolo ya no está activo" (click)="cerrar()">
+                <i class="ti ti-lock"></i> Cerrar
+            </button>
+            <button class="btn btn--outline btn--sm btn-icon--danger" style="width:auto"
+                [appPuede]="Permiso.ProtocoloActivadoAnular" [appPuedeSi]="activo()"
+                appPuedeMotivo="El protocolo ya no está activo" (click)="anular()">
+                <i class="ti ti-ban"></i> Anular
+            </button>
+        </div>
+    </div>
+
+    @if (mostrarGrafo()) {
+    <app-grafo-protocolo [nodos]="nodosGrafo()" [aristas]="aristasGrafo()"
+        [seleccionado]="pasoSeleccionadoId()" (seleccionar)="seleccionarDelGrafo($event)" />
+    <p class="text-sm text-muted">Haz click en un paso para ver su detalle.</p>
+    } @else {
+    <ol class="timeline">
+        @for (p of caso().pasos; track p.id_activado_paso) {
+        <li class="timeline__item" [attr.data-estado]="p.estado">
+            <span class="timeline__icono"><i class="ti" [ngClass]="icono(p)"></i></span>
+            <div class="timeline__cuerpo">
+                <div class="flex gap-2 items-center justify-between">
+                    <strong>{{ p.nombre }}</strong>
+                    <span class="badge badge--{{ p.estado === 'completado' ? 'validado' : p.estado === 'vencido' ?
+                        'gravísima' : p.estado === 'omitido' ? 'confidencial' : 'pendiente' }}">
+                        {{ p.estado | etiqueta:'estado_paso' }}
+                    </span>
+                </div>
+                <p class="text-sm text-muted">
+                    {{ rolesDe(p, 'ejecutor') || '—' }}
+                    @if (p.fecha_completado) { · completado {{ p.fecha_completado | date:'dd/MM/yyyy HH:mm' }} }
+                    @else if (p.fecha_limite) { · vence {{ p.fecha_limite | date:'dd/MM/yyyy HH:mm' }} }
+                </p>
+                @if (respuestas(p).length) {
+                <ul class="respuestas">
+                    @for (r of respuestas(p); track r.etiqueta) {
+                    <li><span class="text-muted">{{ r.etiqueta }}:</span> <strong>{{ r.valor }}</strong></li>
+                    }
+                </ul>
+                }
+            </div>
+        </li>
+        }
+    </ol>
+    }
+</div>
+
+<div class="card">
+    <div class="form-group">
+        <label>Agregar una nota a la bitácora</label>
+        <textarea rows="2" [(ngModel)]="nota" name="nota"
+            placeholder="Queda registrada con tu nombre y la fecha"></textarea>
+    </div>
+    <button class="btn btn--outline btn--sm" style="width:auto" [appPuede]="Permiso.ProtocoloActivadoEditar"
+        (click)="agregarNota()">
+        <i class="ti ti-note"></i> Registrar nota
+    </button>
+</div>
+}
+
+<!-- Detalle del paso elegido en el diagrama -->
+@if (mostrarDetalle()) {
+@if (pasoSeleccionado(); as p) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarDetalle.set(false) : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-git-branch"></i> {{ p.nombre }}</h3>
+            <button class="modal__close" (click)="mostrarDetalle.set(false)"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal__body detalle-paso">
+            <div class="flex gap-2 items-center">
+                <span class="badge badge--{{ p.estado === 'completado' ? 'validado' : p.estado === 'vencido' ?
+                    'gravísima' : p.estado === 'omitido' ? 'confidencial' : 'pendiente' }}">
+                    {{ p.estado | etiqueta:'estado_paso' }}
+                </span>
+                <span class="badge badge--leve">{{ p.tipo_paso | etiqueta:'tipo_paso' }}</span>
+            </div>
+            @if (p.descripcion) { <p class="text-sm">{{ p.descripcion }}</p> }
+
+            <p class="text-sm">
+                <span class="text-muted">Ejecuta:</span> {{ rolesDe(p, 'ejecutor') || '—' }}
+                @if (rolesDe(p, 'aprobador')) { <br /><span class="text-muted">Aprueba:</span> {{ rolesDe(p, 'aprobador') }} }
+                @if (rolesDe(p, 'notificado')) { <br /><span class="text-muted">Se notifica a:</span> {{ rolesDe(p, 'notificado') }} }
+            </p>
+
+            <p class="text-sm text-muted">
+                @if (p.fecha_completado) { <i class="ti ti-circle-check"></i> Completado el {{ p.fecha_completado |
+                date:'dd/MM/yyyy HH:mm' }} }
+                @else if (p.fecha_limite) { <i class="ti ti-clock"></i> Vence el {{ p.fecha_limite | date:'dd/MM/yyyy
+                HH:mm' }} }
+                @else { <i class="ti ti-clock"></i> Sin plazo }
+            </p>
+
+            @if (respuestas(p).length) {
+            <p class="text-sm text-muted mt-4">Lo que se respondió</p>
+            <ul class="respuestas">
+                @for (r of respuestas(p); track r.etiqueta) {
+                <li><span class="text-muted">{{ r.etiqueta }}:</span> <strong>{{ r.valor }}</strong></li>
+                }
+            </ul>
+            } @else if ((p.campos ?? []).length) {
+            <p class="text-sm text-muted mt-4">Todavía sin responder:</p>
+            <ul class="respuestas">
+                @for (c of p.campos; track c.codigo) { <li>{{ c.etiqueta }}</li> }
+            </ul>
+            }
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="mostrarDetalle.set(false)">Cerrar</button>
+        </div>
+    </div>
+</div>
+}
+}
+
+<!-- Bitácora -->
+@if (mostrarBitacora()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarBitacora.set(false) : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-history"></i> Bitácora del protocolo</h3>
+            <button class="modal__close" (click)="mostrarBitacora.set(false)"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal__body">
+            @if (bitacora().length === 0) {
+            <div class="empty-state">
+                <p>Sin eventos</p>
+            </div>
+            } @else {
+            <ol class="bitacora">
+                @for (e of bitacora(); track e.id_evento) {
+                <li>
+                    <div class="bitacora__fecha">{{ e.fecha | date:'dd/MM/yyyy HH:mm' }}</div>
+                    <div>
+                        <span class="badge badge--leve">{{ e.tipo_evento | etiqueta:'tipo_evento' }}</span>
+                        {{ e.descripcion }}
+                        <div class="text-sm text-muted">
+                            {{ e.usuario_correo ?? 'Sistema' }}@if (e.paso_nombre) { · {{ e.paso_nombre }} }
+                        </div>
+                    </div>
+                </li>
+                }
+            </ol>
+            }
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="mostrarBitacora.set(false)">Cerrar</button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Reasignar -->
+@if (mostrarReasignar()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarReasignar.set(false) : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-user-share"></i> Asignar responsable del paso</h3>
+            <button class="modal__close" (click)="mostrarReasignar.set(false)"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal__body">
+            <p class="text-sm text-muted">
+                Quien tenga el rol del paso puede seguir actuando: esto solo indica quién lo está llevando.
+            </p>
+            <div class="form-group">
+                <label>Responsable</label>
+                <select [(ngModel)]="reasignarA" name="reasignarA">
+                    <option [ngValue]="null" disabled>Seleccione un usuario...</option>
+                    @for (u of usuarios(); track u.id_usuario) {
+                    <option [ngValue]="u.id_usuario">{{ u.correo }}</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="mostrarReasignar.set(false)">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" [disabled]="!reasignarA" (click)="reasignar()">
+                <i class="ti ti-device-floppy"></i> Asignar
+            </button>
+        </div>
+    </div>
+</div>
+}

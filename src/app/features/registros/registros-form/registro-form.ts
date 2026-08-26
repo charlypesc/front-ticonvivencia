@@ -2,6 +2,7 @@ import { Component, OnInit, Output, EventEmitter, signal, Input } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.services';
+import { AuthService } from '../../../core/services/auth.service';
 import { Permiso } from '../../../core/constants/permisos';
 import { Puede } from '../../../shared/directives/permiso.directive';
 
@@ -29,6 +30,31 @@ export class RegistroForm implements OnInit {
   // registro.editar_confidencialidad). Al crear siempre se puede: la
   // restricción es para levantar la confidencialidad de un registro ajeno.
   puedeEditarConfidencialidad = signal(true);
+
+  // Activación de protocolo junto con el registro.
+  //
+  // El protocolo se activa SOBRE EL REGISTRO (PROTOCOLO_ACTIVADO.id_registro),
+  // no sobre un estudiante suelto: los involucrados ya cuelgan del registro, así
+  // que activar acá es lo mismo que activárselo al alumno del caso.
+  //
+  // Va como paso aparte después de guardar porque son dos endpoints distintos:
+  // si la activación falla (flujo del protocolo incoherente, por ejemplo), el
+  // registro igual quedó guardado y hay que decirlo en vez de simular un error
+  // de guardado.
+  puedeActivarProtocolo = false;
+  protocolos = signal<any[]>([]);
+  activarProtocolo = false;
+  idProtocoloEstablecimiento: number | null = null;
+  /** Protocolos ya activados sobre este registro (solo en edición). */
+  protocolosActivados = signal<any[]>([]);
+
+  /** El backend rechaza activar dos veces el mismo protocolo sobre un registro. */
+  protocolosDisponibles() {
+    const yaActivados = new Set(
+      this.protocolosActivados().map((p) => p.id_protocolo_establecimiento)
+    );
+    return this.protocolos().filter((p) => !yaActivados.has(p.id_protocolo_establecimiento));
+  }
 
   // Selección múltiple de estudiantes
   estudiantesSeleccionados: { id_estudiante: number; rol_en_incidente: string }[] = [];
@@ -67,9 +93,19 @@ export class RegistroForm implements OnInit {
     setTimeout(() => this.mostrarSugerenciasEstudiante.set(false), 150);
   }
 
+  // Hoy en horario local. `toISOString()` daría UTC y en Chile (UTC-3/-4) un
+  // registro creado de noche saldría con la fecha de mañana.
+  private static hoy() {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mm}-${dd}`;
+  }
+
   form = {
-    fecha_incidente: '',
-    tematica: '',
+    // Un registro nuevo abre con la fecha de hoy; en edición la pisa cargarForm().
+    fecha_incidente: RegistroForm.hoy(),
+    asunto: '',
     antecedentes: '',
     acuerdos: '',
     id_tipo_falta: null as number | null,
@@ -77,12 +113,25 @@ export class RegistroForm implements OnInit {
     nota_confidencial: '',
   };
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private auth: AuthService) {}
 
   ngOnInit() {
     // Carga tipos de falta y estudiantes en paralelo
     this.api.getTiposFalta().subscribe((data) => this.tiposFalta.set(data));
     this.api.getEstudiantes().subscribe((data) => this.estudiantes.set(data));
+
+    // El catálogo del colegio solo se pide si la persona puede activar: sin el
+    // permiso la sección ni se muestra, y sería una llamada que devuelve 403.
+    this.puedeActivarProtocolo = this.auth.can(Permiso.ProtocoloActivadoCrear);
+    if (this.puedeActivarProtocolo) {
+      this.api.getProtocolosEstablecimiento().subscribe((data) => this.protocolos.set(data));
+      if (this.registro) {
+        this.api
+          .getProtocolosActivadosByRegistro(this.registro.id_registro)
+          .subscribe((data) => this.protocolosActivados.set(data));
+      }
+    }
+
     if (this.registro) {
       this.api.getRegistro(this.registro.id_registro).subscribe({
         next: (data) => {
@@ -154,15 +203,20 @@ export class RegistroForm implements OnInit {
 
   guardar() {
     this.error.set('');
-    const { fecha_incidente, tematica, antecedentes, id_tipo_falta } = this.form;
+    const { fecha_incidente, asunto, antecedentes, id_tipo_falta } = this.form;
 
-    if (!fecha_incidente || !tematica || !antecedentes || !id_tipo_falta) {
+    if (!fecha_incidente || !asunto || !antecedentes || !id_tipo_falta) {
       this.error.set('Complete todos los campos requeridos');
       return;
     }
 
     if (this.form.es_confidencial && !this.form.nota_confidencial.trim()) {
       this.error.set('Indique la nota de confidencialidad');
+      return;
+    }
+
+    if (this.activarProtocolo && !this.idProtocoloEstablecimiento) {
+      this.error.set('Seleccione el protocolo a activar');
       return;
     }
 
@@ -174,10 +228,7 @@ export class RegistroForm implements OnInit {
           estudiantes: this.estudiantesSeleccionados,
         })
         .subscribe({
-          next: () => {
-            this.success.set(true);
-            setTimeout(() => this.cerrar.emit(), 1200);
-          },
+          next: (res: any) => this.activarYCerrar(res?.id_registro),
           error: () => {
             this.loading.set(false);
             this.error.set('Error al guardar el registro');
@@ -190,15 +241,43 @@ export class RegistroForm implements OnInit {
           estudiantes: this.estudiantesSeleccionados,
         })
         .subscribe({
-          next: () => {
-            this.success.set(true);
-            setTimeout(() => this.cerrar.emit(), 1200);
-          },
+          next: () => this.activarYCerrar(this.registro.id_registro),
           error: () => {
             this.loading.set(false);
             this.error.set('Error al guardar el registro');
           },
         });
     }
+  }
+
+  /** El registro ya está guardado: acá solo falta el protocolo, si lo pidieron. */
+  private activarYCerrar(idRegistro: number | undefined) {
+    if (!this.activarProtocolo || !this.idProtocoloEstablecimiento || !idRegistro) {
+      this.success.set(true);
+      setTimeout(() => this.cerrar.emit(), 1200);
+      return;
+    }
+
+    this.api
+      .createProtocoloActivado({
+        id_protocolo_establecimiento: this.idProtocoloEstablecimiento,
+        id_registro: idRegistro,
+      })
+      .subscribe({
+        next: () => {
+          this.success.set(true);
+          setTimeout(() => this.cerrar.emit(), 1200);
+        },
+        // El registro quedó guardado igual: el mensaje tiene que decirlo, o la
+        // persona lo vuelve a crear y termina con dos registros del mismo caso.
+        error: (err) => {
+          this.loading.set(false);
+          this.error.set(
+            `Registro guardado, pero no se pudo activar el protocolo: ${
+              err.error?.message ?? 'error del servidor'
+            }`
+          );
+        },
+      });
   }
 }
