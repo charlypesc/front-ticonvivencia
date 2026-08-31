@@ -114,10 +114,13 @@
 </div>
 
 @if (mostrarForm()) {
-<div class="modal-backdrop">
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarForm.set(false) : null">
     <div class="modal modal-box-sm">
         <div class="modal__header">
             <h3>Nuevo rol</h3>
+            <button class="modal__close" (click)="mostrarForm.set(false)" title="Cerrar">
+                <i class="ti ti-x"></i>
+            </button>
         </div>
         <div class="modal__body">
             <div class="form-group">

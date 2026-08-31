@@ -8,7 +8,9 @@ import { AuthService } from '../../core/services/auth.service';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { CredencialesModal } from '../../shared/components/credenciales-modal/credenciales-modal';
+import { Buscador } from '../../shared/components/buscador/buscador';
 import { Credenciales } from '../../core/models/usuario.model';
+import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 
 /**
  * Rol con el que se precarga el alta de usuario desde la ficha de un
@@ -21,7 +23,7 @@ const ROL_POR_DEFECTO = 'ENCARGADO';
 @Component({
   selector: 'app-geo',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, CredencialesModal],
+  imports: [CommonModule, FormsModule, Puede, CredencialesModal, Buscador, CerrarConEsc],
   templateUrl: './geo.html',
   styleUrl: './geo.scss',
 })
@@ -49,7 +51,6 @@ export class Geo implements OnInit {
   // breadcrumb a mano (busca contra toda la BD, no solo la comuna actual).
   busquedaRbd = signal('');
   resultadosBusquedaRbd = signal<any[]>([]);
-  mostrarResultadosBusqueda = signal(false);
   buscandoRbd = signal(false);
   private debounceBusquedaId: ReturnType<typeof setTimeout> | undefined;
 
@@ -243,7 +244,6 @@ export class Geo implements OnInit {
     const q = valor.trim();
     if (q.length < 2) {
       this.resultadosBusquedaRbd.set([]);
-      this.mostrarResultadosBusqueda.set(false);
       return;
     }
 
@@ -252,16 +252,11 @@ export class Geo implements OnInit {
       this.api.buscarEstablecimientosGeoPorRbd(q).subscribe({
         next: (data) => {
           this.resultadosBusquedaRbd.set(data);
-          this.mostrarResultadosBusqueda.set(true);
           this.buscandoRbd.set(false);
         },
         error: () => this.buscandoRbd.set(false),
       });
     }, 300);
-  }
-
-  ocultarResultadosBusquedaConDelay() {
-    setTimeout(() => this.mostrarResultadosBusqueda.set(false), 150);
   }
 
   // Resuelve la cadena País → Región → Provincia → Comuna del establecimiento
@@ -281,7 +276,6 @@ export class Geo implements OnInit {
     this.regionSel.set(region);
     this.provinciaSel.set(provincia);
     this.busquedaRbd.set('');
-    this.mostrarResultadosBusqueda.set(false);
     this.verEstablecimientos(comuna);
 
     // Va después de verEstablecimientos() a propósito: esa función limpia el

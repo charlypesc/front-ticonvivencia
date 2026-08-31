@@ -138,6 +138,171 @@ code {
   }
 }
 
+.mt-2 { margin-top: 8px; }
+
+// El modal del paso trae todo lo que define un paso (datos, responsables,
+// preguntas y salidas), así que necesita más ancho que los 520px del modal
+// corriente: con dos selects y un input por fila, a 520 no entra nada.
+.modal--lg { max-width: 780px; }
+
+// Cada bloque del modal del paso. Separados por una línea y con el título en
+// versalita para que se lean como cuatro cosas distintas dentro de un mismo
+// formulario y no como una lista larga de campos.
+.seccion {
+  & + & {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid $gray-200;
+  }
+
+  &__titulo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: $gray-600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 10px;
+  }
+}
+
+// Ubicación del paso dentro del flujo, arriba del formulario: de qué paso se
+// viene y a cuál se sigue. No nombra el paso actual (ya está en el título del
+// modal): mostrarlo en el medio solo repetiría lo que se está editando.
+.contexto-flujo {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border: 1px solid $gray-200;
+  border-radius: 8px;
+  background: $gray-50;
+
+  &__lado {
+    flex: 1;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    // La fila de un previo (select + condición + borrar) ocupa el ancho del
+    // lado; sin esto el select se encoge al ancho de su opción más corta.
+    .fila-edit { margin-bottom: 0; }
+    .cond { flex-shrink: 0; }
+  }
+
+  &__titulo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: $gray-600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  &__paso {
+    font-size: 13px;
+    font-weight: 600;
+    color: $gray-900;
+  }
+
+  &__vacio {
+    font-size: 13px;
+    color: $gray-400;
+  }
+}
+
+// Fila de controles que se editan juntos (rol + participación + borrar).
+.fila-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  > select,
+  > input { flex: 1; min-width: 0; }
+  > .btn-icon { flex-shrink: 0; }
+}
+
+// Una pregunta con sus opciones y, si es Sí/No, sus dos caminos.
+.campo-edit {
+  border: 1px solid $gray-200;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+
+  .form-group { margin-bottom: 8px; }
+  .fila-edit:last-of-type { margin-bottom: 0; }
+}
+
+// Los dos caminos de una pregunta Sí/No. Van dentro de la pregunta y no en la
+// lista de salidas porque es una sola decisión: separarlos obligaba a recordar
+// el código del campo para escribir la condición a mano.
+.rama {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed $gray-200;
+
+  &__titulo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: $gray-600;
+    margin-bottom: 8px;
+  }
+
+  &__fila {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+
+    > select,
+    > input { flex: 1; min-width: 0; }
+  }
+
+  &__valor {
+    flex-shrink: 0;
+    width: 34px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: $accent-ok;
+    background: rgba(22, 163, 74, .1);
+    border-radius: 999px;
+    padding: 3px 0;
+
+    &--no {
+      color: $accent-danger;
+      background: rgba(220, 38, 38, .1);
+    }
+  }
+
+  // Mantiene alineadas las filas cuyo destino ya existe (sin input de nombre).
+  &__hueco { flex: 1; }
+}
+
+// Personalizar es la única acción posible mientras el flujo se hereda: se
+// muestra como llamada con el botón primario, no como un botón más de la barra.
+.llamada {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-left: 4px solid $primary;
+
+  &__texto p { margin-top: 4px; }
+  &__btn { width: auto; flex-shrink: 0; }
+}
+
 .como-enlace {
   background: none;
   border: 0;

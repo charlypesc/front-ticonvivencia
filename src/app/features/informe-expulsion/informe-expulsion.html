@@ -1,0 +1,326 @@
+<div class="page-header">
+    <h2>Informe previo de expulsión</h2>
+    <a [routerLink]="['/protocolos-activados', idCaso]" class="ver-todos">
+        <i class="ti ti-arrow-left"></i> Volver al caso
+    </a>
+</div>
+
+@if (success()) {
+<div class="alert alert--success"><i class="ti ti-circle-check"></i> {{ success() }}</div>
+}
+@if (error()) {
+<div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+}
+
+@if (loading()) {
+<div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
+}
+
+<!-- Sin informe todavía: se ofrece iniciarlo -->
+@else if (!informe()) {
+<div class="card">
+    <div class="alert alert--info">
+        <i class="ti ti-info-circle"></i>
+        <span>Toda medida de expulsión o cancelación de matrícula requiere este informe previo,
+            elaborado por una comisión de tres personas: profesor jefe, coordinador de convivencia
+            educativa e integrante del equipo técnico pedagógico.</span>
+    </div>
+
+    <div class="modal__body" [appPuede]="Permiso.InformeExpulsionElaborar">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Estudiante *</label>
+                <select [(ngModel)]="formAlta.id_estudiante" name="id_estudiante">
+                    <option [ngValue]="null" disabled>Seleccione...</option>
+                    @for (e of estudiantes(); track e.id_estudiante) {
+                    <option [ngValue]="e.id_estudiante">{{ e.nombre }} {{ e.apellido }}</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Medida *</label>
+                <select [(ngModel)]="formAlta.medida" name="medida">
+                    <option value="expulsion">Expulsión</option>
+                    <option value="cancelacion_matricula">Cancelación de matrícula</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn btn--primary" style="width:auto" (click)="crear()">
+            <i class="ti ti-file-plus"></i> Iniciar informe
+        </button>
+    </div>
+</div>
+}
+
+@else {
+<!-- Estado del informe -->
+<div class="card mb-4">
+    <div class="resumen">
+        <div>
+            <span class="text-sm text-muted">Estudiante</span>
+            <strong>{{ informe().estudiante_nombre }} {{ informe().estudiante_apellido }}</strong>
+        </div>
+        <div>
+            <span class="text-sm text-muted">Medida</span>
+            <strong>{{ informe().medida === 'expulsion' ? 'Expulsión' : 'Cancelación de matrícula' }}</strong>
+        </div>
+        <div>
+            <span class="text-sm text-muted">Estado</span>
+            <strong>{{ emitido ? 'Emitido' : 'Borrador' }}</strong>
+        </div>
+        @if (resuelto) {
+        <div>
+            <span class="text-sm text-muted">Decisión</span>
+            <strong>{{ informe().decision_director === 'aplica' ? 'Se aplica' : 'No se aplica' }}</strong>
+        </div>
+        }
+    </div>
+</div>
+
+<!-- Medidas previas: el insumo que la ley exige explicitar con su resultado -->
+<div class="card mb-4">
+    <div class="card__header">
+        <span class="section-label"><i class="ti ti-gavel"></i> Medidas previas aplicadas</span>
+    </div>
+
+    @if (informe().medidas_sin_resultado > 0) {
+    <div class="alert alert--warning">
+        <i class="ti ti-alert-triangle"></i>
+        <span>{{ informe().medidas_sin_resultado }} medida(s) no tienen registrado su resultado.
+            El informe debe explicitar la aplicación de cada medida con indicación de los
+            resultados obtenidos: completalos en el caso antes de emitir.</span>
+    </div>
+    }
+
+    @if (!informe().medidas_previas?.length) {
+    <div class="empty-state">
+        <i class="ti ti-gavel"></i>
+        <p>No hay medidas previas registradas en este caso</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Fecha</th><th>Medida</th><th>Resultado</th></tr>
+            </thead>
+            <tbody>
+                @for (m of informe().medidas_previas; track m.fecha_aplicacion + m.descripcion) {
+                <tr>
+                    <td>{{ m.fecha_aplicacion }}</td>
+                    <td>{{ m.descripcion }}</td>
+                    <td>
+                        @if (m.resultado) { {{ m.resultado }} }
+                        @else { <span class="badge badge--pendiente">Sin registrar</span> }
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+
+<!-- Contenido del informe -->
+<div class="card mb-4">
+    <div class="card__header">
+        <span class="section-label"><i class="ti ti-file-description"></i> Contenido del informe</span>
+    </div>
+
+    <div class="modal__body" [appPuede]="Permiso.InformeExpulsionElaborar">
+        <div class="form-group">
+            <label>Antecedentes conductuales *</label>
+            <textarea [(ngModel)]="form.antecedentes_conductuales" name="ac" [disabled]="emitido"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Antecedentes pedagógicos *</label>
+            <textarea [(ngModel)]="form.antecedentes_pedagogicos" name="ap" [disabled]="emitido"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Informes técnicos psicosociales</label>
+            <textarea [(ngModel)]="form.informes_psicosociales" name="ips" [disabled]="emitido"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Proporcionalidad de la medida *</label>
+            <textarea [(ngModel)]="form.proporcionalidad" name="prop" [disabled]="emitido"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Gravedad de la afectación a la convivencia *</label>
+            <textarea [(ngModel)]="form.gravedad_afectacion" name="grav" [disabled]="emitido"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Por qué las medidas previas fueron insuficientes *</label>
+            <textarea [(ngModel)]="form.medidas_previas_insuficientes" name="mpi" [disabled]="emitido"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Constancia de que se agotaron las alternativas pedagógicas y formativas *</label>
+            <textarea [(ngModel)]="form.constancia_alternativas" name="ca" [disabled]="emitido"></textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Recomendación de la comisión *</label>
+                <select [(ngModel)]="form.recomendacion" name="reco" [disabled]="emitido">
+                    <option value="" disabled>Seleccione...</option>
+                    <option value="aplicar">Recomienda aplicar la medida</option>
+                    <option value="no_aplicar">No recomienda aplicar la medida</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Fundamento de la recomendación</label>
+            <textarea [(ngModel)]="form.fundamento_recomendacion" name="fr" [disabled]="emitido"></textarea>
+        </div>
+    </div>
+</div>
+
+<!-- Comisión -->
+<div class="card mb-4">
+    <div class="card__header">
+        <span class="section-label"><i class="ti ti-users-group"></i> Comisión</span>
+    </div>
+
+    <div class="modal__body">
+        @for (r of rolesComision; track r.codigo) {
+        <div class="form-row" style="align-items:center; gap:12px">
+            <label style="flex:1">{{ r.etiqueta }}</label>
+            <select style="flex:1" [(ngModel)]="comision[r.codigo]" [name]="'com_' + r.codigo"
+                [disabled]="emitido" [appPuede]="Permiso.InformeExpulsionElaborar">
+                <option [ngValue]="null" disabled>Seleccione...</option>
+                @for (u of usuarios(); track u.id_usuario) {
+                <option [ngValue]="u.id_usuario">{{ u.correo }}</option>
+                }
+            </select>
+            <span style="width:150px">
+                @if (firmaDe(r.codigo)?.fecha_firma) {
+                <span class="badge badge--validado">
+                    <i class="ti ti-writing-sign"></i> Firmado
+                </span>
+                } @else {
+                <span class="badge badge--pendiente">Sin firmar</span>
+                }
+            </span>
+        </div>
+        }
+
+        @if (!emitido) {
+        <p class="text-muted">
+            Cada integrante firma con su propia sesión: no se puede firmar por otro.
+        </p>
+        }
+    </div>
+
+    @if (!emitido) {
+    <div class="modal__footer">
+        <button class="btn btn--outline" style="width:auto" [appPuede]="Permiso.InformeExpulsionElaborar"
+            (click)="firmar()">
+            <i class="ti ti-writing-sign"></i> Firmar como integrante
+        </button>
+        <button class="btn btn--outline" style="width:auto" [appPuede]="Permiso.InformeExpulsionElaborar"
+            (click)="guardar()">
+            <i class="ti ti-device-floppy"></i> Guardar borrador
+        </button>
+        <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.InformeExpulsionElaborar"
+            (click)="emitir()">
+            <i class="ti ti-file-check"></i> Emitir informe
+        </button>
+    </div>
+    }
+</div>
+
+<!-- Decisión del director -->
+@if (emitido) {
+<div class="card mb-4">
+    <div class="card__header">
+        <span class="section-label"><i class="ti ti-gavel"></i> Decisión del director</span>
+    </div>
+
+    @if (resuelto) {
+    <div class="modal__body">
+        <p>
+            <strong>{{ informe().decision_director === 'aplica' ? 'Se aplica la medida' : 'No se aplica la medida' }}</strong>
+            @if (informe().fecha_decision) { — {{ informe().fecha_decision | date:'dd/MM/yyyy' }} }
+        </p>
+        @if (informe().fundamento_director) {
+        <p class="text-muted"><strong>Fundamento:</strong> {{ informe().fundamento_director }}</p>
+        }
+
+        @if (informe().fecha_limite_informes) {
+        <!-- 5 días hábiles desde la notificación al apoderado, calculados con
+             feriados. Es un plazo legal, no un recordatorio. -->
+        <div class="alert" [class.alert--warning]="!informe().fecha_informe_superintendencia || !informe().fecha_informe_seremi"
+            [class.alert--success]="informe().fecha_informe_superintendencia && informe().fecha_informe_seremi">
+            <i class="ti ti-clock"></i>
+            <span>Plazo para informar a la Superintendencia y a la SEREMI:
+                hasta el {{ informe().fecha_limite_informes }}.</span>
+        </div>
+
+        <div class="form-row" [appPuede]="Permiso.InformeExpulsionDecidir">
+            <div class="form-group">
+                <label>Informe a la Superintendencia</label>
+                @if (informe().fecha_informe_superintendencia) {
+                <p>Enviado el {{ informe().fecha_informe_superintendencia }}</p>
+                } @else {
+                <input type="date" [(ngModel)]="formEnvios.fecha_informe_superintendencia" name="fsuper" />
+                }
+            </div>
+            <div class="form-group">
+                <label>Informe a la SEREMI</label>
+                @if (informe().fecha_informe_seremi) {
+                <p>Enviado el {{ informe().fecha_informe_seremi }}</p>
+                } @else {
+                <input type="date" [(ngModel)]="formEnvios.fecha_informe_seremi" name="fseremi" />
+                }
+            </div>
+        </div>
+
+        @if (!informe().fecha_informe_superintendencia || !informe().fecha_informe_seremi) {
+        <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.InformeExpulsionDecidir"
+            (click)="guardarEnvios()">
+            <i class="ti ti-device-floppy"></i> Registrar envíos
+        </button>
+        }
+        }
+    </div>
+    }
+
+    @else {
+    <div class="modal__body" [appPuede]="Permiso.InformeExpulsionDecidir">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Decisión *</label>
+                <select [(ngModel)]="formDecision.decision" name="decision">
+                    <option value="" disabled>Seleccione...</option>
+                    <option value="aplica">Aplicar la medida</option>
+                    <option value="no_aplica">No aplicar la medida</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Fecha de notificación al apoderado</label>
+                <input type="date" [(ngModel)]="formDecision.fecha_notificacion_apoderado"
+                    name="fecha_notif" />
+            </div>
+        </div>
+
+        @if (contradiceRecomendacion) {
+        <!-- La comisión no recomendó la medida. Si el director la aplica igual,
+             la ley le exige fundamentar de forma pormenorizada. -->
+        <div class="alert alert--error">
+            <i class="ti ti-alert-octagon"></i>
+            <span>El informe no recomienda esta medida. Para aplicarla igual hay que indicar de
+                forma pormenorizada los fundamentos de la decisión.</span>
+        </div>
+        }
+
+        <div class="form-group">
+            <label>Fundamento de la decisión {{ contradiceRecomendacion ? '*' : '' }}</label>
+            <textarea [(ngModel)]="formDecision.fundamento_director" name="fund_dir"></textarea>
+        </div>
+
+        <button class="btn btn--primary" style="width:auto" (click)="decidir()">
+            <i class="ti ti-gavel"></i> Registrar decisión
+        </button>
+    </div>
+    }
+</div>
+}
+}

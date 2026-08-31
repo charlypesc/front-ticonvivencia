@@ -1,0 +1,115 @@
+@use '../../../../styles/variables' as *;
+
+:host {
+  display: block;
+}
+
+.buscador {
+  // Ancla el dropdown, que se posiciona absoluto sobre el contenido de abajo.
+  position: relative;
+}
+
+.buscador__campo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: text;
+  border: 1px solid $gray-200;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: $white;
+  transition: border-color .15s, box-shadow .15s;
+
+  &:focus-within {
+    border-color: $primary-light;
+    box-shadow: 0 0 0 3px rgba($primary-light, .15);
+  }
+
+  > i { color: $gray-400; font-size: 16px; flex: 0 0 auto; }
+
+  // El padding vertical va en el input y no en el label: así el área real del
+  // campo cubre todo el alto del recuadro. Con el padding en el label, el input
+  // medía solo la línea de texto y había que acertarle a esa franja.
+  // El recuadro visible es el <label>, no el input. Adentro de un .form-group
+  // el input además hereda el borde/radio/glow de foco de los campos globales
+  // (styles.scss), y se dibuja una segunda caja dentro de la primera: por eso
+  // acá se apagan los tres, no solo el borde.
+  input {
+    border: none;
+    border-radius: 0;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+    font-size: 14px;
+    width: 100%;
+    min-width: 0;
+    padding: 9px 0;
+    cursor: text;
+    color: $gray-900;
+    text-overflow: ellipsis;
+    &::placeholder { color: $gray-400; }
+  }
+}
+
+// Campo azul del listado de estudiantes: es la acción principal de esa pantalla.
+.buscador--destacado .buscador__campo {
+  border: 1.5px solid $primary-light;
+  background: $primary-bg;
+
+  &:focus-within {
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba(30, 58, 110, .12);
+  }
+
+  > i { color: $primary; }
+  input { padding: 10px 0; }
+}
+
+// Campo del header: más bajo, y con chevron en vez de lupa.
+.buscador--compacto .buscador__campo {
+  padding: 0 8px;
+  border-radius: 6px;
+
+  input { padding: 6px 0; font: inherit; }
+  .buscador__chevron { color: $gray-400; font-size: .95rem; pointer-events: none; }
+}
+
+.buscador__lista {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: $white;
+  border: 1px solid $gray-200;
+  border-radius: $radius;
+  box-shadow: $shadow-md;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.buscador__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  cursor: pointer;
+
+  & + & { border-top: 1px solid $gray-100; }
+
+  // El resaltado del teclado y el del mouse son el mismo: mouseenter mueve
+  // indiceActivo, así que alcanza con un solo estilo para los dos.
+  &--activo {
+    background: $primary-bg;
+    box-shadow: inset 3px 0 0 $primary;
+  }
+}
+
+.buscador__vacio {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: $gray-400;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spin .8s linear infinite; }

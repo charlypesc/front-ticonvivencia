@@ -1,0 +1,50 @@
+<div class="buscador" [class.buscador--destacado]="variante === 'destacado'"
+    [class.buscador--compacto]="variante === 'compacto'">
+
+    <!-- El campo es un <label>: clickear el borde, el padding o la lupa enfoca
+         el input, en vez de obligar a acertarle a la franja de texto. -->
+    <label class="buscador__campo">
+        @if (variante !== 'compacto') {
+        <i class="ti ti-search"></i>
+        }
+
+        <input #campo type="text" [ngModel]="valorVisible()" (ngModelChange)="alEscribir($event)"
+            [placeholder]="placeholder" [ngClass]="claseInput" (focus)="abrir()" (blur)="cerrarConDelay()"
+            (keydown.arrowdown)="mover(1, $event)" (keydown.arrowup)="mover(-1, $event)"
+            (keydown.enter)="confirmar($event)" (keydown.escape)="cerrar()" role="combobox" aria-autocomplete="list"
+            [attr.aria-expanded]="listaVisible()"
+            [attr.aria-activedescendant]="indiceActivo() >= 0 ? idOpcion(indiceActivo()) : null" />
+
+        @if (cargando) {
+        <i class="ti ti-loader-2 spin"></i>
+        }
+
+        @if (variante === 'compacto') {
+        <i class="ti buscador__chevron" [class.ti-chevron-down]="!abierto()" [class.ti-x]="abierto()"></i>
+        }
+    </label>
+
+    <!-- El dropdown va fuera del <label> a propósito: adentro, clickear una
+         sugerencia también dispararía el focus del input. -->
+    @if (listaVisible()) {
+    <div class="buscador__lista" role="listbox">
+        @for (item of items; track $index; let i = $index) {
+        <!-- mouseenter mueve el resaltado además del teclado: si no, el mouse
+             marca una fila con el hover y el teclado otra con la clase, y Enter
+             confirma la que no se está mirando. -->
+        <div class="buscador__item" [class.buscador__item--activo]="i === indiceActivo()" [id]="idOpcion(i)"
+            role="option" [attr.aria-selected]="i === indiceActivo()" (mouseenter)="indiceActivo.set(i)"
+            (mousedown)="elegirItem(item)">
+            <ng-container
+                *ngTemplateOutlet="itemTpl ?? null; context: { $implicit: item, indice: i, activo: i === indiceActivo() }"></ng-container>
+        </div>
+        } @empty {
+        @if (vacioTpl) {
+        <div class="buscador__vacio">
+            <ng-container *ngTemplateOutlet="vacioTpl"></ng-container>
+        </div>
+        }
+        }
+    </div>
+    }
+</div>

@@ -5,8 +5,16 @@ import { Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.services';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
+import { comprimirImagen } from '../../shared/utils/comprimir-imagen';
 
 type Paso = 'upload' | 'validacion';
+
+/** Mismo tope que el multer del backend. */
+// Tope de la subida, alineado con el multer del backend. No es el límite de
+// Document AI (20 MB): si el archivo llega por encima de eso, el backend lo
+// comprime antes de mandarlo a procesar. Rechazar acá a los 20 MB dejaba
+// afuera fotos y PDF que el sistema sí sabe manejar.
+const MAX_SUBIDA = 50 * 1024 * 1024;
 
 @Component({
   selector: 'app-subir-documento',
@@ -23,6 +31,7 @@ export class SubirDocumento {
   archivo = signal<File | null>(null);
   dragging = signal(false);
   loading = signal(false);
+  comprimiendo = signal(false);
   error = signal('');
   respuestaIA = signal<any>(null);
 
@@ -67,18 +76,37 @@ export class SubirDocumento {
     if (file) this.setArchivo(file);
   }
 
-  setArchivo(file: File) {
+  async setArchivo(file: File) {
     this.error.set('');
-    const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
-    if (!allowed.includes(file.type)) {
-      this.error.set('Formato no admitido. Use JPG, PNG o PDF');
+    const allowed = [
+      'image/jpeg', 'image/png', 'image/webp', 'application/pdf',
+      'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence',
+    ];
+    // Safari/Android a veces entregan las fotos HEIC con type vacío o
+    // application/octet-stream, así que caemos a la extensión del nombre.
+    const esHeicPorExtension = /\.(heic|heif)$/i.test(file.name);
+    if (!allowed.includes(file.type) && !esHeicPorExtension) {
+      this.error.set('Formato no admitido. Use JPG, PNG, HEIC o PDF');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      this.error.set('El archivo supera el tamaño máximo permitido (10 MB)');
+    // Las fotos pesadas no se rechazan: se comprimen. Solo si después de
+    // comprimir sigue sin entrar (típicamente un PDF enorme, que el navegador
+    // no puede recomprimir) le avisamos a la persona.
+    this.comprimiendo.set(true);
+    let archivo = file;
+    try {
+      archivo = await comprimirImagen(file);
+    } catch {
+      // Si la compresión falla por lo que sea, subimos el original.
+    } finally {
+      this.comprimiendo.set(false);
+    }
+
+    if (archivo.size > MAX_SUBIDA) {
+      this.error.set('El archivo es demasiado grande para subirlo (máximo 50 MB)');
       return;
     }
-    this.archivo.set(file);
+    this.archivo.set(archivo);
   }
 
   // ── SUBIR ────────────────────────────────────

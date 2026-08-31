@@ -25,8 +25,14 @@ export interface AristaGrafo {
   es_default?: boolean | number;
 }
 
-/** Lo que se puede hacer sobre un paso desde el propio diagrama. */
-export type AccionNodo = 'editar' | 'roles' | 'campo' | 'transicion' | 'eliminar';
+/**
+ * Lo que se puede hacer sobre un paso desde el propio diagrama.
+ *
+ * Antes eran cinco (paso, roles, campos, salidas, eliminar), una por cada
+ * modal del editor. Ahora el paso se edita entero en un solo modal, así que
+ * la caja del diagrama solo necesita abrirlo o borrar el paso.
+ */
+export type AccionNodo = 'editar' | 'eliminar';
 
 interface NodoUbicado extends NodoGrafo {
   x: number;
@@ -40,8 +46,9 @@ interface NodoUbicado extends NodoGrafo {
 
 interface AristaDibujada {
   d: string;
-  /** Recortado para que no se monte sobre las cajas vecinas. */
-  texto: string;
+  /** La etiqueta partida en líneas y recortada para que no se monte sobre las
+   *  cajas vecinas. */
+  lineas: string[];
   /** Completo, para el tooltip cuando el recorte esconde algo. */
   titulo: string;
   /** Una arista que retrocede es un reintento ("volver a investigar"), y se
@@ -91,10 +98,7 @@ export class GrafoProtocolo {
 
   /** Los botones de la barra, en el orden en que se dibujan. */
   readonly BOTONES: { accion: AccionNodo; icono: string; titulo: string; peligro?: boolean }[] = [
-    { accion: 'editar', icono: 'ti-pencil', titulo: 'Editar paso (nombre, tipo, plazo, si es inicial o final)' },
-    { accion: 'roles', icono: 'ti-users', titulo: 'Responsables del paso (ejecutor, aprobador, notificado)' },
-    { accion: 'campo', icono: 'ti-forms', titulo: 'Agregar un campo a llenar en este paso' },
-    { accion: 'transicion', icono: 'ti-arrow-ramp-right', titulo: 'Agregar una salida: en qué paso continúa' },
+    { accion: 'editar', icono: 'ti-pencil', titulo: 'Editar el paso: nombre, plazo, responsables, preguntas y salidas' },
     { accion: 'eliminar', icono: 'ti-trash', titulo: 'Eliminar paso', peligro: true },
   ];
 
@@ -102,9 +106,29 @@ export class GrafoProtocolo {
   /** Dos líneas para el nombre más la línea de tipo/plazo; con la barra de
    *  acciones adentro, una fila más. */
   ALTO = computed(() => (this.acciones() ? 108 : 76));
-  /** El hueco entre columnas también es donde va la etiqueta de la condición,
-   *  así que tiene que caber una condición corta sin pisar las cajas. */
-  private readonly GAP_X = 120;
+  /** El hueco entre columnas es también donde va la etiqueta de la condición,
+   *  así que se calcula a partir de la etiqueta más larga en vez de fijarlo:
+   *  con un hueco fijo, una pregunta con nombre largo ("¿Tiene paso sí y no?
+   *  = Sí") salía recortada a la mitad y el diagrama no se podía leer. Tiene
+   *  tope porque un hueco enorme separa tanto las cajas que deja de verse el
+   *  camino; lo que no entre en el tope sigue recortándose con su tooltip. */
+  private readonly GAP_X_MIN = 120;
+  private readonly GAP_X_MAX = 300;
+  GAP_X = computed(() => {
+    // La etiqueta se escribe en dos líneas (pregunta y valor), así que el hueco
+    // lo pide la línea más larga y no la etiqueta entera.
+    const necesario = Math.max(
+      0,
+      ...this.aristas().flatMap((a) =>
+        this.partirEtiqueta(this.textoArista(a)).map((l) => this.anchoAprox(l, 11)),
+      ),
+    );
+    return Math.round(
+      Math.min(this.GAP_X_MAX, Math.max(this.GAP_X_MIN, necesario + this.PAD_ETIQUETA * 2)),
+    );
+  });
+  /** Aire a cada lado de la etiqueta para que no toque las cajas vecinas. */
+  private readonly PAD_ETIQUETA = 14;
   private readonly GAP_Y = 26;
   private readonly PAD = 20;
   /** Margen interno de la caja: 12 por lado. */
@@ -154,7 +178,7 @@ export class GrafoProtocolo {
         salida.push({
           ...n,
           nivel: l,
-          x: this.PAD + l * (this.ANCHO + this.GAP_X),
+          x: this.PAD + l * (this.ANCHO + this.GAP_X()),
           y: this.PAD + arriba + i * (this.ALTO() + this.GAP_Y),
           lineas: this.repartir(n.nombre),
           meta: this.recortar(
@@ -185,8 +209,7 @@ export class GrafoProtocolo {
       const d = pos.get(a.destino);
       if (!o || !d) continue;
 
-      const legible =
-        a.condicion_legible ?? a.condicion ?? (a.es_default ? 'si no' : (a.etiqueta ?? ''));
+      const legible = this.textoArista(a);
       // El tooltip suma la condición cruda: es lo que hay que mirar cuando una
       // rama no se toma y se quiere saber qué se está evaluando.
       const titulo =
@@ -194,7 +217,11 @@ export class GrafoProtocolo {
       // La etiqueta vive en el hueco entre columnas: si no cabe ahí, se recorta
       // y el nombre completo queda en el tooltip. Antes se salía del hueco y
       // terminaba encima del nombre del paso.
-      const texto = this.recortar(legible, this.GAP_X - 16, 11);
+      const lineas = this.lineasEtiqueta(legible, this.GAP_X() - this.PAD_ETIQUETA * 2);
+      // Las flechas de retroceso no van en el hueco entre columnas sino por
+      // fuera de las cajas, donde hay más espacio: recortarlas con la medida
+      // del hueco les comía texto sin necesidad.
+      const lineasAtras = this.lineasEtiqueta(legible, this.ANCHO + this.GAP_X());
 
       // Volver al mismo paso: un lazo por arriba. Es el "mantiene seguimiento"
       // de los protocolos reales.
@@ -202,7 +229,7 @@ export class GrafoProtocolo {
         const cx = o.x + this.ANCHO / 2;
         salida.push({
           d: `M ${cx - 22} ${o.y} C ${cx - 30} ${o.y - 44}, ${cx + 30} ${o.y - 44}, ${cx + 22} ${o.y}`,
-          texto,
+          lineas: lineasAtras,
           titulo,
           atras: true,
           lx: cx,
@@ -226,7 +253,7 @@ export class GrafoProtocolo {
           const cx = porIzquierda ? o.x - 40 : borde + 40;
           salida.push({
             d: `M ${borde} ${oy} C ${cx} ${oy}, ${cx} ${dy}, ${borde} ${dy}`,
-            texto,
+            lineas: lineasAtras,
             titulo,
             atras: true,
             lx: cx + 4,
@@ -240,7 +267,7 @@ export class GrafoProtocolo {
         const x2 = d.x + this.ANCHO / 2;
         salida.push({
           d: `M ${x1} ${o.y + this.ALTO()} L ${x1} ${y} L ${x2} ${y} L ${x2} ${d.y + this.ALTO()}`,
-          texto,
+          lineas: lineasAtras,
           titulo,
           atras: true,
           lx: (x1 + x2) / 2,
@@ -256,7 +283,7 @@ export class GrafoProtocolo {
       const mx = (x1 + x2) / 2;
       salida.push({
         d: `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`,
-        texto,
+        lineas,
         titulo,
         atras: false,
         lx: mx,
@@ -264,14 +291,16 @@ export class GrafoProtocolo {
       });
     }
     // Dos salidas del mismo paso hacia la misma altura dejaban las etiquetas
-    // una encima de otra; se separan en vertical al detectarlo.
+    // una encima de otra; se separan en vertical al detectarlo. La distancia
+    // depende de cuántas líneas ocupe cada una: con dos líneas, separarlas 14px
+    // seguía dejando la de abajo pisando a la de arriba.
     for (let i = 0; i < salida.length; i++)
-      for (let j = 0; j < i; j++)
-        if (
-          Math.abs(salida[i].lx - salida[j].lx) < 60 &&
-          Math.abs(salida[i].ly - salida[j].ly) < 13
-        )
-          salida[i].ly = salida[j].ly + 14;
+      for (let j = 0; j < i; j++) {
+        const alto =
+          ((salida[i].lineas.length + salida[j].lineas.length) / 2) * this.ALTO_LINEA + 4;
+        if (Math.abs(salida[i].lx - salida[j].lx) < 60 && Math.abs(salida[i].ly - salida[j].ly) < alto)
+          salida[i].ly = salida[j].ly + alto;
+      }
     return salida;
   });
 
@@ -307,6 +336,95 @@ export class GrafoProtocolo {
   // recálculo, se estima el ancho con el factor medio de la tipografía (0.55
   // del tamaño de fuente; 0.58 en semibold). Es una estimación conservadora:
   // preferimos recortar una letra de más a que se salga del borde.
+
+  /** Lo que se escribe sobre la flecha, completo y sin recortar. */
+  private textoArista(a: AristaGrafo): string {
+    return this.rotulos().get(a) ?? '';
+  }
+
+  /** Alto de línea de la etiqueta, para separar las dos líneas y para saber
+   *  cuánto ocupa el bloque al esquivar otra etiqueta. */
+  private readonly ALTO_LINEA = 13;
+
+  /** Parte la etiqueta por el `=`: la pregunta arriba y el valor abajo.
+   *
+   * En una sola línea, lo que no cabía en el hueco entre columnas se recortaba
+   * por el final — y el final es justamente el valor ("¿El estudiante está
+   * fuera de riesgo? =…"), o sea lo único que distingue una rama de la otra.
+   * Partida en dos, cada línea tiene todo el ancho del hueco para sí y el
+   * valor se ve siempre.
+   */
+  private partirEtiqueta(texto: string): string[] {
+    if (!texto) return [];
+    const m = /^(.*?)\s*=\s*(.+)$/.exec(texto);
+    return m ? [m[1], `= ${m[2]}`] : [texto];
+  }
+
+  /** Las líneas de la etiqueta ya recortadas a lo que entra en `ancho`. */
+  private lineasEtiqueta(texto: string, ancho: number): string[] {
+    return this.partirEtiqueta(texto).map((l) => this.recortar(l, ancho, 11));
+  }
+
+  /** Y de cada línea de la etiqueta: el bloque queda centrado en `ly`, que es
+   *  donde iba la etiqueta cuando era de una sola línea. */
+  yEtiqueta(a: AristaDibujada, i: number) {
+    return a.ly + (i - (a.lineas.length - 1) / 2) * this.ALTO_LINEA;
+  }
+
+  /** La condición de una arista escrita para leer, o vacío si no tiene. */
+  private condicionDe(a: AristaGrafo): string {
+    return (a.condicion_legible || a.condicion || '').trim();
+  }
+
+  /** `¿El apoderado compareció? = No` → `¿El apoderado compareció? = Sí`.
+   *  Devuelve null si la condición no es una pregunta de Sí/No. */
+  private complementoSiNo(condicion: string): string | null {
+    const m = /^(.*?)\s*=\s*(sí|si|no)$/i.exec(condicion);
+    if (!m) return null;
+    return `${m[1]} = ${m[2].toLowerCase() === 'no' ? 'Sí' : 'No'}`;
+  }
+
+  /**
+   * Rótulo de cada flecha, resuelto mirando todas las salidas del paso y no
+   * cada flecha por separado.
+   *
+   * Un paso que se abre en dos ramas guarda la condición solo en una: la otra
+   * es la que se toma "si no se cumple" y llegaba sin nada escrito encima. En
+   * el diagrama eso se veía como una flecha rotulada y la de al lado muda, así
+   * que al separarse no se sabía cuál era el camino del Sí y cuál el del No.
+   *
+   * Cuando lo que se evalúa es una misma pregunta de Sí/No, la rama por
+   * defecto es exactamente el caso contrario, así que se rotula con el valor
+   * complementario y las dos flechas quedan legibles por sí solas. Si la
+   * bifurcación tiene otra forma (varias condiciones, o una que no es Sí/No),
+   * la rama por defecto al menos dice que es el resto de los casos.
+   */
+  private rotulos = computed<Map<AristaGrafo, string>>(() => {
+    const porOrigen = new Map<number, AristaGrafo[]>();
+    for (const a of this.aristas()) {
+      const ramas = porOrigen.get(a.origen);
+      ramas ? ramas.push(a) : porOrigen.set(a.origen, [a]);
+    }
+
+    const mapa = new Map<AristaGrafo, string>();
+    for (const ramas of porOrigen.values()) {
+      const condicionales = ramas.filter((a) => this.condicionDe(a));
+      for (const a of ramas) {
+        const propia = this.condicionDe(a);
+        if (propia) {
+          mapa.set(a, propia);
+          continue;
+        }
+        // Sin condición propia: es la rama por defecto. Solo se puede nombrar
+        // por oposición si hay exactamente una condición de la que ser el
+        // contrario.
+        const opuesta =
+          condicionales.length === 1 ? this.complementoSiNo(this.condicionDe(condicionales[0])) : null;
+        mapa.set(a, opuesta ?? (condicionales.length ? 'en los demás casos' : (a.etiqueta ?? '')));
+      }
+    }
+    return mapa;
+  });
 
   private anchoAprox(texto: string, px: number, negrita = false) {
     return texto.length * px * (negrita ? 0.58 : 0.55);

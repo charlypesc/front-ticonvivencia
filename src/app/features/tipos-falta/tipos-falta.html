@@ -39,6 +39,7 @@
                     <th>Nombre</th>
                     <th>Gravedad</th>
                     <th>Medida sugerida</th>
+                    <th>Protocolos</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -47,9 +48,21 @@
                 <tr class="fila-clickeable" (click)="abrirForm(t)">
                     <td>{{ t.nombre }}</td>
                     <td>
-                        <span class="badge badge--{{ t.gravedad }}">{{ t.gravedad }}</span>
+                        <span class="badge badge--{{ t.gravedad }}">{{ t.gravedad | titlecase }}</span>
                     </td>
                     <td class="text-muted">{{ t.medida_sugerida ?? '—' }}</td>
+                    <td>
+                        @if (!t.protocolos?.length) {
+                        <span class="text-muted">—</span>
+                        } @else {
+                        @for (p of t.protocolos; track p.id_protocolo_establecimiento) {
+                        <span class="badge" [class.badge--gravísima]="p.obligatorio"
+                            [title]="p.obligatorio ? 'Obligatorio: sin activarlo no se puede validar el registro' : 'Sugerido'">
+                            {{ p.protocolo_nombre }}
+                        </span>
+                        }
+                        }
+                    </td>
                     <td class="acciones" (click)="$event.stopPropagation()">
                         <button class="btn-icon" title="Editar" [appPuede]="Permiso.TipoFaltaEditar"
                             (click)="abrirForm(t)">
@@ -119,6 +132,31 @@
                 <label>Medida sugerida</label>
                 <input type="text" placeholder="Ej: Suspensión y citación de apoderado"
                     [(ngModel)]="form.medida_sugerida" name="medida_sugerida" />
+            </div>
+
+            <!-- Ley 21.809: el hecho es lo que dispara el protocolo, no la
+                 memoria de quien registra. "Obligatorio" impide validar el
+                 registro mientras el protocolo no esté activado. -->
+            <div class="form-group" [appPuede]="Permiso.TipoFaltaVincularProtocolo">
+                <label>Protocolos que debe activar</label>
+                @if (protocolos().length === 0) {
+                <p class="text-muted">
+                    El establecimiento todavía no tiene protocolos adoptados.
+                </p>
+                } @else {
+                @for (p of protocolos(); track p.id_protocolo_establecimiento) {
+                <div class="form-row" style="align-items:center; gap:12px">
+                    <span style="flex:1">{{ p.nombre }}</span>
+                    <select style="width:auto" [ngModel]="estadoVinculo(p.id_protocolo_establecimiento)"
+                        (ngModelChange)="cambiarVinculo(p.id_protocolo_establecimiento, $event)"
+                        [name]="'vinculo_' + p.id_protocolo_establecimiento">
+                        <option value="">No aplica</option>
+                        <option value="sugerido">Sugerido</option>
+                        <option value="obligatorio">Obligatorio</option>
+                    </select>
+                </div>
+                }
+                }
             </div>
         </div>
 

@@ -16,7 +16,10 @@
     <div class="dropzone" [appPuede]="Permiso.DocumentoSubir" [class.dropzone--active]="dragging()"
         [class.dropzone--ready]="archivo()"
         (dragover)="onDragOver($event)" (dragleave)="onDragLeave()" (drop)="onDrop($event)">
-        @if (archivo()) {
+        @if (comprimiendo()) {
+        <i class="ti ti-loader-2 dropzone__icon spin"></i>
+        <p>Preparando el archivo...</p>
+        } @else if (archivo()) {
         <i class="ti ti-file-check dropzone__icon dropzone__icon--ok"></i>
         <p class="dropzone__filename">{{ archivo()!.name }}</p>
         <p class="text-muted text-sm">{{ (archivo()!.size / 1024).toFixed(0) }} KB</p>
@@ -27,9 +30,11 @@
              que la persona ve y aprieta es la etiqueta. -->
         <label class="btn-seleccionar" [appPuede]="Permiso.DocumentoSubir">
             <i class="ti ti-folder-open"></i> Seleccionar archivo
-            <input type="file" accept=".jpg,.jpeg,.png,.pdf" (change)="onFileSelect($event)" hidden />
+            <input type="file" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.pdf,image/*,application/pdf"
+                   (change)="onFileSelect($event)" hidden />
         </label>
-        <p class="text-muted text-sm">JPG, PNG o PDF · máximo 10 MB</p>
+        <!-- No anunciamos un tope: las fotos pesadas se comprimen solas. -->
+        <p class="text-muted text-sm">JPG, PNG, HEIC o PDF</p>
         }
     </div>
 

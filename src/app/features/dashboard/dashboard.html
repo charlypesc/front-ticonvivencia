@@ -34,6 +34,104 @@
     </div>
 </div>
 
+<!-- Cumplimiento (Ley 21.809).
+     Las tarjetas de arriba miden actividad; estas miden si los procedimientos
+     se ejecutan dentro de plazo, que es lo que hay que poder demostrar ante la
+     Superintendencia. Las que están en cero no se muestran: un tablero lleno de
+     ceros esconde el único número que importa cuando deja de serlo. -->
+@if (resumen().cumplimiento; as c) {
+<div class="page-header" style="margin-top:24px">
+    <h2>Cumplimiento de protocolos</h2>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-card__num">{{ c.casos_activos }}</div>
+        <div class="stat-card__label">
+            <i class="ti ti-file-search"></i> Casos activos
+        </div>
+    </div>
+
+    @if (c.porcentaje_en_plazo !== null) {
+    <div class="stat-card" [class.stat-card--warn]="c.porcentaje_en_plazo < 80">
+        <div class="stat-card__num">{{ c.porcentaje_en_plazo }}%</div>
+        <div class="stat-card__label">
+            <i class="ti ti-clock-check"></i> Pasos cerrados en plazo
+        </div>
+    </div>
+    }
+
+    @if (c.pasos_por_vencer > 0) {
+    <div class="stat-card stat-card--warn">
+        <div class="stat-card__num">{{ c.pasos_por_vencer }}</div>
+        <div class="stat-card__label">
+            <i class="ti ti-hourglass"></i> Pasos vencen en 48 h
+        </div>
+    </div>
+    }
+
+    @if (c.pasos_vencidos > 0) {
+    <div class="stat-card stat-card--warn">
+        <div class="stat-card__num">{{ c.pasos_vencidos }}</div>
+        <div class="stat-card__label">
+            <i class="ti ti-alarm"></i> Pasos vencidos
+        </div>
+    </div>
+    }
+
+    @if (c.registros_sin_protocolo > 0) {
+    <div class="stat-card stat-card--warn">
+        <div class="stat-card__num">{{ c.registros_sin_protocolo }}</div>
+        <div class="stat-card__label">
+            <i class="ti ti-alert-octagon"></i> Registros sin su protocolo
+        </div>
+    </div>
+    }
+
+    <!-- Suspensiones cautelares con el plazo de diez días hábiles vencido y el
+         procedimiento sin resolver. Va con la misma prominencia que las firmas
+         pendientes porque acá hay alguien suspendido: es la infracción más cara
+         que el sistema puede detectar solo. -->
+    @if (c.cautelares_sin_resolver > 0) {
+    <div class="stat-card stat-card--warn">
+        <div class="stat-card__num">{{ c.cautelares_sin_resolver }}</div>
+        <div class="stat-card__label">
+            <i class="ti ti-hourglass-off"></i> Suspensiones cautelares sin resolver
+        </div>
+    </div>
+    }
+
+    <!-- La firma no detiene el protocolo, así que sin esta tarjeta una
+         notificación sin acuse solo se ve abriendo el caso. -->
+    @if (c.notificaciones_sin_acuse > 0) {
+    <div class="stat-card stat-card--warn">
+        <div class="stat-card__num">{{ c.notificaciones_sin_acuse }}</div>
+        <div class="stat-card__label">
+            <i class="ti ti-writing-off"></i> Notificaciones sin firma
+        </div>
+    </div>
+    }
+
+    @if (c.medidas_vencidas > 0) {
+    <div class="stat-card stat-card--warn">
+        <div class="stat-card__num">{{ c.medidas_vencidas }}</div>
+        <div class="stat-card__label">
+            <i class="ti ti-shield-off"></i> Medidas de protección vencidas
+        </div>
+    </div>
+    }
+
+    @if (c.investigaciones_fuera_de_plazo > 0) {
+    <div class="stat-card stat-card--warn">
+        <div class="stat-card__num">{{ c.investigaciones_fuera_de_plazo }}</div>
+        <div class="stat-card__label">
+            <i class="ti ti-gavel"></i> Investigaciones fuera del plazo legal
+        </div>
+    </div>
+    }
+</div>
+}
+
 <!-- Últimos registros -->
 <div class="card">
     <div class="card__header">

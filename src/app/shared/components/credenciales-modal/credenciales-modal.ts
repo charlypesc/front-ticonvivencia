@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Credenciales } from '../../../core/models/usuario.model';
 import type { VarianteCredenciales } from '../../utils/credenciales-pdf';
+import { CerrarConEsc } from '../../directives/cerrar-con-esc.directive';
 
 /**
  * Muestra las credenciales recién emitidas y permite llevárselas en papel.
@@ -14,7 +15,7 @@ import type { VarianteCredenciales } from '../../utils/credenciales-pdf';
 @Component({
   selector: 'app-credenciales-modal',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CerrarConEsc],
   templateUrl: './credenciales-modal.html',
   styleUrl: './credenciales-modal.scss',
 })

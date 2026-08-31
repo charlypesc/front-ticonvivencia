@@ -15,30 +15,17 @@
 }
 
 <div class="card">
-    <div class="toolbar__search">
-        <i class="ti ti-search"></i>
-        <input type="text" placeholder="Buscar por RBD..." [ngModel]="busquedaRbd()"
-            (ngModelChange)="onBuscarRbdChange($event)" (focus)="mostrarResultadosBusqueda.set(true)"
-            (blur)="ocultarResultadosBusquedaConDelay()" name="busquedaRbd" />
-        @if (buscandoRbd()) {
-        <i class="ti ti-loader-2 spin"></i>
-        }
-
-        @if (mostrarResultadosBusqueda() && busquedaRbd().trim().length >= 2) {
-        <div class="autocomplete">
-            @if (resultadosBusquedaRbd().length === 0 && !buscandoRbd()) {
-            <div class="autocomplete__item autocomplete__item--vacio">Sin resultados para "{{ busquedaRbd() }}"</div>
-            } @else {
-            @for (est of resultadosBusquedaRbd(); track est.id_establecimiento) {
-            <div class="autocomplete__item" (mousedown)="irAEstablecimiento(est)">
-                <span class="autocomplete__nombre">{{ est.nombre }}</span>
-                <span class="autocomplete__meta">RBD {{ est.rbd }}</span>
-            </div>
-            }
-            }
-        </div>
-        }
-    </div>
+    <app-buscador class="toolbar__search" [items]="resultadosBusquedaRbd()" [texto]="busquedaRbd()"
+        (textoChange)="onBuscarRbdChange($event)" placeholder="Buscar por RBD..." [cargando]="buscandoRbd()"
+        (elegir)="irAEstablecimiento($event)">
+        <ng-template #item let-est>
+            <span class="sugerencia__nombre">{{ est.nombre }}</span>
+            <span class="sugerencia__meta">RBD {{ est.rbd }}</span>
+        </ng-template>
+        <ng-template #vacio>
+            @if (buscandoRbd()) { Buscando… } @else { Sin resultados para "{{ busquedaRbd() }}" }
+        </ng-template>
+    </app-buscador>
 
     <div class="breadcrumb">
         @for (crumb of breadcrumb(); track crumb.nivel) {

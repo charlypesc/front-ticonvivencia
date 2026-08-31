@@ -24,8 +24,9 @@
         @for (a of dibujadas(); track $index) {
         <path [attr.d]="a.d" class="arista" [class.arista--atras]="a.atras"
             [attr.marker-end]="a.atras ? 'url(#punta-atras)' : 'url(#punta)'" />
-        @if (a.texto) {
-        <text [attr.x]="a.lx" [attr.y]="a.ly" class="etiqueta" [class.etiqueta--atras]="a.atras">{{ a.texto }}
+        @for (linea of a.lineas; track $index) {
+        <text [attr.x]="a.lx" [attr.y]="yEtiqueta(a, $index)" class="etiqueta"
+            [class.etiqueta--atras]="a.atras">{{ linea }}
             <title>{{ a.titulo }}</title>
         </text>
         }

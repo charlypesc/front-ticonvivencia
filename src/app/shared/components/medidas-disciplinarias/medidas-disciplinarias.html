@@ -1,0 +1,453 @@
+<div class="card mb-4">
+    <div class="card__header">
+        <span class="section-label">
+            <i class="ti ti-gavel"></i> Medidas disciplinarias
+        </span>
+        <button class="btn btn--primary btn--sm" style="width:auto"
+            [appPuede]="Permiso.MedidaDisciplinariaRegistrar" (click)="abrirForm()">
+            <i class="ti ti-plus"></i> Registrar medida
+        </button>
+    </div>
+
+    @if (success()) {
+    <div class="alert alert--success"><i class="ti ti-circle-check"></i> {{ success() }}</div>
+    }
+    @if (error()) {
+    <div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+    }
+
+    @if (sinResultado > 0) {
+    <!-- Sin resultado, estas medidas no sirven para el informe de expulsión:
+         la ley pide indicar el resultado obtenido de cada una. -->
+    <div class="alert alert--warning">
+        <i class="ti ti-alert-triangle"></i>
+        <span>{{ sinResultado }} medida(s) sin resultado registrado. Si más adelante hay que
+            elaborar un informe de expulsión, debe indicar el resultado de cada medida aplicada.</span>
+    </div>
+    }
+
+    @if (loading()) {
+    <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
+    } @else if (medidas().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-gavel"></i>
+        <p>Sin medidas disciplinarias registradas</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Medida</th>
+                    <th>Estudiante</th>
+                    <th>Resultado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (m of medidas(); track m.id_medida) {
+                <tr>
+                    <td>{{ m.fecha_aplicacion }}</td>
+                    <td>
+                        {{ m.descripcion }}
+                        @if (m.tipo_medida) { <span class="badge">{{ m.tipo_medida }}</span> }
+                    </td>
+                    <td class="text-muted">
+                        {{ m.estudiante_nombre ? m.estudiante_nombre + ' ' + m.estudiante_apellido : '—' }}
+                    </td>
+                    <td>
+                        @if (m.resultado) {
+                        {{ m.resultado }}
+                        } @else {
+                        <span class="badge badge--pendiente">Sin registrar</span>
+                        }
+                    </td>
+                    <td class="acciones">
+                        <button class="btn-icon" title="Registrar resultado"
+                            [appPuede]="Permiso.MedidaDisciplinariaRegistrar" (click)="abrirResultado(m)">
+                            <i class="ti ti-checkbox"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+
+<!-- Suspensión cautelar del art. 6 letra d. Va en su propia card y no mezclada
+     con las medidas disciplinarias de arriba porque es otro instituto: no es
+     una sanción, acompaña al procedimiento sancionatorio y lo que la ley le
+     pone tope es el plazo para resolverlo. -->
+<div class="card mb-4">
+    <div class="card__header">
+        <span class="section-label">
+            <i class="ti ti-hourglass-high"></i> Suspensión cautelar
+        </span>
+        @if (casoActivo) {
+        <button class="btn btn--primary btn--sm" style="width:auto"
+            [appPuede]="Permiso.SuspensionCautelarCrear" (click)="abrirFormCautelar()">
+            <i class="ti ti-plus"></i> Decretar suspensión
+        </button>
+        }
+    </div>
+
+    @if (cautelaresEnInfraccion > 0) {
+    <div class="alert alert--error">
+        <i class="ti ti-alert-octagon"></i>
+        <span>{{ cautelaresEnInfraccion }} suspensión(es) cautelar(es) con el plazo de diez días
+            hábiles vencido y el procedimiento sin resolver. Es una infracción a la normativa
+            educacional mientras siga así.</span>
+    </div>
+    }
+
+    @if (cargandoCautelares()) {
+    <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
+    } @else if (cautelares().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-hourglass-off"></i>
+        <p>Sin suspensiones cautelares en este caso</p>
+    </div>
+    } @else {
+    @for (c of cautelares(); track c.id_suspension_cautelar) {
+    <div class="medida" [class.medida--vencida]="c.en_infraccion">
+        <div class="medida__cab">
+            <div>
+                <span class="badge">{{ c.estado === 'ampliada_por_reconsideracion'
+                    ? 'Ampliada por reconsideración' : (c.estado | titlecase) }}</span>
+                @if (c.estudiante_nombre) {
+                <span class="text-muted">— {{ c.estudiante_nombre }} {{ c.estudiante_apellido }}</span>
+                }
+            </div>
+            <div class="medida__acciones">
+                @if (c.estado !== 'resuelta') {
+                @if (!c.fecha_reconsideracion) {
+                <button class="btn-icon" title="Registrar reconsideración"
+                    [appPuede]="Permiso.SuspensionCautelarRegistrarReconsideracion"
+                    (click)="abrirReconsideracion(c)">
+                    <i class="ti ti-file-report"></i>
+                </button>
+                }
+                <button class="btn-icon" title="Resolver el procedimiento"
+                    [appPuede]="Permiso.SuspensionCautelarResolver" (click)="abrirResolver(c)">
+                    <i class="ti ti-gavel"></i>
+                </button>
+                }
+            </div>
+        </div>
+
+        <div class="text-muted">
+            Notificada el {{ c.fecha_notificacion | date:'dd-MM-yyyy HH:mm' }}
+            por {{ c.medio_notificacion }}
+        </div>
+
+        <!-- Los dos relojes que arranca la notificación. Es el dato que se pide
+             en una fiscalización, así que va visible y no escondido en un
+             detalle. -->
+        <div class="plazos">
+            <span [class.plazos__vencido]="c.en_infraccion">
+                <i class="ti ti-clock-exclamation"></i>
+                Plazo para resolver: {{ c.fecha_limite_resolucion | date:'dd-MM-yyyy' }}
+                @if (c.fecha_resolucion) { — resuelto el {{ c.fecha_resolucion | date:'dd-MM-yyyy' }} }
+            </span>
+            <span>
+                <i class="ti ti-file-report"></i>
+                Reconsideración hasta: {{ c.fecha_limite_reconsideracion | date:'dd-MM-yyyy' }}
+            </span>
+        </div>
+
+        <p class="text-muted"><strong>Fundamento:</strong> {{ c.fundamento }}</p>
+
+        @if (c.en_infraccion) {
+        <div class="alert alert--error">
+            <i class="ti ti-alert-octagon"></i>
+            <span>Venció el plazo de diez días hábiles para resolver el procedimiento
+                sancionatorio, contado desde la notificación de la medida (art. 6 letra d).</span>
+        </div>
+        }
+
+        @if (c.fecha_reconsideracion) {
+        <div class="seguimientos">
+            <p>
+                <strong>Reconsideración</strong> presentada el
+                {{ c.fecha_reconsideracion | date:'dd-MM-yyyy' }}.
+                @if (c.reconsideracion_fuera_de_plazo) {
+                <span class="badge badge--pendiente">Fuera de plazo</span>
+                }
+                @if (c.resultado_reconsideracion) {
+                Resultado: {{ c.resultado_reconsideracion }}.
+                }
+            </p>
+            <!-- La ley exige que el Consejo se pronuncie por escrito. Sin esta
+                 acta el backend no deja resolver, así que se avisa acá antes de
+                 que el director se choque con el error. -->
+            @if (c.consejo_profesores_acta) {
+            <p><strong>Consejo de Profesores</strong>
+                @if (c.fecha_consejo) { ({{ c.fecha_consejo | date:'dd-MM-yyyy' }}) }:
+                {{ c.consejo_profesores_acta }}
+            </p>
+            } @else if (c.estado !== 'resuelta') {
+            <p class="text-muted">
+                <i class="ti ti-alert-triangle"></i>
+                Falta el pronunciamiento por escrito del Consejo de Profesores, requisito para
+                resolver la reconsideración.
+            </p>
+            }
+        </div>
+        }
+    </div>
+    }
+    }
+</div>
+
+@if (mostrarForm()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-gavel"></i> Registrar medida disciplinaria</h3>
+            <button class="modal__close" (click)="cerrarForm()"><i class="ti ti-x"></i></button>
+        </div>
+        @if (error()) {
+        <div class="alert alert--error" style="margin:16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+        <div class="modal__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Fecha de aplicación *</label>
+                    <input type="date" [(ngModel)]="form.fecha_aplicacion" name="fecha_aplicacion" />
+                </div>
+                <div class="form-group">
+                    <label>Estudiante</label>
+                    <select [(ngModel)]="form.id_estudiante" name="id_estudiante_md">
+                        <option [ngValue]="null">No aplica</option>
+                        @for (e of estudiantes; track e.id_estudiante) {
+                        <option [ngValue]="e.id_estudiante">{{ e.nombre }} {{ e.apellido }}</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Tipo de medida</label>
+                <input type="text" placeholder="Ej: Amonestación, derivación, servicio comunitario"
+                    [(ngModel)]="form.tipo_medida" name="tipo_medida" />
+            </div>
+            <div class="form-group">
+                <label>Descripción *</label>
+                <textarea [(ngModel)]="form.descripcion" name="descripcion_md"></textarea>
+            </div>
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+                <i class="ti ti-device-floppy"></i> Registrar
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+@if (resultadoDe()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarResultado() : null">
+    <div class="modal modal-box-sm" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-checkbox"></i> Resultado de la medida</h3>
+            <button class="modal__close" (click)="cerrarResultado()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal__body">
+            <p class="text-muted">{{ resultadoDe().descripcion }}</p>
+            <div class="form-group">
+                <label>Fecha *</label>
+                <input type="date" [(ngModel)]="formResultado.fecha_resultado" name="fecha_resultado" />
+            </div>
+            <div class="form-group">
+                <label>Resultado obtenido *</label>
+                <textarea [(ngModel)]="formResultado.resultado" name="resultado"
+                    placeholder="Qué efecto tuvo la medida..."></textarea>
+            </div>
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarResultado()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarResultado()">
+                <i class="ti ti-device-floppy"></i> Guardar
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+@if (mostrarFormCautelar()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarFormCautelar() : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-hourglass-high"></i> Decretar suspensión cautelar</h3>
+            <button class="modal__close" (click)="cerrarFormCautelar()"><i class="ti ti-x"></i></button>
+        </div>
+        @if (error()) {
+        <div class="alert alert--error" style="margin:16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+        <div class="modal__body">
+            <div class="alert alert--warning">
+                <i class="ti ti-info-circle"></i>
+                <span>Desde la notificación corren dos plazos: <strong>diez días hábiles</strong> para
+                    resolver el procedimiento y <strong>cinco</strong> para que se pida
+                    reconsideración. El sistema los calcula con los feriados de la región.</span>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Fecha y hora de notificación *</label>
+                    <input type="datetime-local" [(ngModel)]="formCautelar.fecha_notificacion"
+                        name="fecha_notificacion" />
+                </div>
+                <div class="form-group">
+                    <!-- La ley obliga a notificar por escrito, por eso no hay
+                         opción de teléfono. -->
+                    <label>Medio de notificación *</label>
+                    <select [(ngModel)]="formCautelar.medio_notificacion" name="medio_notificacion">
+                        <option value="presencial">Presencial (con acta)</option>
+                        <option value="correo">Correo electrónico</option>
+                        <option value="plataforma">Plataforma</option>
+                        <option value="carta">Carta</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Estudiante</label>
+                <select [(ngModel)]="formCautelar.id_estudiante" name="id_estudiante_sc">
+                    <option [ngValue]="null">No aplica</option>
+                    @for (e of estudiantes; track e.id_estudiante) {
+                    <option [ngValue]="e.id_estudiante">{{ e.nombre }} {{ e.apellido }}</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Fundamentos *</label>
+                <textarea [(ngModel)]="formCautelar.fundamento" name="fundamento_sc"
+                    placeholder="Por qué se suspende: la falta grave o gravísima imputada y por qué no basta otra medida mientras dura el procedimiento..."></textarea>
+                <small class="text-muted">Se notifican junto con la decisión. Sin fundamentos por
+                    escrito la medida no se sostiene.</small>
+            </div>
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarFormCautelar()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarCautelar()">
+                <i class="ti ti-device-floppy"></i> Decretar
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+@if (reconsiderarDe()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarReconsideracion() : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-file-report"></i> Registrar reconsideración</h3>
+            <button class="modal__close" (click)="cerrarReconsideracion()"><i class="ti ti-x"></i></button>
+        </div>
+        @if (error()) {
+        <div class="alert alert--error" style="margin:16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+        <div class="modal__body">
+            <div class="alert alert--warning">
+                <i class="ti ti-info-circle"></i>
+                <span>Interponerla <strong>amplía la suspensión</strong> hasta que termine su
+                    tramitación, así que el caso deja de contar como fuera de plazo. Se resuelve
+                    previa consulta al Consejo de Profesores, que debe pronunciarse por escrito.</span>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Fecha de presentación *</label>
+                    <input type="date" [(ngModel)]="formReconsideracion.fecha_reconsideracion"
+                        name="fecha_reconsideracion" />
+                    <small class="text-muted">El plazo vencía el
+                        {{ reconsiderarDe().fecha_limite_reconsideracion | date:'dd-MM-yyyy' }}. Si llegó
+                        después queda registrada igual: admitirla es decisión del director.</small>
+                </div>
+                <div class="form-group">
+                    <label>Fecha del Consejo de Profesores</label>
+                    <input type="date" [(ngModel)]="formReconsideracion.fecha_consejo" name="fecha_consejo" />
+                </div>
+            </div>
+            <div class="form-group">
+                <!-- Opcional acá porque el Consejo se consulta para resolver, no
+                     para recibir el escrito. Al resolver pasa a ser obligatorio. -->
+                <label>Pronunciamiento del Consejo de Profesores</label>
+                <textarea [(ngModel)]="formReconsideracion.consejo_profesores_acta"
+                    name="consejo_profesores_acta"
+                    placeholder="Se puede completar después, pero hace falta para poder resolver..."></textarea>
+            </div>
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarReconsideracion()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarReconsideracion()">
+                <i class="ti ti-device-floppy"></i> Registrar
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+@if (resolverDe()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarResolver() : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-gavel"></i> Resolver el procedimiento</h3>
+            <button class="modal__close" (click)="cerrarResolver()"><i class="ti ti-x"></i></button>
+        </div>
+        @if (error()) {
+        <div class="alert alert--error" style="margin:16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+        <div class="modal__body">
+            <p class="text-muted">
+                Plazo para resolver: {{ resolverDe().fecha_limite_resolucion | date:'dd-MM-yyyy' }}
+            </p>
+            <div class="form-group">
+                <label>Fecha de resolución *</label>
+                <input type="date" [(ngModel)]="formResolver.fecha_resolucion" name="fecha_resolucion" />
+            </div>
+
+            @if (resolverDe().fecha_reconsideracion) {
+            <div class="form-group">
+                <label>Resultado de la reconsideración *</label>
+                <select [(ngModel)]="formResolver.resultado_reconsideracion"
+                    name="resultado_reconsideracion">
+                    <option value="">Seleccioná...</option>
+                    <option value="acogida">Acogida</option>
+                    <option value="rechazada">Rechazada</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Fecha del Consejo de Profesores</label>
+                    <input type="date" [(ngModel)]="formResolver.fecha_consejo" name="fecha_consejo_r" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Pronunciamiento del Consejo de Profesores *</label>
+                <textarea [(ngModel)]="formResolver.consejo_profesores_acta"
+                    name="consejo_profesores_acta_r"
+                    placeholder="Lo que el Consejo resolvió por escrito..."></textarea>
+                <small class="text-muted">La ley exige consultarlo antes de resolver la
+                    reconsideración y que se pronuncie por escrito.</small>
+            </div>
+            }
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarResolver()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarResolucion()">
+                <i class="ti ti-device-floppy"></i> Resolver
+            </button>
+        </div>
+    </div>
+</div>
+}

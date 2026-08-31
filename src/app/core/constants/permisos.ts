@@ -123,6 +123,39 @@ export const Permiso = {
   ProtocoloActivadoAnular       : 91,
   ProtocoloActivadoVerBitacora  : 92,
 
+  // ── Ley 21.809 ────────────────────────────────────────────────────────────
+  TipoFaltaVincularProtocolo: 93,
+
+  MedidaProteccionVer                 : 94,
+  MedidaProteccionCrear               : 95,
+  MedidaProteccionFinalizar           : 96,
+  MedidaProteccionRegistrarSeguimiento: 97,
+
+  MedidaDisciplinariaVer      : 98,
+  MedidaDisciplinariaRegistrar: 99,
+
+  InformeExpulsionVer     : 100,
+  InformeExpulsionElaborar: 101,
+  InformeExpulsionDecidir : 102,
+
+  ExpedienteExportar      : 103,
+  ExpedienteExportarMasivo: 104,
+
+  FeriadoAdministrar: 105,
+
+  DocumentoInstitucionalVer      : 106,
+  DocumentoInstitucionalGestionar: 107,
+
+  ConstanciaVer      : 108,
+  ConstanciaRegistrar: 109,
+
+  // Suspensión cautelar del art. 6 letra d (distinta de la del art. 16 E j).
+  // Decretarla y resolverla es facultad del director.
+  SuspensionCautelarVer                     : 110,
+  SuspensionCautelarCrear                   : 111,
+  SuspensionCautelarRegistrarReconsideracion: 112,
+  SuspensionCautelarResolver                : 113,
+
   // documento
   DocumentoVer  : 63,
   DocumentoSubir: 64,
@@ -241,4 +274,21 @@ export const CODIGO_POR_ID: Record<number, string> = {
   90: 'protocolo_activado.cerrar',
   91: 'protocolo_activado.anular',
   92: 'protocolo_activado.ver_bitacora',
+  93: 'tipo_falta.vincular_protocolo',
+  94: 'medida_proteccion.ver',
+  95: 'medida_proteccion.crear',
+  96: 'medida_proteccion.finalizar',
+  97: 'medida_proteccion.registrar_seguimiento',
+  98: 'medida_disciplinaria.ver',
+  99: 'medida_disciplinaria.registrar',
+ 100: 'informe_expulsion.ver',
+ 101: 'informe_expulsion.elaborar',
+ 102: 'informe_expulsion.decidir',
+ 103: 'expediente.exportar',
+ 104: 'expediente.exportar_masivo',
+ 105: 'feriado.administrar',
+ 106: 'documento_institucional.ver',
+ 107: 'documento_institucional.gestionar',
+ 108: 'constancia.ver',
+ 109: 'constancia.registrar',
 };

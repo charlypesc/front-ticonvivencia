@@ -9,11 +9,12 @@ import { ImportacionService } from '../../core/services/importacion.service';
 import { CursoNombrePipe } from '../../shared/pipes/curso-nombre.pipe';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
+import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 
 @Component({
   selector: 'app-cursos',
   standalone: true,
-  imports: [CommonModule, FormsModule, CursoNombrePipe, Puede],
+  imports: [CommonModule, FormsModule, CursoNombrePipe, Puede, CerrarConEsc],
   templateUrl: './cursos.html',
   styleUrl: './cursos.scss',
 })

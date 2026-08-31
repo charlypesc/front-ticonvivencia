@@ -14,16 +14,10 @@
         </div>
         }
 
-        @if (success() && registro === null) {
-        <div class="alert alert--success">
-            <i class="ti ti-circle-check"></i> Registro guardado exitosamente
-        </div>
-        }
-        @if (success() && registro) {
-        <div class="alert alert--success">
-            <i class="ti ti-circle-check"></i> Registro actualizado exitosamente
-        </div>
-        }
+        <!-- El aviso de "guardado" ya no vive acá: el modal se cierra apenas
+             responde el backend y el mensaje lo muestra la pantalla de atrás.
+             Mostrarlo acá obligaba a dejar el modal abierto 1,2 s de más solo
+             para que alcanzara a leerse. -->
 
         <!-- Todo el formulario va opaco si la persona no puede guardarlo: este
              modal también se abre desde la fila de la tabla y desde la ficha del
@@ -36,14 +30,61 @@
                 </div>
                 <div class="form-group">
                     <label>Tipo de falta *</label>
-                    <select [(ngModel)]="form.id_tipo_falta" name="tipo">
+                    <select [(ngModel)]="form.id_tipo_falta" name="tipo"
+                        (ngModelChange)="onTipoFaltaChange()">
                         <option [ngValue]="null" disabled>Seleccione...</option>
                         @for (tf of tiposFalta(); track tf.id_tipo_falta) {
                         <option [ngValue]="tf.id_tipo_falta">
-                            {{ tf.nombre }} — {{ tf.gravedad }}
+                            {{ tf.nombre }} — {{ tf.gravedad | titlecase }}
                         </option>
                         }
                     </select>
+                </div>
+            </div>
+
+            <!-- Estudiantes involucrados. Va acá arriba, pegado a la fecha y al
+                 tipo de falta: son los tres datos que identifican el caso
+                 (cuándo, qué y a quién), y recién después viene el relato. -->
+            <!-- con signal se llama estudiantes() como funcion y el for itera correctamente -> OJO -->
+            <div class="form-group">
+                <label>Estudiantes involucrados</label>
+                <!-- limpiarAlElegir: la lista de involucrados es de selección
+                     múltiple, así que el campo queda vacío listo para el
+                     siguiente nombre en vez de conservar el ya agregado. -->
+                <app-buscador [items]="sugerenciasEstudiante()" [texto]="busquedaEstudiante()"
+                    (textoChange)="busquedaEstudiante.set($event)" placeholder="Buscar por nombre..."
+                    [limpiarAlElegir]="true" (elegir)="seleccionarEstudianteSugerido($event)">
+                    <ng-template #item let-e>
+                        <span class="sugerencia__nombre">{{ e.nombre }} {{ e.apellido }}</span>
+                        <span class="sugerencia__meta">{{ e.run }}-{{ e.dv }} · {{ e.curso_nombre | cursoNombre }}</span>
+                    </ng-template>
+                </app-buscador>
+
+                <div class="estudiantes-list">
+                    @if (involucrados().length === 0) {
+                    <p class="estudiantes-vacio">Busque y seleccione a los estudiantes involucrados.</p>
+                    }
+                    @for (e of involucrados(); track e.id_estudiante) {
+                    <div class="estudiante-item selected">
+                        <span class="estudiante-check">
+                            <span class="estudiante-nombre">{{ e.nombre }} {{ e.apellido }}</span>
+                            <span class="estudiante-run">{{ e.run }}-{{ e.dv }}</span>
+                        </span>
+                        <select [ngModel]="getRol(e.id_estudiante)" (ngModelChange)="setRol(e.id_estudiante, $event)"
+                            [name]="'rol_' + e.id_estudiante" class="rol-select">
+                            @if (getRol(e.id_estudiante) && !esRolConocido(getRol(e.id_estudiante))) {
+                            <option [value]="getRol(e.id_estudiante)">Involucrado</option>
+                            }
+                            <option value="afectado">Afectado</option>
+                            <option value="senalado">Señalado</option>
+                            <option value="testigo">Testigo</option>
+                            <option value="denunciante">Denunciante</option>
+                        </select>
+                        <button type="button" class="btn-icon" title="Quitar" (click)="toggleEstudiante(e.id_estudiante)">
+                            <i class="ti ti-x"></i>
+                        </button>
+                    </div>
+                    }
                 </div>
             </div>
 
@@ -89,55 +130,6 @@
                     name="acuerdos"></textarea>
             </div>
 
-            <!-- Estudiantes involucrados -->
-            <!-- con signal se llama estudiantes() como funcion y el for itera correctamente -> OJO -->
-            <div class="form-group">
-                <label>Estudiantes involucrados</label>
-                <div class="toolbar__search">
-                    <i class="ti ti-search"></i>
-                    <input type="text" placeholder="Buscar por nombre..." [ngModel]="busquedaEstudiante()"
-                        (ngModelChange)="busquedaEstudiante.set($event)"
-                        (focus)="mostrarSugerenciasEstudiante.set(true)"
-                        (blur)="ocultarSugerenciasEstudianteConDelay()" name="busquedaEstudiante" />
-
-                    @if (mostrarSugerenciasEstudiante() && sugerenciasEstudiante().length > 0) {
-                    <div class="autocomplete">
-                        @for (e of sugerenciasEstudiante(); track e.id_estudiante) {
-                        <div class="autocomplete__item" (mousedown)="seleccionarEstudianteSugerido(e.id_estudiante)">
-                            <span class="autocomplete__nombre">{{ e.nombre }} {{ e.apellido }}</span>
-                            <span class="autocomplete__meta">{{ e.run }}-{{ e.dv }}</span>
-                        </div>
-                        }
-                    </div>
-                    }
-                </div>
-
-                <div class="estudiantes-list">
-                    @if (involucrados().length === 0) {
-                    <p class="estudiantes-vacio">Busque y seleccione a los estudiantes involucrados.</p>
-                    }
-                    @for (e of involucrados(); track e.id_estudiante) {
-                    <div class="estudiante-item selected">
-                        <span class="estudiante-check">
-                            {{ e.nombre }} {{ e.apellido }} | {{ e.run }}-{{ e.dv }}
-                        </span>
-                        <select [ngModel]="getRol(e.id_estudiante)" (ngModelChange)="setRol(e.id_estudiante, $event)"
-                            [name]="'rol_' + e.id_estudiante" class="rol-select">
-                            @if (getRol(e.id_estudiante) && !esRolConocido(getRol(e.id_estudiante))) {
-                            <option [value]="getRol(e.id_estudiante)">Involucrado</option>
-                            }
-                            <option value="víctima">Víctima</option>
-                            <option value="agresor">Agresor</option>
-                            <option value="testigo">Testigo</option>
-                        </select>
-                        <button type="button" class="btn-icon" title="Quitar" (click)="toggleEstudiante(e.id_estudiante)">
-                            <i class="ti ti-x"></i>
-                        </button>
-                    </div>
-                    }
-                </div>
-            </div>
-
             <!-- Activar protocolo sobre el caso. El protocolo se activa sobre el
                  registro, que es lo que ya tiene a los estudiantes involucrados. -->
             @if (puedeActivarProtocolo) {
@@ -147,7 +139,7 @@
                 <div class="estudiantes-list">
                     @for (p of protocolosActivados(); track p.id_protocolo_activado) {
                     <div class="estudiante-item">
-                        <span class="estudiante-check">
+                        <span class="estudiante-check estudiante-check--fila">
                             <i class="ti ti-shield-check"></i> {{ p.nombre }} — {{ p.estado }}
                         </span>
                     </div>
@@ -155,8 +147,25 @@
                 </div>
                 }
 
+                <!-- Aviso de protocolo. Queda pegado al control que propone
+                     usar, para que la acción sugerida esté a un clic del aviso.
+                     Cambia de tono cuando el protocolo es obligatorio: ahí no
+                     es una recomendación, es lo que impide validar después. -->
+                @if (sugerirProtocolo) {
+                <div class="alert" [class.alert--error]="protocoloEsObligatorio"
+                    [class.alert--warning]="!protocoloEsObligatorio">
+                    <i class="ti" [class.ti-alert-octagon]="protocoloEsObligatorio"
+                        [class.ti-alert-triangle]="!protocoloEsObligatorio"></i>
+                    <!-- El texto va dentro de un solo <span>: .alert es flex, y sin
+                         esto cada trozo suelto se vuelve un ítem flex aparte y la
+                         frase se corta. -->
+                    <span>{{ mensajeSugerencia }}</span>
+                </div>
+                }
+
                 <label class="check-inline">
                     <input type="checkbox" [(ngModel)]="activarProtocolo" name="activar_protocolo"
+                        (ngModelChange)="onActivarProtocoloChange()"
                         [disabled]="protocolosDisponibles().length === 0" />
                     Activar un protocolo para este caso
                 </label>
@@ -166,7 +175,8 @@
                 }
 
                 @if (activarProtocolo) {
-                <select [(ngModel)]="idProtocoloEstablecimiento" name="id_protocolo_establecimiento">
+                <select [(ngModel)]="idProtocoloEstablecimiento" name="id_protocolo_establecimiento"
+                    (ngModelChange)="onActivarProtocoloChange()">
                     <option [ngValue]="null" disabled>Seleccione el protocolo...</option>
                     @for (p of protocolosDisponibles(); track p.id_protocolo_establecimiento) {
                     <option [ngValue]="p.id_protocolo_establecimiento">{{ p.nombre }}</option>

@@ -448,6 +448,25 @@ export class ApiService {
     return this.http.post(`${this.base}/protocolos-activados/${id}/nota`, { descripcion });
   }
 
+  // Involucrados del caso: contra quién y a favor de quién se instruye. Vienen
+  // también dentro de getProtocoloActivado; estos endpoints son para tocarlos.
+  getInvolucrados(id: number) {
+    return this.http.get<any[]>(`${this.base}/protocolos-activados/${id}/involucrados`);
+  }
+  agregarInvolucrado(id: number, data: any) {
+    return this.http.post(`${this.base}/protocolos-activados/${id}/involucrados`, data);
+  }
+  cambiarRolInvolucrado(id: number, idInvolucrado: number, rol: string) {
+    return this.http.put(`${this.base}/protocolos-activados/${id}/involucrados/${idInvolucrado}/rol`, { rol });
+  }
+  quitarInvolucrado(id: number, idInvolucrado: number) {
+    return this.http.delete(`${this.base}/protocolos-activados/${id}/involucrados/${idInvolucrado}`);
+  }
+  /** Lo que se hizo con una persona en un paso: notificación, entrega, firma. */
+  registrarGestion(id: number, idPasoInvolucrado: number, data: any) {
+    return this.http.post(`${this.base}/protocolos-activados/${id}/gestiones/${idPasoInvolucrado}`, data);
+  }
+
   // Notificaciones (la campana de la barra superior)
   /** Las últimas 30 del usuario en sesión, sin leer primero. */
   getNotificaciones() {
@@ -462,5 +481,139 @@ export class ApiService {
   }
   marcarTodasNotificacionesLeidas() {
     return this.http.put(`${this.base}/notificaciones/leer-todas`, {});
+  }
+
+  // ── Ley 21.809 ────────────────────────────────────────────────────────────
+
+  // Vínculo tipo de falta -> protocolo que obliga a activar
+  setProtocolosTipoFalta(idTipoFalta: number, protocolos: any[]) {
+    return this.http.put(`${this.base}/tipos-falta/${idTipoFalta}/protocolos`, { protocolos });
+  }
+
+  // Medidas de protección (art. 16 E letra j). El alta cuelga del caso; las
+  // acciones sobre una medida ya registrada van por su propia ruta.
+  getMedidasProteccion(idCaso: number) {
+    return this.http.get<any[]>(`${this.base}/protocolos-activados/${idCaso}/medidas-proteccion`);
+  }
+  createMedidaProteccion(idCaso: number, data: any) {
+    return this.http.post<any>(`${this.base}/protocolos-activados/${idCaso}/medidas-proteccion`, data);
+  }
+  finalizarMedidaProteccion(idMedida: number, id_medida_sustituye?: number) {
+    return this.http.patch(`${this.base}/medidas-proteccion/${idMedida}/finalizar`, { id_medida_sustituye });
+  }
+  registrarSeguimientoMedida(idMedida: number, data: any) {
+    return this.http.post(`${this.base}/medidas-proteccion/${idMedida}/seguimiento`, data);
+  }
+
+  // Medidas disciplinarias y su resultado (insumo del informe de expulsión)
+  getMedidasDisciplinarias(idRegistro: number) {
+    return this.http.get<any[]>(`${this.base}/registros/${idRegistro}/medidas-disciplinarias`);
+  }
+  createMedidaDisciplinaria(idRegistro: number, data: any) {
+    return this.http.post(`${this.base}/registros/${idRegistro}/medidas-disciplinarias`, data);
+  }
+  registrarResultadoMedida(idMedida: number, data: any) {
+    return this.http.patch(`${this.base}/medidas-disciplinarias/${idMedida}/resultado`, data);
+  }
+
+  // Suspensión cautelar (art. 6 letra d). Como las de protección: el alta
+  // cuelga del caso, las acciones sobre una suspensión ya decretada van por su
+  // propia ruta.
+  getSuspensionesCautelares(idCaso: number) {
+    return this.http.get<any[]>(`${this.base}/protocolos-activados/${idCaso}/suspensiones-cautelares`);
+  }
+  createSuspensionCautelar(idCaso: number, data: any) {
+    return this.http.post<any>(`${this.base}/protocolos-activados/${idCaso}/suspensiones-cautelares`, data);
+  }
+  registrarReconsideracionCautelar(idSuspension: number, data: any) {
+    return this.http.patch<any>(`${this.base}/suspensiones-cautelares/${idSuspension}/reconsideracion`, data);
+  }
+  resolverSuspensionCautelar(idSuspension: number, data: any) {
+    return this.http.patch<any>(`${this.base}/suspensiones-cautelares/${idSuspension}/resolver`, data);
+  }
+
+  // Informe previo de expulsión o cancelación de matrícula
+  getInformeExpulsion(idCaso: number) {
+    return this.http.get<any>(`${this.base}/protocolos-activados/${idCaso}/informe-expulsion`);
+  }
+  createInformeExpulsion(idCaso: number, data: any) {
+    return this.http.post<any>(`${this.base}/protocolos-activados/${idCaso}/informe-expulsion`, data);
+  }
+  updateInformeExpulsion(idInforme: number, data: any) {
+    return this.http.put(`${this.base}/informes-expulsion/${idInforme}`, data);
+  }
+  setComisionInforme(idInforme: number, integrantes: any[]) {
+    return this.http.put(`${this.base}/informes-expulsion/${idInforme}/comision`, { integrantes });
+  }
+  firmarInformeExpulsion(idInforme: number) {
+    return this.http.post(`${this.base}/informes-expulsion/${idInforme}/firmar`, {});
+  }
+  emitirInformeExpulsion(idInforme: number) {
+    return this.http.post(`${this.base}/informes-expulsion/${idInforme}/emitir`, {});
+  }
+  decidirInformeExpulsion(idInforme: number, data: any) {
+    return this.http.post(`${this.base}/informes-expulsion/${idInforme}/decidir`, data);
+  }
+  registrarEnviosInforme(idInforme: number, data: any) {
+    return this.http.patch(`${this.base}/informes-expulsion/${idInforme}/informes-enviados`, data);
+  }
+
+  // Expediente: lo que se le entrega a la Superintendencia
+  getExpediente(idCaso: number, redactado = false) {
+    return this.http.get<any>(`${this.base}/protocolos-activados/${idCaso}/expediente`, {
+      params: redactado ? { redactado: '1' } : {},
+    });
+  }
+  /** Exportación redactada de los últimos 24 meses (obligación ante terceros). */
+  getExpedientesMasivo(params: { categoria?: string; meses?: number } = {}) {
+    return this.http.get<any>(`${this.base}/expedientes/masivo`, { params: params as any });
+  }
+
+  // Feriados: definen qué días son hábiles y por lo tanto los plazos legales
+  getFeriados(anio?: number) {
+    return this.http.get<any[]>(`${this.base}/feriados`, { params: anio ? { anio } : {} });
+  }
+  createFeriado(data: any) {
+    return this.http.post(`${this.base}/feriados`, data);
+  }
+  deleteFeriado(id: number) {
+    return this.http.delete(`${this.base}/feriados/${id}`);
+  }
+
+  // Documentos institucionales (RICE y Plan de Gestión) y constancias de
+  // recepción del apoderado (art. 16 G). Los archivos viajan como FormData:
+  // NO fijar Content-Type a mano, el navegador tiene que poner el boundary.
+  getDocumentosInstitucionales() {
+    return this.http.get<any[]>(`${this.base}/documentos-institucionales`);
+  }
+  createDocumentoInstitucional(data: FormData) {
+    return this.http.post(`${this.base}/documentos-institucionales`, data);
+  }
+  publicarDocumentoInstitucional(id: number) {
+    return this.http.post(`${this.base}/documentos-institucionales/${id}/publicar`, {});
+  }
+  /**
+   * El archivo se pide como blob y no por URL directa: el token va en la
+   * cabecera que pone el interceptor, así que una URL abierta con window.open
+   * llegaría sin autenticación y rebotaría con 401.
+   */
+  getArchivoDocumentoInstitucional(id: number) {
+    return this.http.get(`${this.base}/documentos-institucionales/${id}/archivo`, {
+      responseType: 'blob',
+    });
+  }
+  getConstancias(idDocumento: number) {
+    return this.http.get<any>(`${this.base}/documentos-institucionales/${idDocumento}/constancias`);
+  }
+  registrarConstancia(idDocumento: number, data: FormData) {
+    return this.http.post(`${this.base}/documentos-institucionales/${idDocumento}/constancias`, data);
+  }
+  adjuntarConstanciaFirmada(idConstancia: number, data: FormData) {
+    return this.http.put(`${this.base}/constancias/${idConstancia}/archivo`, data);
+  }
+  getArchivoConstancia(idConstancia: number) {
+    return this.http.get(`${this.base}/constancias/${idConstancia}/archivo`, {
+      responseType: 'blob',
+    });
   }
 }
