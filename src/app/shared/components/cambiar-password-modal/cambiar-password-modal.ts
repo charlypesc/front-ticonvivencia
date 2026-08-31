@@ -2,6 +2,7 @@ import { Component, EventEmitter, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.services';
+import { CerrarConEsc } from '../../directives/cerrar-con-esc.directive';
 
 /** Mismo mínimo que valida el backend. Si cambia allá, cambia acá. */
 const LARGO_MINIMO = 8;
@@ -16,7 +17,7 @@ const LARGO_MINIMO = 8;
 @Component({
   selector: 'app-cambiar-password-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CerrarConEsc],
   templateUrl: './cambiar-password-modal.html',
   styleUrl: './cambiar-password-modal.scss',
 })

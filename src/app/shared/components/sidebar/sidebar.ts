@@ -57,6 +57,13 @@ export class Sidebar {
       permiso: Permiso.ProtocoloActivadoVer,
     },
     // Catálogo cross-tenant (País/Región/Provincia/Comuna)
+    {
+      label: 'Reglamento y Plan',
+      icon: 'ti-book',
+      route: '/documentos-institucionales',
+      permiso: Permiso.DocumentoInstitucionalVer,
+    },
+    { label: 'Feriados', icon: 'ti-calendar', route: '/feriados', permiso: Permiso.FeriadoAdministrar },
     { label: 'Geo',      icon: 'ti-map-2',    route: '/geo',      permiso: Permiso.EstablecimientoVer },
     { label: 'Usuarios', icon: 'ti-user-cog', route: '/usuarios', permiso: Permiso.UsuarioVer },
     // Gateado por rol.asignar_permiso (solo ADMIN) y no por rol.ver: quien

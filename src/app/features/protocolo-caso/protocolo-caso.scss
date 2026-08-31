@@ -132,3 +132,203 @@
     color: $gray-400;
   }
 }
+
+// Involucrados del caso: quién es quién antes de mirar los pasos.
+.involucrados {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    flex-wrap: wrap;
+  }
+
+  // Un estudiante del establecimiento lleva a su ficha; un apoderado o un
+  // funcionario no tiene ninguna, así que solo se ve pinchable el que lo es.
+  .involucrado--enlazable {
+    cursor: pointer;
+    padding: 4px 6px;
+    margin: -4px -6px;
+    border-radius: 6px;
+
+    &:hover,
+    &:focus-visible {
+      background: $gray-100;
+    }
+
+    &:hover .involucrado__ir,
+    &:focus-visible .involucrado__ir {
+      opacity: 1;
+    }
+  }
+
+  .involucrado__ir {
+    margin-left: auto;
+    color: $gray-400;
+    font-size: 15px;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+}
+
+// El hecho del que trata el caso, arriba de los involucrados y dentro de la
+// misma tarjeta: son las dos mitades de la misma pregunta — qué pasó y con
+// quién — y separarlas en dos tarjetas obligaba a mirar en dos lugares.
+.registro {
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid $gray-200;
+
+  &__cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+
+    h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &__campo {
+    margin-bottom: 8px;
+
+    > span {
+      display: block;
+      font-size: 12px;
+      color: $gray-600;
+    }
+
+    // El relato viene de un <textarea>: sin esto los saltos de línea se pierden
+    // y los antecedentes se leen como un párrafo corrido.
+    p { white-space: pre-wrap; }
+  }
+}
+
+// El cumplimiento de un paso persona por persona. No es una tarjeta aparte
+// dentro de la tarjeta del paso: el paso ES la notificación, y sus datos (a
+// quién, cómo, cuándo) tienen que leerse de corrido con el resto del
+// formulario. Solo se separa con líneas, que es lo justo para distinguir a una
+// persona de la siguiente cuando hay varias.
+.gestiones {
+  margin: 14px 0;
+  padding-top: 12px;
+  border-top: 1px solid $gray-200;
+
+  &__titulo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: $gray-600;
+    margin-bottom: 4px;
+  }
+
+  ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.gestion {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+
+  // Entre personas, no arriba de la primera: ahí ya está la línea del bloque.
+  & + & { border-top: 1px dashed $gray-200; }
+
+  &--falta .gestion__marca { color: $accent-danger; }
+
+  &__cabecera {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+
+  &__marca {
+    font-size: 16px;
+    color: $gray-400;
+  }
+
+  // Empuja el estado de la firma al extremo derecho: la pregunta que se hace al
+  // mirar la lista es "¿quién falta?", y así se responde leyendo una columna.
+  &__estado { margin-left: auto; }
+
+  // Los controles en una sola línea mientras entren, y bajando de a uno cuando
+  // no. Cada campo declara su ancho base para que la observación no se coma el
+  // espacio del resto ni la fecha quede más ancha que su contenido.
+  &__form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px 12px;
+  }
+
+  &__campo {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    margin: 0;
+
+    > span {
+      font-size: 12px;
+      color: $gray-600;
+    }
+
+    select,
+    input {
+      margin: 0;
+      height: 38px;
+    }
+
+    // La observación crece con el espacio sobrante; la fecha y el medio de la
+    // notificación no necesitan más que su contenido.
+    &--estado { flex: 1 1 190px; }
+    &--medio  { flex: 0 1 170px; }
+    &--fecha  { flex: 0 1 150px; }
+    &--obs    { flex: 4 1 200px; }
+  }
+
+}
+
+// En pantalla angosta cada campo toma la fila entera: con dos por línea los
+// <select> quedaban demasiado cortos para leer su opción.
+@media (max-width: 640px) {
+  .gestion__campo { flex: 1 1 100%; }
+}
+
+.seccion-nueva {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid $gray-200;
+
+  h4 { font-weight: 600; margin-bottom: 4px; }
+  p { margin-bottom: 10px; }
+}

@@ -7,11 +7,12 @@ import { Permiso as PermisoModel, Rol } from '../../core/models/usuario.model';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
+import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 
 @Component({
   selector: 'app-roles',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, EtiquetaPipe],
+  imports: [CommonModule, FormsModule, Puede, EtiquetaPipe, CerrarConEsc],
   templateUrl: './roles.html',
   styleUrl: './roles.scss',
 })

@@ -1,5 +1,115 @@
 
+## Catálogo de protocolos
+✔ porte de armas sugería el protocolo de vulneración de derechos @done
+  No era un bug de código sino de datos: el protocolo de vulneración de derechos
+  (id_protocolo 8, "indicios de que un estudiante ESTÁ SIENDO vulnerado —
+  negligencia, abandono, entorno familiar de riesgo") estaba vinculado a mano a 4
+  faltas que no tienen nada que ver: Agresión física, Discriminación arbitraria,
+  Fuga del establecimiento y Porte de armas. Se usó de cajón por defecto. Está al
+  revés: en esas faltas el estudiante es el infractor, no la víctima, y el
+  protocolo arranca una derivación proteccional A FAVOR de él.
+  La causa de fondo: no existía protocolo de armas en el catálogo (los 12 no lo
+  cubrían), así que se colgó del que más se le parecía.
+  Se desvincularon los 4 y se creó el "Protocolo de porte de armas u objetos
+  peligrosos" (id_protocolo 45, id_protocolo_establecimiento 66), 9 pasos,
+  vinculado a Porte de armas como obligatorio=1.
+  Lección: antes de insertar un grafo nuevo a mano, pasarlo por validarGrafo() de
+  utils/flujoProtocolo.js — es el mismo validador que usa el motor al publicar, y
+  atrapa pasos sin destino, sin inicial/final y condiciones que apuntan a campos
+  inexistentes. Se validó dos veces: la definición antes de insertar, y el grafo
+  releído de la base después.
+  Respaldo previo de las 7 tablas afectadas: scratchpad/backup-armas.sql
+
+✔ protocolos para las 3 faltas que quedaron huérfanas @done
+  Agresión física (id 46), Discriminación arbitraria (47) y Salida del
+  establecimiento sin autorización (48), adoptados en el 6258 y vinculados como
+  obligatorio=1. Agresión física es distinta de bullying a propósito: el bullying
+  exige reiteración y asimetría de poder y ya tenía protocolo; la agresión
+  puntual no tenía ninguno pese a ser gravísima.
+  Fuga se modeló como problema de custodia y no disciplinario: plazos en horas,
+  aviso al apoderado antes que nada y salida formativa. Discriminación registra
+  la categoría de la Ley 20.609 porque es lo que la distingue de un conflicto
+  común, y se cierra sin resolución si no se acredita (para no dejar una sanción
+  en blanco en el expediente de alguien).
+  Respaldo previo: scratchpad/backup-protocolos-3.sql
+✔ acoso o abuso sexual conectado a su protocolo @done
+  El protocolo de connotación sexual ya existía en el catálogo (id 7, publicado,
+  8 pasos, validarGrafo ✓) pero nunca se había adoptado en el establecimiento,
+  así que la falta gravísima más delicada del listado no sugería nada. Adoptado
+  (id_protocolo_establecimiento 70) y vinculado como obligatorio=1.
+  Lección: un protocolo puede estar sano en el catálogo y aun así no servirle a
+  nadie — hasta adoptarlo en el establecimiento y vincularlo al tipo de falta no
+  existe para el usuario. Al revisar cobertura, mirar TIPO_FALTA_PROTOCOLO, no
+  el catálogo.
+  Quedan sin protocolo 3 gravísimas, las tres administrativas y sin norma que
+  exija procedimiento especial: Adulteración de documentos, Copia o plagio en
+  evaluación y Daño a la infraestructura. Se resuelven por el conducto
+  disciplinario común; evaluar si su gravedad está bien calificada.
+
+## Protocolos activados
+✔ el coordinador puede completar los pasos de otros roles @done
+  El coordinador ya podía hacerlo, pero dando un rodeo: reasignarse el paso a sí
+  mismo y recién ahí completarlo. Y ese rodeo dejaba PEOR registro, porque
+  reasignar sobrescribe id_usuario_responsable y el expediente terminaba diciendo
+  que el paso siempre fue suyo. Ahora puedeActuar() devuelve 'propio' /
+  'en_lugar_de' / null en vez de sí/no; el gate de 'en_lugar_de' es el permiso
+  reasignar_paso (3 roles) y NO completar_paso (13 roles: un Funcionario habría
+  podido firmar la denuncia del Director). La bitácora anota "(en lugar del rol
+  Director)" y el paso conserva a su responsable.
+  De paso: el botón "Completar paso" salía gateado solo por el permiso, sin
+  mirar de qué rol era el paso — quien no correspondía lo apretaba y recibía un
+  403 seco. Ahora sale deshabilitado con el motivo en el tooltip.
+  Lección: antes de agregar un permiso/campo nuevo, revisar si la capacidad ya
+  existe por otro camino. Acá se propuso un permiso "subrogar" que sobraba: la
+  reserva legal (expulsión, suspensión cautelar) ya estaba modelada en permisos
+  aparte que el coordinador no tiene, y esos siguen bloqueados igual.
+  Pendiente menor: el Director NO puede tomar pasos del coordinador, porque no
+  tiene reasignar_paso. Si se quiere, se le asigna ese permiso desde la pantalla
+  de roles — no requiere tocar código.
+
+## Ficha del estudiante
+✔ historial de registros: entrar al protocolo desde la ficha @done
+  La columna "Estado" del historial no era el estado del protocolo: mostraba
+  estado_validacion (Pendiente/Validado), o sea si el director ya dio por bueno
+  el registro. Se renombró a "Validación" y se agregó una columna "Protocolo"
+  aparte, con el botón que lleva al protocolo activado — el mismo atajo que ya
+  existía en la lista de registros y que en la ficha faltaba. El endpoint
+  consultarRut ni siquiera traía los datos de protocolo; las 3 subconsultas se
+  sacaron de registros.controller y viven ahora en utils/sqlProtocolos.js, para
+  que las dos pantallas cuenten con el mismo criterio (si una contara los
+  anulados y la otra no, el mismo registro saldría "con protocolo" en una y
+  "pendiente" en la otra).
+  Lección: un registro puede tener un protocolo andando Y deberle otro
+  obligatorio a la vez (el registro 39 en la base real). Encadenar los avisos
+  con @else if escondía justo el que hay que ver — van en @if separados.
+
+## Rendimiento
+✔ guardar un registro se demoraba ~3 s @done
+  La base es remota (Aiven): cada consulta cuesta ~155 ms de red y el handshake
+  de conexión nueva ~620 ms — medido, no estimado. Guardar hacía 5 viajes
+  (BEGIN, SELECT valida tipo de falta, INSERT registro, INSERT estudiantes,
+  COMMIT) + 1200 ms de setTimeout puesto solo para alcanzar a leer el ✓ verde
+  + una recarga completa de la lista. Se arregló: el modal cierra apenas
+  responde el backend y el aviso lo muestra la pantalla de atrás; la lista solo
+  se recarga si de verdad se guardó algo (cancelar ya no dispara el getAll); y
+  el SELECT que valida el tipo de falta se plegó dentro del propio INSERT con
+  `SELECT ... FROM DUAL WHERE EXISTS`, saltándose la transacción cuando no hay
+  estudiantes involucrados. Alta sin estudiantes: 5 viajes → 1.
+  Lección: cuando algo "se demora", medir primero la latencia de un round-trip
+  a la base antes de optimizar el SQL — acá el motor no era el problema, la
+  cuenta de viajes sí.
+
 ## Registro de tiempo
+- 2026-08-29 21:45 → 22:07 (22m)
+- 2026-08-29 19:33 → 22:07 (2h33m)
+- 2026-08-29 18:53 → 22:07 (3h14m)
+- 2026-08-26 18:37 → 22:02 (3h25m)
+- 2026-08-26 10:36 → 22:02 (11h26m)
+- 2026-08-26 17:04 → 22:02 (4h58m)
+- 2026-08-26 20:06 → 22:02 (1h55m)
+- 2026-08-26 16:39 → 22:02 (5h23m)
+- 2026-08-26 16:12 → 22:02 (5h49m)
+- 2026-08-26 18:33 → 22:02 (3h28m)
 - 2026-08-22 18:56 → 20:53 (1h57m)
 - 2026-08-22 13:49 → 14:01 (11m)
 - 2026-08-21 16:50 → 20:06 (3h16m)

@@ -5,12 +5,18 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  > * { min-width: 0; }
 }
 
 .check-inline {
-  display: inline-flex;
+  // flex-start explícito: dentro de .form-group el label hereda un layout flex
+  // que, con el checkbox estirado, dejaba la casilla al centro y el texto lejos.
+  display: flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: flex-start;
+  gap: 8px;
+
+  input[type="checkbox"] { flex: 0 0 auto; }
 
   &--disabled {
     color: $gray-400;
@@ -26,54 +32,8 @@
   color: $gray-400;
 }
 
-.toolbar__search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: relative;
-  border: 1px solid $gray-200;
-  border-radius: 8px;
-  padding: 8px 12px;
-  background: #fff;
-  margin-bottom: 8px;
-
-  i { color: $gray-400; font-size: 16px; }
-  input {
-    border: none;
-    outline: none;
-    font-size: 14px;
-    width: 100%;
-    &::placeholder { color: $gray-400; }
-  }
-}
-
-.autocomplete {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  background: $white;
-  border: 1px solid $gray-200;
-  border-radius: $radius;
-  box-shadow: $shadow-md;
-  max-height: 220px;
-  overflow-y: auto;
-  z-index: 20;
-
-  &__item {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 8px 12px;
-    cursor: pointer;
-
-    &:hover { background: $primary-bg; }
-    & + & { border-top: 1px solid $gray-100; }
-  }
-
-  &__nombre { font-size: 14px; font-weight: 600; color: $gray-900; }
-  &__meta { font-size: 12px; color: $gray-600; }
-}
+// Aire entre el buscador y la lista de involucrados que arma debajo.
+app-buscador { margin-bottom: 8px; }
 
 .estudiantes-vacio {
   padding: 14px;
@@ -104,14 +64,41 @@
 
 .estudiante-check {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   cursor: pointer;
   font-size: 13px;
-  flex: 1;
+  // min-width:0 para que el nombre pueda encogerse en vez de empujar al select;
+  // sin esto el nombre largo se quiebra letra a letra y la fila queda enorme.
+  flex: 1 1 auto;
+  min-width: 0;
+
+  // Los protocolos ya activados son ícono + texto: una sola línea.
+  &--fila {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.estudiante-nombre {
+  font-weight: 600;
+  color: $gray-900;
+  line-height: 1.25;
+}
+
+.estudiante-run {
+  font-size: 12px;
+  color: $gray-600;
 }
 
 .rol-select {
+  // El select global es width:100%; acá debe ocupar solo lo suyo.
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 110px;
+  max-width: 140px;
   padding: 4px 8px;
   border: 1px solid $gray-200;
   border-radius: 6px;

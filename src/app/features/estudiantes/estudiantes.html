@@ -9,39 +9,14 @@
             (click)="abrirForm()">
             <i class="ti ti-plus"></i> Agregar
         </button>
-        <div class="toolbar__search">
-            <!-- El campo es un <label> y no un <div>: clickear el borde, el
-                 padding o la lupa enfoca el input, en vez de obligar a acertarle
-                 a la franja de texto. -->
-            <label class="toolbar__search-field">
-                <i class="ti ti-search"></i>
-                <input #buscarInput type="text" placeholder="Buscar por nombre..." [ngModel]="busqueda()"
-                    (ngModelChange)="alEscribir($event)" (focus)="mostrarSugerencias.set(true)"
-                    (blur)="ocultarSugerenciasConDelay()" (keydown.arrowdown)="moverSeleccion(1, $event)"
-                    (keydown.arrowup)="moverSeleccion(-1, $event)" (keydown.enter)="confirmarSeleccion($event)"
-                    (keydown.escape)="cerrarSugerencias()" role="combobox" aria-autocomplete="list"
-                    [attr.aria-expanded]="mostrarSugerencias() && sugerencias().length > 0"
-                    [attr.aria-activedescendant]="indiceActivo() >= 0 ? 'sugerencia-' + indiceActivo() : null" />
-            </label>
-
-            <!-- El dropdown va fuera del <label> a propósito: adentro, clickear
-                 una sugerencia también dispararía el focus del input. -->
-            @if (mostrarSugerencias() && sugerencias().length > 0) {
-            <div class="autocomplete" role="listbox">
-                @for (e of sugerencias(); track e.id_estudiante; let i = $index) {
-                <!-- mouseenter mueve el resaltado además del teclado: si no, el
-                     mouse marca una fila con el hover y el teclado otra con la
-                     clase, y Enter abre la que no se está mirando. -->
-                <div class="autocomplete__item" [class.autocomplete__item--activo]="i === indiceActivo()"
-                    [id]="'sugerencia-' + i" role="option" [attr.aria-selected]="i === indiceActivo()"
-                    (mouseenter)="indiceActivo.set(i)" (mousedown)="seleccionarEstudiante(e)">
-                    <span class="autocomplete__nombre">{{ e.nombre }} {{ e.apellido }}</span>
-                    <span class="autocomplete__meta">{{ e.run }}-{{ e.dv }} · {{ e.curso_nombre | cursoNombre }}</span>
-                </div>
-                }
-            </div>
-            }
-        </div>
+        <app-buscador #buscador class="toolbar__search" [items]="sugerencias()" [texto]="busqueda()"
+            (textoChange)="busqueda.set($event)" placeholder="Buscar por nombre..." variante="destacado"
+            (elegir)="seleccionarEstudiante($event)">
+            <ng-template #item let-e>
+                <span class="sugerencia__nombre">{{ e.nombre }} {{ e.apellido }}</span>
+                <span class="sugerencia__meta">{{ e.run }}-{{ e.dv }} · {{ e.curso_nombre | cursoNombre }}</span>
+            </ng-template>
+        </app-buscador>
     </div>
 
     @if (!seleccionado() && cursoFiltrado(); as curso) {
@@ -195,7 +170,12 @@
                     <th>Tipo de falta</th>
                     <th>Rol</th>
                     <th>Gravedad</th>
-                    <th>Estado</th>
+                    <!-- Dos columnas distintas a propósito: "Validación" es si
+                         el director ya dio por bueno el registro, "Protocolo"
+                         es si el caso tiene un protocolo andando. Cuando las
+                         dos se llamaban "Estado" se leían como lo mismo. -->
+                    <th>Validación</th>
+                    <th>Protocolo</th>
                 </tr>
             </thead>
             <tbody>
@@ -207,18 +187,52 @@
                         <i class="ti ti-lock"></i>
                         <strong>Confidencial</strong> — {{ r.nota_confidencial ?? 'Sin nota' }}
                     </td>
-                    <td><span class="badge badge--confidencial">reservado</span></td>
+                    <td colspan="2"><span class="badge badge--confidencial">reservado</span></td>
                     } @else {
                     <td>{{ r.asunto }}</td>
                     <td class="celda-folio">#{{ r.id_registro }}</td>
                     <td>{{ r.tipo_falta_nombre }}</td>
                     <td>{{ r.rol_en_incidente | titlecase }}</td>
                     <td>
-                        <span class="badge badge--{{ r.gravedad }}">{{ r.gravedad }}</span>
+                        <span class="badge badge--{{ r.gravedad }}">{{ r.gravedad | titlecase }}</span>
                     </td>
                     <td>
                         <span class="badge badge--{{ r.estado_validacion }}">{{ r.estado_validacion |
                             etiqueta:'estado_validacion' }}</span>
+                    </td>
+                    <!-- stopPropagation: el clic de la fila abre el registro,
+                         y acá se quiere ir al protocolo, no al registro. -->
+                    <td class="celda-protocolo" (click)="$event.stopPropagation()">
+                        @if (r.protocolos_activos > 0) {
+                        <!-- El atajo que faltaba: desde la ficha del estudiante
+                             se entra directo a seguir el protocolo, sin abrir
+                             el registro, leer el nombre y buscarlo a mano en
+                             "Protocolos activados". -->
+                        <button class="btn-ver" [appPuede]="Permiso.ProtocoloActivadoVer"
+                            title="Abrir el protocolo para seguir trabajándolo"
+                            (click)="seguirProtocolo(r)">
+                            <i class="ti ti-shield-check"></i>
+                            {{ r.estado_protocolo === 'cerrado' ? 'Ver protocolo' : 'Seguir protocolo' }}
+                        </button>
+                        }
+                        @if (r.protocolos_pendientes > 0) {
+                        <!-- Ley 21.809: el tipo de falta obliga a un protocolo
+                             que nadie activó. No lleva a ninguna parte porque
+                             todavía no existe: se activa abriendo el registro,
+                             que es lo que hace el clic de la fila.
+
+                             Va en un @if aparte y no en un @else del botón: un
+                             registro puede tener un protocolo andando y aun así
+                             deberle otro obligatorio, y encadenarlos escondía
+                             justo el aviso que hay que ver. -->
+                        <span class="badge badge--gravísima"
+                            title="El tipo de falta obliga a activar un protocolo que todavía no se activó. Abre el registro para activarlo.">
+                            <i class="ti ti-alert-octagon"></i> Sin activar
+                        </span>
+                        }
+                        @if (!r.protocolos_activos && !r.protocolos_pendientes) {
+                        <span class="texto-tenue">—</span>
+                        }
                     </td>
                     }
                 </tr>
@@ -233,7 +247,7 @@
 <!-- Modal registro de convivencia -->
 @if (mostrarRegistroForm()) {
 <app-registro-form [registro]="registroSeleccionado" [estudiantePreseleccionado]="seleccionado()?.id_estudiante"
-    (cerrar)="cerrarRegistroForm()" />
+    (cerrar)="cerrarRegistroForm($event)" />
 }
 
 <!-- Modal -->

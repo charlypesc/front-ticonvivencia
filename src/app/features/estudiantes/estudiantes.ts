@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, DestroyRef, signal, computed } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild, DestroyRef, signal, computed } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -9,15 +9,18 @@ import { ConfirmService } from '../../core/services/confirm.service';
 import { ConfidencialService } from '../../core/services/confidencial.service';
 import { AuthService } from '../../core/services/auth.service';
 import { CursoNombrePipe } from '../../shared/pipes/curso-nombre.pipe';
+import { Buscador } from '../../shared/components/buscador/buscador';
+import { ordenarPorCoincidencia } from '../../shared/utils/coincidencia';
 import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
 import { RegistroForm } from '../registros/registros-form/registro-form';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
+import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 
 @Component({
   selector: 'app-estudiantes',
   standalone: true,
-  imports: [CommonModule, FormsModule, CursoNombrePipe, EtiquetaPipe, RegistroForm, Puede],
+  imports: [CommonModule, FormsModule, CursoNombrePipe, EtiquetaPipe, RegistroForm, Puede, Buscador, CerrarConEsc],
   templateUrl: './estudiantes.html',
   styleUrl: './estudiantes.scss',
 })
@@ -25,7 +28,7 @@ export class Estudiantes implements OnInit, AfterViewInit {
   /** El template no ve los imports del módulo: hay que exponerlo en la clase. */
   protected readonly Permiso = Permiso;
 
-  @ViewChild('buscarInput') buscarInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('buscador') buscador?: Buscador;
 
   estudiantes = signal<any[]>([]);
   cursos = signal<any[]>([]);
@@ -35,16 +38,7 @@ export class Estudiantes implements OnInit, AfterViewInit {
   editando = signal<any | null>(null);
   error = signal('');
   success = signal('');
-  mostrarSugerencias = signal(false);
   filtroCurso = signal<number | null>(null);
-
-  /**
-   * Sugerencia resaltada por teclado. -1 = ninguna, que es el estado en cuanto
-   * cambia lo escrito: la lista se rearma y el índice viejo apuntaría a otra
-   * persona, así que abrir con Enter sin haber bajado con las flechas sería
-   * abrir a alguien que nunca se miró.
-   */
-  indiceActivo = signal(-1);
 
   /**
    * Ficha del estudiante abierto, con su historial de registros. Antes esto era
@@ -82,9 +76,18 @@ export class Estudiantes implements OnInit, AfterViewInit {
     });
   });
 
+  /**
+   * Las ocho mejores, ordenadas por parecido: el buscador resalta la primera,
+   * así que tiene que ser la que uno tenía en mente al escribir.
+   */
   sugerencias = computed(() => {
-    if (this.busqueda().trim().length < 2) return [];
-    return this.filtrados().slice(0, 8);
+    const q = this.busqueda().trim();
+    if (q.length < 2) return [];
+    return ordenarPorCoincidencia(
+      this.filtrados(),
+      q,
+      (e) => `${e.nombre} ${e.apellido}`,
+    ).slice(0, 8);
   });
 
   form = {
@@ -151,7 +154,7 @@ export class Estudiantes implements OnInit, AfterViewInit {
   }
 
   private enfocarBuscador() {
-    this.buscarInput?.nativeElement.focus();
+    this.buscador?.enfocar();
   }
 
   cargar() {
@@ -217,73 +220,6 @@ export class Estudiantes implements OnInit, AfterViewInit {
     });
   }
 
-  ocultarSugerenciasConDelay() {
-    setTimeout(() => {
-      this.mostrarSugerencias.set(false);
-      this.indiceActivo.set(-1);
-    }, 150);
-  }
-
-  /** Cada tecla rearma la lista, así que el resaltado vuelve a cero. */
-  alEscribir(valor: string) {
-    this.busqueda.set(valor);
-    this.mostrarSugerencias.set(true);
-    this.indiceActivo.set(-1);
-  }
-
-  /**
-   * Flechas arriba/abajo por la lista, con vuelta circular: desde el último,
-   * abajo lleva al primero. Es lo que hace cualquier autocomplete, y evita
-   * quedarse trabado en la punta cuando hay 8 resultados.
-   */
-  moverSeleccion(delta: number, evento: Event) {
-    const total = this.sugerencias().length;
-    if (!this.mostrarSugerencias() || total === 0) return;
-
-    // Sin esto la flecha además mueve el cursor dentro del input, y el texto
-    // escrito se recorre mientras se navega la lista.
-    evento.preventDefault();
-
-    const actual = this.indiceActivo();
-    this.indiceActivo.set((actual + delta + total) % total);
-    this.scrollAlActivo();
-  }
-
-  /**
-   * Enter abre la sugerencia resaltada. Si no hay ninguna resaltada pero quedó
-   * una sola coincidencia, abre esa: escribir el nombre completo y apretar
-   * Enter es el camino más corto, y con un único resultado no hay ambigüedad.
-   * Con varias sin resaltar no hace nada, para no abrir a alguien al azar.
-   */
-  confirmarSeleccion(evento: Event) {
-    if (!this.mostrarSugerencias()) return;
-
-    const lista = this.sugerencias();
-    const i = this.indiceActivo();
-    const elegido = i >= 0 ? lista[i] : lista.length === 1 ? lista[0] : null;
-    if (!elegido) return;
-
-    evento.preventDefault();
-    this.seleccionarEstudiante(elegido);
-  }
-
-  cerrarSugerencias() {
-    this.mostrarSugerencias.set(false);
-    this.indiceActivo.set(-1);
-  }
-
-  /**
-   * La lista tiene alto máximo con scroll propio: sin esto, el resaltado se
-   * va fuera de vista al pasar del cuarto o quinto nombre. Va en un setTimeout
-   * porque la clase --activo todavía no está en el DOM cuando corre esto.
-   */
-  private scrollAlActivo() {
-    setTimeout(() => {
-      const activo = document.querySelector('.autocomplete__item--activo');
-      activo?.scrollIntoView({ block: 'nearest' });
-    });
-  }
-
   /**
    * Elegir una sugerencia abre la ficha, igual que clickear la fila: el
    * autocomplete es otra forma de llegar al estudiante, no una acción distinta.
@@ -292,7 +228,6 @@ export class Estudiantes implements OnInit, AfterViewInit {
    * filtrada y la persona ve dónde estaba parada.
    */
   seleccionarEstudiante(e: any) {
-    this.cerrarSugerencias();
     this.abrirFicha(e);
   }
 
@@ -361,8 +296,24 @@ export class Estudiantes implements OnInit, AfterViewInit {
     this.mostrarRegistroForm.set(true);
   }
 
-  cerrarRegistroForm() {
+  /**
+   * Lleva al protocolo del registro para seguir trabajándolo. Cuál es lo decide
+   * el backend: prefiere uno todavía activo y, entre varios, el más reciente.
+   * Mismo criterio que el botón de la lista de registros, así que los dos
+   * atajos llevan siempre al mismo lugar.
+   */
+  seguirProtocolo(r: any) {
+    if (!r.id_protocolo_activado) return;
+    this.router.navigate(['/protocolos-activados', r.id_protocolo_activado]);
+  }
+
+  /**
+   * `mensaje` solo llega cuando el modal se cerró por un guardado; cancelar no
+   * tocó nada, así que no hace falta volver a pedir la ficha del estudiante.
+   */
+  cerrarRegistroForm(mensaje?: string) {
     this.mostrarRegistroForm.set(false);
+    if (!mensaje) return;
     this.refrescarFicha();
   }
 

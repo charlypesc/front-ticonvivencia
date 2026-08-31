@@ -7,11 +7,12 @@ import { ConfirmService } from '../../core/services/confirm.service';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
+import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 
 @Component({
   selector: 'app-protocolos-activados',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, EtiquetaPipe],
+  imports: [CommonModule, FormsModule, Puede, EtiquetaPipe, CerrarConEsc],
   templateUrl: './protocolos-activados.html',
   styleUrl: './protocolos-activados.scss',
 })

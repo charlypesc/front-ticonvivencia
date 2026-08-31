@@ -1,0 +1,357 @@
+<div class="page-header">
+    <h2>Reglamento interno y Plan de Gestión</h2>
+</div>
+
+@if (success()) {
+<div class="alert alert--success"><i class="ti ti-circle-check"></i> {{ success() }}</div>
+}
+@if (error()) {
+<div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+}
+
+<div class="alert alert--info">
+    <i class="ti ti-info-circle"></i>
+    <span>El reglamento interno y el Plan de Gestión deben entregarse a cada apoderado al
+        matricular o renovar matrícula, impresos o en formato digital, dejando constancia de su
+        recepción. Cada versión lleva sus propias constancias: si el documento se actualiza,
+        hay que volver a entregarlo.</span>
+</div>
+
+<div class="card">
+    <div class="card__header">
+        <span class="section-label"><i class="ti ti-file-text"></i> Versiones</span>
+        <button class="btn btn--primary btn--sm" style="width:auto"
+            [appPuede]="Permiso.DocumentoInstitucionalGestionar" (click)="abrirForm()">
+            <i class="ti ti-upload"></i> Cargar versión
+        </button>
+    </div>
+
+    @if (loading()) {
+    <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
+    } @else if (documentos().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-file-off"></i>
+        <p>No hay documentos cargados</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Documento</th>
+                    <th>Versión</th>
+                    <th>Estado</th>
+                    <th>Vigente desde</th>
+                    <th>Constancias</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (d of documentos(); track d.id_documento_institucional) {
+                <tr>
+                    <td>
+                        {{ d.titulo }}
+                        <div class="text-muted text-sm">{{ etiquetaTipo(d.tipo) }}</div>
+                    </td>
+                    <td>v{{ d.version }}</td>
+                    <td>
+                        <span class="badge" [class.badge--validado]="d.estado === 'vigente'"
+                            [class.badge--pendiente]="d.estado === 'borrador'">
+                            {{ d.estado | titlecase }}
+                        </span>
+                    </td>
+                    <td class="text-muted">{{ d.vigente_desde ?? '—' }}</td>
+                    <td>{{ d.constancias }}</td>
+                    <td class="acciones">
+                        <button class="btn-icon" title="Ver documento" (click)="verDocumento(d)">
+                            <i class="ti ti-eye"></i>
+                        </button>
+                        <button class="btn-icon" title="Constancias de recepción"
+                            [appPuede]="Permiso.ConstanciaVer" (click)="abrirConstancias(d)">
+                            <i class="ti ti-checklist"></i>
+                        </button>
+                        @if (d.estado === 'borrador') {
+                        <button class="btn-icon" title="Poner vigente"
+                            [appPuede]="Permiso.DocumentoInstitucionalGestionar" (click)="publicar(d)">
+                            <i class="ti ti-circle-check"></i>
+                        </button>
+                        }
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+
+<!-- Cargar versión -->
+@if (mostrarForm()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-upload"></i> Cargar versión</h3>
+            <button class="modal__close" (click)="cerrarForm()"><i class="ti ti-x"></i></button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin:16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Documento *</label>
+                    <select [(ngModel)]="form.tipo" name="tipo">
+                        <option value="rice">Reglamento interno (RICE)</option>
+                        <option value="plan_gestion">Plan de Gestión</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fecha de aprobación</label>
+                    <input type="date" [(ngModel)]="form.fecha_aprobacion" name="fecha_aprobacion" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Título *</label>
+                <input type="text" placeholder="Ej: Reglamento Interno de Convivencia Escolar 2027"
+                    [(ngModel)]="form.titulo" name="titulo" />
+            </div>
+
+            <div class="form-group">
+                <label>Vigente desde</label>
+                <input type="date" [(ngModel)]="form.vigente_desde" name="vigente_desde" />
+            </div>
+
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea [(ngModel)]="form.descripcion" name="descripcion"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Archivo * (PDF o imagen)</label>
+                <label class="btn btn--outline btn--sm" style="width:auto">
+                    <i class="ti ti-paperclip"></i>
+                    {{ archivo ? archivo.name : 'Seleccionar archivo' }}
+                    <input type="file" hidden accept="application/pdf,image/*"
+                        (change)="onArchivo($event, 'documento')" />
+                </label>
+            </div>
+
+            <p class="text-muted">
+                La versión se numera sola y entra como borrador. Se activa al ponerla vigente.
+                Las fotos y los PDF se comprimen solos al subirlos: no hace falta achicarlos antes.
+            </p>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+                <i class="ti ti-device-floppy"></i> Cargar
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Constancias del documento -->
+@if (documentoAbierto()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarConstancias() : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3>
+                <i class="ti ti-checklist"></i>
+                Constancias — {{ documentoAbierto().titulo }} v{{ documentoAbierto().version }}
+            </h3>
+            <button class="modal__close" (click)="cerrarConstancias()"><i class="ti ti-x"></i></button>
+        </div>
+
+        <div class="modal__body">
+            @if (cargandoConstancias()) {
+            <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
+            } @else {
+
+            <!-- Los pendientes van primero: es lo que falta para cumplir. -->
+            <span class="section-label">
+                <i class="ti ti-alert-triangle"></i> Sin constancia ({{ pendientes().length }})
+            </span>
+            @if (pendientes().length === 0) {
+            <p class="text-muted">Todos los estudiantes activos tienen constancia de esta versión.</p>
+            } @else {
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Estudiante</th><th>Curso</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @for (e of pendientes(); track e.id_estudiante) {
+                        <tr>
+                            <td>{{ e.apellido }}, {{ e.nombre }}</td>
+                            <td class="text-muted">{{ e.curso_nombre ?? '—' }}</td>
+                            <td class="acciones">
+                                <button class="btn-icon" title="Registrar entrega"
+                                    [appPuede]="Permiso.ConstanciaRegistrar" (click)="abrirFormConstancia(e)">
+                                    <i class="ti ti-plus"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+
+            <span class="section-label" style="margin-top:20px; display:block">
+                <i class="ti ti-checks"></i> Entregadas ({{ constancias().length }})
+            </span>
+            @if (constancias().length === 0) {
+            <p class="text-muted">Todavía no hay entregas registradas.</p>
+            } @else {
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Estudiante</th><th>Apoderado</th><th>Entrega</th>
+                            <th>Canal</th><th>Firmada</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (c of constancias(); track c.id_constancia) {
+                        <tr>
+                            <td>{{ c.estudiante_apellido }}, {{ c.estudiante_nombre }}</td>
+                            <td>
+                                {{ c.apoderado_nombre }}
+                                @if (c.apoderado_run) {
+                                <div class="text-muted text-sm">{{ c.apoderado_run }}</div>
+                                }
+                            </td>
+                            <td>{{ c.fecha_entrega }}</td>
+                            <td class="text-muted">{{ c.canal | titlecase }}</td>
+                            <td class="acciones">
+                                @if (c.tiene_archivo) {
+                                <button class="btn-icon" title="Ver constancia firmada"
+                                    (click)="verConstanciaFirmada(c)">
+                                    <i class="ti ti-file-check"></i>
+                                </button>
+                                } @else {
+                                <label class="btn-icon" title="Adjuntar firmada"
+                                    [appPuede]="Permiso.ConstanciaRegistrar">
+                                    <i class="ti ti-paperclip"></i>
+                                    <input type="file" hidden accept="application/pdf,image/*"
+                                        (change)="onFirmadaSeleccionada($event, c)" />
+                                </label>
+                                }
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+            }
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarConstancias()">Cerrar</button>
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="Permiso.ConstanciaRegistrar" (click)="abrirFormConstancia()">
+                <i class="ti ti-plus"></i> Registrar entrega
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Alta de constancia -->
+@if (mostrarFormConstancia()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarFormConstancia() : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-writing-sign"></i> Registrar entrega</h3>
+            <button class="modal__close" (click)="cerrarFormConstancia()"><i class="ti ti-x"></i></button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin:16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-group">
+                <label>Estudiante *</label>
+                <select [(ngModel)]="formConstancia.id_estudiante" name="id_estudiante">
+                    <option [ngValue]="null" disabled>Seleccione...</option>
+                    @for (e of pendientes(); track e.id_estudiante) {
+                    <option [ngValue]="e.id_estudiante">{{ e.apellido }}, {{ e.nombre }}</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nombre del apoderado *</label>
+                    <input type="text" [(ngModel)]="formConstancia.apoderado_nombre"
+                        name="apoderado_nombre" />
+                </div>
+                <div class="form-group">
+                    <label>RUN del apoderado</label>
+                    <input type="text" placeholder="12.345.678-9"
+                        [(ngModel)]="formConstancia.apoderado_run" name="apoderado_run" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Fecha de entrega *</label>
+                    <input type="date" [(ngModel)]="formConstancia.fecha_entrega" name="fecha_entrega" />
+                </div>
+                <div class="form-group">
+                    <label>Canal</label>
+                    <select [(ngModel)]="formConstancia.canal" name="canal">
+                        <option value="impreso">Impreso</option>
+                        <option value="digital">Digital</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Motivo</label>
+                    <select [(ngModel)]="formConstancia.motivo" name="motivo">
+                        <option value="matricula">Matrícula</option>
+                        <option value="renovacion">Renovación</option>
+                        <option value="actualizacion">Actualización del documento</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Constancia firmada (opcional)</label>
+                <label class="btn btn--outline btn--sm" style="width:auto">
+                    <i class="ti ti-paperclip"></i>
+                    {{ archivoConstancia ? archivoConstancia.name : 'Adjuntar documento firmado' }}
+                    <input type="file" hidden accept="application/pdf,image/*"
+                        (change)="onArchivo($event, 'constancia')" />
+                </label>
+                <p class="text-muted">
+                    Se puede adjuntar después: la entrega queda registrada igual con su fecha.
+                    Sacale una foto al papel firmado sin preocuparte por el peso, se comprime sola.
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label>Observaciones</label>
+                <textarea [(ngModel)]="formConstancia.observaciones" name="observaciones"></textarea>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarFormConstancia()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarConstancia()">
+                <i class="ti ti-device-floppy"></i> Registrar
+            </button>
+        </div>
+    </div>
+</div>
+}

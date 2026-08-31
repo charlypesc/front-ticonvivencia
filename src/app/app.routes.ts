@@ -103,6 +103,23 @@ export const routes: Routes = [
           import('./features/protocolo-flujo/protocolo-flujo').then((m) => m.ProtocoloFlujo),
       },
       {
+        // RICE y Plan de Gestión, con la constancia de entrega al apoderado.
+        path: 'documentos-institucionales',
+        canActivate: [permissionGuard(Permiso.DocumentoInstitucionalVer)],
+        loadComponent: () =>
+          import('./features/documentos-institucionales/documentos-institucionales').then(
+            (m) => m.DocumentosInstitucionales,
+          ),
+      },
+      {
+        // El calendario que define los días hábiles de los plazos legales.
+        // Lectura abierta a quien pueda ver protocolos activados (necesita
+        // entender de dónde sale una fecha límite); editar exige el permiso.
+        path: 'feriados',
+        canActivate: [permissionGuard(Permiso.ProtocoloActivadoVer)],
+        loadComponent: () => import('./features/feriados/feriados').then((m) => m.Feriados),
+      },
+      {
         path: 'geo',
         canActivate: [permissionGuard(Permiso.EstablecimientoVer)],
         loadComponent: () => import('./features/geo/geo').then((m) => m.Geo),
@@ -114,6 +131,15 @@ export const routes: Routes = [
           import('./features/protocolos-activados/protocolos-activados').then(
             (m) => m.ProtocolosActivados,
           ),
+      },
+      {
+        // Informe previo de expulsión del caso. Va antes que ':id' a propósito:
+        // el router toma la primera que calza, y con el orden invertido
+        // 'informe-expulsion' se leería como un id de caso.
+        path: 'protocolos-activados/:id/informe-expulsion',
+        canActivate: [permissionGuard(Permiso.InformeExpulsionVer)],
+        loadComponent: () =>
+          import('./features/informe-expulsion/informe-expulsion').then((m) => m.InformeExpulsion),
       },
       {
         path: 'protocolos-activados/:id',

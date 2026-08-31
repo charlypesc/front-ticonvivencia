@@ -9,11 +9,12 @@ import { ConfirmService } from '../../core/services/confirm.service';
 import { AutoAjustarTextarea } from '../../shared/directives/auto-ajustar-textarea.directive';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
+import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 
 @Component({
   selector: 'app-protocolos-genericos',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AutoAjustarTextarea, Puede],
+  imports: [CommonModule, FormsModule, RouterLink, AutoAjustarTextarea, Puede, CerrarConEsc],
   templateUrl: './protocolos-genericos.html',
   styleUrl: './protocolos-genericos.scss',
 })

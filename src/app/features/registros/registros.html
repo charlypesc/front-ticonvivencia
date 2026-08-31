@@ -70,6 +70,15 @@
                     }
                     <td>
                         @if (!esConfidencialBloqueado(r)) {
+                        @if (r.protocolos_pendientes > 0) {
+                        <!-- Ley 21.809: el tipo de falta obliga a un protocolo
+                             que nadie activó. Se muestra en la lista porque si
+                             solo se viera al abrir el caso, nadie se entera
+                             hasta que el director intenta validar y rebota. -->
+                        <span class="badge badge--gravísima" title="El tipo de falta obliga a activar un protocolo que todavía no se activó">
+                            <i class="ti ti-alert-octagon"></i> Protocolo pendiente
+                        </span>
+                        }
                         <span class="badge badge--{{ r.estado_validacion }}">
                             {{ r.estado_validacion | etiqueta:'estado_validacion' }}
                         </span>
@@ -79,6 +88,17 @@
                         <a class="btn-ver" (click)="abrirForm(r)">
                             <i class="ti ti-eye"></i> Ver
                         </a>
+                        <!-- Atajo al caso cuando el registro ya tiene un
+                             protocolo activado: sin esto hay que abrir el
+                             registro, leer el nombre del protocolo y buscarlo
+                             a mano en "Protocolos activados". -->
+                        @if (!esConfidencialBloqueado(r) && r.protocolos_activos > 0) {
+                        <a class="btn-ver" [appPuede]="Permiso.ProtocoloActivadoVer"
+                            title="Abrir el caso del protocolo activado"
+                            (click)="seguirProtocolo(r)">
+                            <i class="ti ti-shield-check"></i> Seguir protocolo
+                        </a>
+                        }
                         <button class="btn-icon" title="Eliminar" [appPuede]="Permiso.RegistroEliminar"
                             (click)="eliminar(r)">
                             <i class="ti ti-trash"></i>
@@ -94,5 +114,5 @@
 
 <!-- Modal formulario nuevo registro -->
 @if (mostrarForm()) {
-<app-registro-form [registro]="itemMove" (cerrar)="cerrarForm()" />
+<app-registro-form [registro]="itemMove" (cerrar)="cerrarForm($event)" />
 }

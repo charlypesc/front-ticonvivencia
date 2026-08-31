@@ -1,0 +1,252 @@
+<div class="card mb-4">
+    <div class="card__header">
+        <span class="section-label">
+            <i class="ti ti-shield-half"></i> Medidas de protección
+        </span>
+        @if (casoActivo) {
+        <button class="btn btn--primary btn--sm" style="width:auto" [appPuede]="Permiso.MedidaProteccionCrear"
+            (click)="abrirForm()">
+            <i class="ti ti-plus"></i> Aplicar medida
+        </button>
+        }
+    </div>
+
+    @if (success()) {
+    <div class="alert alert--success"><i class="ti ti-circle-check"></i> {{ success() }}</div>
+    }
+    @if (error()) {
+    <div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+    }
+
+    @if (loading()) {
+    <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
+    } @else if (medidas().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-shield-off"></i>
+        <p>Sin medidas de protección registradas</p>
+    </div>
+    } @else {
+    @for (m of medidas(); track m.id_medida_proteccion) {
+    <div class="medida" [class.medida--vencida]="m.vencida">
+        <div class="medida__cab">
+            <div>
+                <strong>{{ m.tipo | titlecase }}</strong>
+                @if (m.es_reaplicacion) {
+                <span class="badge badge--gravísima" title="Reaplicación: la investigación debe concluir antes del término de esta medida">
+                    Reaplicación
+                </span>
+                }
+                <span class="badge">{{ m.estado | titlecase }}</span>
+                @if (m.estudiante_nombre) {
+                <span class="text-muted">— {{ m.estudiante_nombre }} {{ m.estudiante_apellido }}</span>
+                }
+            </div>
+            <div class="medida__acciones">
+                @if (m.estado === 'vigente') {
+                <button class="btn-icon" title="Registrar seguimiento"
+                    [appPuede]="Permiso.MedidaProteccionRegistrarSeguimiento" (click)="abrirSeguimiento(m)">
+                    <i class="ti ti-notes"></i>
+                </button>
+                <button class="btn-icon" title="Finalizar medida" [appPuede]="Permiso.MedidaProteccionFinalizar"
+                    (click)="finalizar(m)">
+                    <i class="ti ti-circle-check"></i>
+                </button>
+                }
+            </div>
+        </div>
+
+        <div class="text-muted">
+            Desde el {{ m.fecha_inicio }}
+            @if (m.fecha_termino) { hasta el {{ m.fecha_termino }}
+            @if (m.dias_habiles) { ({{ m.dias_habiles }} días hábiles) }
+            }
+        </div>
+
+        @if (m.descripcion) { <p>{{ m.descripcion }}</p> }
+        @if (m.fundamento) {
+        <p class="text-muted"><strong>Fundamento:</strong> {{ m.fundamento }}</p>
+        }
+
+        @if (m.vencida && m.estado === 'vigente') {
+        <div class="alert alert--error">
+            <i class="ti ti-alert-octagon"></i>
+            <span>Esta medida venció. Si el procedimiento sigue abierto, corresponde adoptar otra
+                medida de protección: la ley no permite extender la suspensión.</span>
+        </div>
+        }
+
+        <!-- Los dos deberes del art. 16 E letra j sobre el estudiante suspendido.
+             Se avisan por separado porque son obligaciones distintas: tener uno
+             cargado no acredita el otro. -->
+        @if (m.falta_monitoreo_pedagogico || m.falta_continuidad_trayectoria) {
+        <div class="alert alert--warning">
+            <i class="ti ti-alert-triangle"></i>
+            <span>
+                Falta acreditar
+                @if (m.falta_monitoreo_pedagogico && m.falta_continuidad_trayectoria) {
+                <strong>el monitoreo pedagógico</strong> y <strong>las medidas de continuidad de la
+                    trayectoria educativa</strong>
+                } @else if (m.falta_monitoreo_pedagogico) {
+                <strong>el monitoreo pedagógico</strong>
+                } @else {
+                <strong>las medidas de continuidad de la trayectoria educativa</strong>
+                }
+                del estudiante suspendido (art. 16 E letra j).
+            </span>
+        </div>
+        }
+
+        @if (m.seguimientos?.length) {
+        <div class="seguimientos">
+            @for (s of m.seguimientos; track s.id_seguimiento) {
+            <div>{{ s.fecha }} — {{ s.descripcion }}</div>
+            }
+        </div>
+        } @else if (m.tipo === 'suspension' && m.estado === 'vigente') {
+        <div class="seguimientos">
+            Sin monitoreo pedagógico registrado todavía.
+        </div>
+        }
+    </div>
+    }
+    }
+</div>
+
+<!-- Alta de medida -->
+@if (mostrarForm()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-shield-half"></i> Aplicar medida de protección</h3>
+            <button class="modal__close" (click)="cerrarForm()"><i class="ti ti-x"></i></button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin:16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tipo de medida *</label>
+                    <select [(ngModel)]="form.tipo" name="tipo">
+                        <option value="" disabled>Seleccione...</option>
+                        <option value="acompanamiento">Acompañamiento</option>
+                        <option value="cambio_curso">Cambio de curso</option>
+                        <option value="separacion_funciones">Separación de funciones</option>
+                        <option value="suspension">Suspensión</option>
+                        <option value="otra">Otra</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Estudiante</label>
+                    <select [(ngModel)]="form.id_estudiante" name="id_estudiante">
+                        <option [ngValue]="null">No aplica</option>
+                        @for (e of estudiantes; track e.id_estudiante) {
+                        <option [ngValue]="e.id_estudiante">{{ e.nombre }} {{ e.apellido }}</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Fecha de inicio *</label>
+                    <input type="date" [(ngModel)]="form.fecha_inicio" name="fecha_inicio" />
+                </div>
+                @if (esSuspension) {
+                <div class="form-group">
+                    <label>Días hábiles * (máx. {{ MAX_DIAS_SUSPENSION }})</label>
+                    <input type="number" min="1" [max]="MAX_DIAS_SUSPENSION" [(ngModel)]="form.dias_habiles"
+                        name="dias_habiles" />
+                </div>
+                }
+            </div>
+
+            @if (esSuspension) {
+            <!-- La ley admite la suspensión solo si no se puede resguardar con
+                 otra medida. El fundamento es obligatorio porque es lo que
+                 sostiene esa decisión en el expediente. -->
+            <div class="alert alert--warning">
+                <i class="ti ti-alert-triangle"></i>
+                <span>La suspensión solo procede cuando no es posible resguardar a la persona afectada
+                    con otra medida, y no puede durar más de {{ MAX_DIAS_SUSPENSION }} días hábiles.
+                    La fecha de término la calcula el sistema descontando fines de semana y feriados.</span>
+            </div>
+
+            <div class="form-group">
+                <label>Fundamento *</label>
+                <textarea [(ngModel)]="form.fundamento" name="fundamento"
+                    placeholder="Por qué no es posible resguardar con otra medida..."></textarea>
+            </div>
+
+            <label class="check-inline">
+                <input type="checkbox" [(ngModel)]="form.es_reaplicacion" name="es_reaplicacion" />
+                Es una reaplicación por reiteración de la falta
+            </label>
+            @if (form.es_reaplicacion) {
+            <div class="alert alert--warning">
+                <i class="ti ti-alert-triangle"></i>
+                <span>Al reaplicar la suspensión, la investigación debe concluir antes del término de
+                    este nuevo plazo.</span>
+            </div>
+            }
+            }
+
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea [(ngModel)]="form.descripcion" name="descripcion"></textarea>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+                <i class="ti ti-device-floppy"></i> Aplicar medida
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Seguimiento -->
+@if (seguimientoDe()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarSeguimiento() : null">
+    <div class="modal modal-box-sm" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-notes"></i> Seguimiento del estudiante suspendido</h3>
+            <button class="modal__close" (click)="cerrarSeguimiento()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal__body">
+            <!-- Son dos deberes distintos, no uno: la ley exige el monitoreo
+                 pedagógico Y las medidas de continuidad de la trayectoria. -->
+            <div class="form-group">
+                <label>Qué acredita este registro *</label>
+                <select [(ngModel)]="formSeguimiento.tipo" name="tipo_seg">
+                    <option value="monitoreo_pedagogico">Monitoreo pedagógico</option>
+                    <option value="continuidad_trayectoria">Continuidad de la trayectoria educativa</option>
+                    <option value="otro">Otro registro</option>
+                </select>
+                <small class="text-muted">El art. 16 E letra j exige los dos por separado.</small>
+            </div>
+            <div class="form-group">
+                <label>Fecha *</label>
+                <input type="date" [(ngModel)]="formSeguimiento.fecha" name="fecha_seg" />
+            </div>
+            <div class="form-group">
+                <label>Qué se hizo *</label>
+                <textarea [(ngModel)]="formSeguimiento.descripcion" name="desc_seg"
+                    placeholder="Material entregado, contacto con el apoderado, avance pedagógico..."></textarea>
+            </div>
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarSeguimiento()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardarSeguimiento()">
+                <i class="ti ti-device-floppy"></i> Registrar
+            </button>
+        </div>
+    </div>
+</div>
+}

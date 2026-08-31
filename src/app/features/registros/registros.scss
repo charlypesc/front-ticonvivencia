@@ -45,21 +45,8 @@
   }
 }
 
-.btn-ver {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: $primary;
-  font-size: 13px;
-  font-weight: 500;
-  text-decoration: none;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background .15s;
-
-  &:hover { background: #eef2fb; }
-  i { font-size: 15px; }
-}
+// .btn-ver se mudó a styles.scss: la ficha del estudiante usa el mismo atajo
+// a protocolos y tener el estilo acá lo dejaba fuera de ese componente.
 
 .empty-state {
   text-align: center;

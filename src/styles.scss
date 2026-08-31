@@ -105,6 +105,35 @@ h3 { font-size: 1rem; font-weight: 600; }
 
 
 
+// El input vive dentro de <app-buscador>, así que la clase que le pasa el
+// selector del header tiene que ser global para llegarle.
+.selector-est__input--vacio::placeholder { color: #b54708; }
+
+// ─── SUGERENCIAS DE BÚSQUEDA ──────────────────────
+// Las filas del <app-buscador> se escriben en un <ng-template> del componente
+// que lo usa, así que sus estilos tienen que ser globales: la encapsulación de
+// Angular las marca con el atributo del padre, no con el del buscador.
+.sugerencia__nombre { font-size: 14px; font-weight: 600; color: $gray-900; }
+.sugerencia__meta { font-size: 12px; color: $gray-600; }
+.sugerencia__fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  font-size: .85rem;
+
+  span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+.sugerencia__pill {
+  flex-shrink: 0;
+  font-size: .75rem;
+  color: $gray-600;
+  background: $gray-100;
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
 // ─── FORMULARIOS ──────────────────────────────────
 .form-group {
   display: flex;
@@ -128,6 +157,11 @@ h3 { font-size: 1rem; font-weight: 600; }
     border: 1px solid $gray-200;
     border-radius: $radius;
     font-size: 14px;
+    // Un <select> se dimensiona por su opción más larga. Sin este tope, un
+    // catálogo con nombres largos ensancha el campo más allá de su contenedor.
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     color: $gray-900;
     background: $white;
     transition: border-color .2s, box-shadow .2s;
@@ -141,6 +175,16 @@ h3 { font-size: 1rem; font-weight: 600; }
     }
 
     &.error { border-color: $accent-danger; }
+  }
+
+  // Un checkbox/radio no es un campo de ancho completo: con width:100% la caja
+  // se estira y la marca queda centrada, separada de su texto.
+  input[type="checkbox"], input[type="radio"] {
+    width: auto;
+    max-width: none;
+    flex: 0 0 auto;
+    padding: 0;
+    margin: 0;
   }
 
   textarea { resize: vertical; min-height: 90px; }
@@ -239,6 +283,10 @@ table {
 
   &--error   { background: #fee2e2; color: #991b1b; }
   &--success { background: #d1fae5; color: #065f46; }
+  &--warning { background: #fef3c7; color: #92400e; }
+  // Ya se usaba en la pantalla de Roles sin estar definido: se veía como un
+  // bloque sin fondo, indistinguible del texto normal.
+  &--info    { background: #dbeafe; color: #1e40af; }
 }
 
 // ─── LAYOUT ───────────────────────────────────────
@@ -357,11 +405,43 @@ table {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  // Los hijos de un grid llevan min-width:auto, o sea que una columna nunca se
+  // encoge por debajo del contenido mínimo de su hijo. Con un <select> ese
+  // mínimo es el ancho de su opción más larga, así que la columna se pasaba de
+  // 1fr y empujaba la fila fuera del modal. El 1fr solo manda con min-width:0.
+  > * { min-width: 0; }
 }
 .acciones {
   display: flex;
   gap: 8px;
 }
+
+// Acción discreta dentro de una fila de tabla ("Ver", "Seguir protocolo"). Es
+// global porque la usan la lista de registros y el historial de la ficha del
+// estudiante, sobre <a> en una y <button> en la otra: por eso resetea background
+// y border, que el <button> trae por defecto y el <a> no.
+.btn-ver {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: $primary;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  text-decoration: none;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background .15s;
+
+  &:hover { background: #eef2fb; }
+  i { font-size: 15px; }
+}
+
+/* Guion del "sin protocolo": presente pero sin competir con los badges. */
+.texto-tenue { color: $gray-400; }
 //para el loading
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { display: inline-block; animation: spin .8s linear infinite; }

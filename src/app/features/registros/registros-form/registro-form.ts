@@ -5,11 +5,15 @@ import { ApiService } from '../../../core/services/api.services';
 import { AuthService } from '../../../core/services/auth.service';
 import { Permiso } from '../../../core/constants/permisos';
 import { Puede } from '../../../shared/directives/permiso.directive';
+import { CursoNombrePipe } from '../../../shared/pipes/curso-nombre.pipe';
+import { Buscador } from '../../../shared/components/buscador/buscador';
+import { ordenarPorCoincidencia } from '../../../shared/utils/coincidencia';
+import { CerrarConEsc } from '../../../shared/directives/cerrar-con-esc.directive';
 
 @Component({
   selector: 'app-registro-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede],
+  imports: [CommonModule, FormsModule, Puede, CursoNombrePipe, Buscador, CerrarConEsc],
   templateUrl: './registro-form.html',
   styleUrl: './registro-form.scss',
 })
@@ -17,14 +21,19 @@ export class RegistroForm implements OnInit {
   /** El template no ve los imports del módulo: hay que exponerlo en la clase. */
   protected readonly Permiso = Permiso;
 
-  @Output() cerrar = new EventEmitter<void>();
+  /**
+   * Emite el mensaje de éxito cuando el cierre viene de un guardado, y nada
+   * cuando la persona cancela o cierra el modal. La pantalla de atrás usa eso
+   * para dos cosas: mostrar el aviso de "guardado" y decidir si vale la pena
+   * recargar la lista (cancelar no cambió nada, no hay qué recargar).
+   */
+  @Output() cerrar = new EventEmitter<string | undefined>();
   @Input() registro: any | null;
   @Input() estudiantePreseleccionado: number | null = null;
   tiposFalta = signal<any[]>([]);
   estudiantes = signal<any[]>([]);
   loading = signal(false);
   error = signal('');
-  success = signal(false);
 
   // Lo decide el backend (autor del registro o permiso
   // registro.editar_confidencialidad). Al crear siempre se puede: la
@@ -56,12 +65,145 @@ export class RegistroForm implements OnInit {
     return this.protocolos().filter((p) => !yaActivados.has(p.id_protocolo_establecimiento));
   }
 
+  /**
+   * Son getters y no `computed()` porque `form` es un objeto plano que mueve
+   * ngModel, no una señal: un computed no se enteraría del cambio.
+   */
+  get tipoFaltaSeleccionado(): any | null {
+    return this.tiposFalta().find((t) => t.id_tipo_falta === this.form.id_tipo_falta) ?? null;
+  }
+
+  get gravedadSeleccionada(): string | null {
+    return this.tipoFaltaSeleccionado?.gravedad ?? null;
+  }
+
+  /**
+   * Protocolos que el tipo de falta elegido manda activar (Ley 21.809).
+   *
+   * Antes esto era un heurístico por gravedad: se sugería activar algo si la
+   * falta era grave o gravísima, y la persona elegía cuál de una lista plana.
+   * Ahora el vínculo es explícito y lo configura el establecimiento en el
+   * mantenedor de tipos de falta, que es donde vive su reglamento interno.
+   *
+   * El heurístico sigue vivo como respaldo para las faltas que todavía no
+   * tienen ningún protocolo vinculado: quitarlo dejaría sin ningún aviso a los
+   * colegios que aún no cargaron el mapeo.
+   */
+  get protocolosDeLaFalta(): any[] {
+    return this.tipoFaltaSeleccionado?.protocolos ?? [];
+  }
+
+  get protocolosObligatorios(): any[] {
+    return this.protocolosDeLaFalta.filter((p) => p.obligatorio);
+  }
+
+  /** Obligatorios de esta falta que todavía no están activados en el registro. */
+  get obligatoriosPendientes(): any[] {
+    const yaActivados = new Set(
+      this.protocolosActivados().map((p) => p.id_protocolo_establecimiento),
+    );
+    return this.protocolosObligatorios.filter(
+      (p) => !yaActivados.has(p.id_protocolo_establecimiento),
+    );
+  }
+
+  /**
+   * No se muestra si ya marcó activar protocolo, si el registro ya tiene uno
+   * activado o si no hay ninguno disponible: en esos casos el aviso no le pide
+   * nada que pueda hacer, y un aviso que no se puede atender se vuelve ruido
+   * que se aprende a ignorar.
+   */
+  get sugerirProtocolo(): boolean {
+    if (!this.puedeActivarProtocolo || this.activarProtocolo) return false;
+    if (this.protocolosDisponibles().length === 0) return false;
+
+    // Con mapeo explícito el aviso depende de él, no de la gravedad. Y un
+    // obligatorio pendiente se avisa aunque el registro ya tenga otro protocolo
+    // activado: son protocolos distintos, activar uno no cubre al otro.
+    if (this.protocolosDeLaFalta.length > 0) return this.obligatoriosPendientes.length > 0
+      || (this.protocolosActivados().length === 0 && this.protocolosDeLaFalta.length > 0);
+
+    // Respaldo por gravedad para las faltas sin vínculo configurado.
+    const g = this.gravedadSeleccionada;
+    if (g !== 'grave' && g !== 'gravísima') return false;
+    return this.protocolosActivados().length === 0;
+  }
+
+  /** El aviso cambia de tono si el protocolo es obligatorio: no es una sugerencia. */
+  get protocoloEsObligatorio(): boolean {
+    return this.obligatoriosPendientes.length > 0;
+  }
+
+  get mensajeSugerencia(): string {
+    if (this.protocoloEsObligatorio)
+      return (
+        'Este tipo de falta obliga a activar ' +
+        this.obligatoriosPendientes.map((p) => `"${p.protocolo_nombre}"`).join(' y ') +
+        '. Sin activarlo, el registro no se va a poder validar.'
+      );
+    if (this.protocolosDeLaFalta.length > 0)
+      return (
+        'Para este tipo de falta el establecimiento tiene definido el protocolo ' +
+        this.protocolosDeLaFalta.map((p) => `"${p.protocolo_nombre}"`).join(' o ') +
+        '.'
+      );
+    return 'Por la gravedad de la falta, evaluá si corresponde activar un protocolo.';
+  }
+
+  /**
+   * Si el protocolo tildado lo puso el formulario solo (y no la persona), se
+   * puede volver atrás al cambiar el tipo de falta. Una elección manual, en
+   * cambio, es una decisión sobre el caso y no se pisa: puede haber un motivo
+   * que el reglamento no cubre.
+   */
+  private protocoloAutoSeleccionado = false;
+
+  /**
+   * Al elegir el tipo de falta se preselecciona su protocolo. Es el cambio de
+   * fondo: la persona ya no tiene que saber cuál corresponde, el reglamento del
+   * colegio lo dice. Igual puede desmarcarlo si el caso no lo amerita, salvo
+   * que el bloqueo de la validación lo obligue después.
+   *
+   * Y al revés: corregir la falta tiene que poder deshacer la sugerencia. Si se
+   * eligió una gravísima con protocolo y después resulta que era una leve, el
+   * tilde de la gravísima quedaba puesto y se activaba un protocolo que ya no
+   * correspondía. Por eso lo primero es limpiar la preselección anterior.
+   */
+  onTipoFaltaChange() {
+    if (!this.puedeActivarProtocolo) return;
+
+    if (this.protocoloAutoSeleccionado) {
+      this.activarProtocolo = false;
+      this.idProtocoloEstablecimiento = null;
+      this.protocoloAutoSeleccionado = false;
+    }
+
+    const pendiente = this.obligatoriosPendientes[0] ?? this.protocolosDeLaFalta[0];
+    if (!pendiente) return;
+    if (!this.protocolosDisponibles().some(
+      (p) => p.id_protocolo_establecimiento === pendiente.id_protocolo_establecimiento)) return;
+
+    this.activarProtocolo = true;
+    this.idProtocoloEstablecimiento = pendiente.id_protocolo_establecimiento;
+    this.protocoloAutoSeleccionado = true;
+  }
+
+  /**
+   * Tocar el tilde o el desplegable convierte la preselección en una decisión
+   * propia: desde acá el cambio de tipo de falta ya no la toca.
+   */
+  onActivarProtocoloChange() {
+    this.protocoloAutoSeleccionado = false;
+    if (!this.activarProtocolo) this.idProtocoloEstablecimiento = null;
+  }
+
   // Selección múltiple de estudiantes
   estudiantesSeleccionados: { id_estudiante: number; rol_en_incidente: string }[] = [];
 
-  // Buscador para agregar estudiantes a la lista de involucrados
+  // Buscador para agregar estudiantes a la lista de involucrados. El desplegable,
+  // el teclado y el cierre por blur los resuelve <app-buscador>; acá solo queda
+  // el texto escrito y el criterio de filtrado.
   busquedaEstudiante = signal('');
-  mostrarSugerenciasEstudiante = signal(false);
 
   involucrados() {
     return this.estudiantes().filter((e) => this.isSeleccionado(e.id_estudiante));
@@ -72,25 +214,21 @@ export class RegistroForm implements OnInit {
     if (q.length < 2) return [];
 
     // Mismo criterio que el buscador de Estudiantes: cada palabra escrita se
-    // busca por separado, sin importar el orden ni qué haya en el medio.
+    // busca por separado, sin importar el orden ni qué haya en el medio, y
+    // después se ordena por parecido para que Enter caiga sobre la mejor.
     const tokens = q.split(/\s+/);
-    return this.estudiantes()
+    const coincidencias = this.estudiantes()
       .filter((e) => !this.isSeleccionado(e.id_estudiante))
       .filter((e) => {
         const nombreCompleto = `${e.nombre} ${e.apellido}`.toLowerCase();
         return tokens.every((t) => nombreCompleto.includes(t)) || e.run?.includes(q);
-      })
-      .slice(0, 8);
+      });
+
+    return ordenarPorCoincidencia(coincidencias, q, (e) => `${e.nombre} ${e.apellido}`).slice(0, 8);
   }
 
-  seleccionarEstudianteSugerido(id: number) {
-    this.toggleEstudiante(id);
-    this.busquedaEstudiante.set('');
-    this.mostrarSugerenciasEstudiante.set(false);
-  }
-
-  ocultarSugerenciasEstudianteConDelay() {
-    setTimeout(() => this.mostrarSugerenciasEstudiante.set(false), 150);
+  seleccionarEstudianteSugerido(e: any) {
+    this.toggleEstudiante(e.id_estudiante);
   }
 
   // Hoy en horario local. `toISOString()` daría UTC y en Chile (UTC-3/-4) un
@@ -174,7 +312,7 @@ export class RegistroForm implements OnInit {
     if (idx >= 0) {
       this.estudiantesSeleccionados.splice(idx, 1);
     } else {
-      this.estudiantesSeleccionados.push({ id_estudiante: id, rol_en_incidente: 'víctima' });
+      this.estudiantesSeleccionados.push({ id_estudiante: id, rol_en_incidente: 'afectado' });
     }
   }
 
@@ -193,10 +331,13 @@ export class RegistroForm implements OnInit {
     );
   }
 
-  // Registros antiguos (o importados por IA) pueden traer un rol libre que no
-  // calza con las 3 opciones del select (ej: "involucrado") — sin esto el
-  // <select> se ve vacío aunque el dato exista.
-  rolesConocidos = ['víctima', 'agresor', 'testigo'];
+  // Estos cuatro son exactamente los valores del enum de la columna
+  // REGISTRO_ESTUDIANTE.rol_en_incidente. No son etiquetas: 'afectado' y
+  // 'senalado' se eligieron en vez de 'víctima' y 'agresor' porque esas son
+  // calificaciones jurídicas que el establecimiento no puede hacer antes de
+  // investigar, y el rol se asigna al registrar el hecho. Mandar cualquier otra
+  // cosa hace que MySQL rechace el INSERT.
+  rolesConocidos = ['afectado', 'senalado', 'testigo', 'denunciante'];
   esRolConocido(rol: string) {
     return this.rolesConocidos.includes(rol);
   }
@@ -228,10 +369,14 @@ export class RegistroForm implements OnInit {
           estudiantes: this.estudiantesSeleccionados,
         })
         .subscribe({
-          next: (res: any) => this.activarYCerrar(res?.id_registro),
-          error: () => {
+          next: (res: any) => this.activarYCerrar(res?.id_registro, 'Registro creado'),
+          // El backend rechaza guardados que el formulario no puede anticipar
+          // (un tipo de falta que otro usuario eliminó mientras esto estaba
+          // abierto, por ejemplo) y explica el motivo. Descartar ese mensaje
+          // deja al usuario con un "error al guardar" que no dice qué corregir.
+          error: (err) => {
             this.loading.set(false);
-            this.error.set('Error al guardar el registro');
+            this.error.set(err.error?.message ?? 'Error al guardar el registro');
           },
         });
     } else {
@@ -241,20 +386,21 @@ export class RegistroForm implements OnInit {
           estudiantes: this.estudiantesSeleccionados,
         })
         .subscribe({
-          next: () => this.activarYCerrar(this.registro.id_registro),
-          error: () => {
+          next: () => this.activarYCerrar(this.registro.id_registro, 'Registro actualizado'),
+          error: (err) => {
             this.loading.set(false);
-            this.error.set('Error al guardar el registro');
+            this.error.set(err.error?.message ?? 'Error al guardar el registro');
           },
         });
     }
   }
 
   /** El registro ya está guardado: acá solo falta el protocolo, si lo pidieron. */
-  private activarYCerrar(idRegistro: number | undefined) {
+  private activarYCerrar(idRegistro: number | undefined, mensaje: string) {
+    // Se cierra apenas el backend confirma, sin espera artificial: el aviso de
+    // éxito lo muestra la pantalla de atrás, que es la que queda a la vista.
     if (!this.activarProtocolo || !this.idProtocoloEstablecimiento || !idRegistro) {
-      this.success.set(true);
-      setTimeout(() => this.cerrar.emit(), 1200);
+      this.cerrar.emit(mensaje);
       return;
     }
 
@@ -264,10 +410,7 @@ export class RegistroForm implements OnInit {
         id_registro: idRegistro,
       })
       .subscribe({
-        next: () => {
-          this.success.set(true);
-          setTimeout(() => this.cerrar.emit(), 1200);
-        },
+        next: () => this.cerrar.emit(`${mensaje} y protocolo activado`),
         // El registro quedó guardado igual: el mensaje tiene que decirlo, o la
         // persona lo vuelve a crear y termina con dos registros del mismo caso.
         error: (err) => {

@@ -68,6 +68,16 @@ export class Registros implements OnInit {
     return this.confidencial.estaBloqueado(r);
   }
 
+  /**
+   * Lleva al caso del protocolo activado del registro. El backend ya elige
+   * cuál: prefiere uno todavía activo y, entre varios, el más reciente. Si
+   * hubiera más de uno, desde el caso se puede volver al listado completo.
+   */
+  seguirProtocolo(r: any) {
+    if (!r.id_protocolo_activado) return;
+    this.router.navigate(['/protocolos-activados', r.id_protocolo_activado]);
+  }
+
   abrirForm(item: any = null) {
     // Se avisa con el modal del proyecto en vez de abrir el formulario: el
     // backend igual respondería 403, y así queda claro por qué no se abre.
@@ -76,14 +86,28 @@ export class Registros implements OnInit {
     this.itemMove = item;
     this.mostrarForm.set(true);
   }
-  cerrarForm() {
+  /**
+   * `mensaje` solo llega cuando el modal se cerró por un guardado. Cancelar o
+   * cerrar con la X no cambió nada en la base, así que ahí no se recarga: el
+   * getAll de registros trae todo el listado con varias subconsultas por fila
+   * y pedirlo de nuevo para nada agrega medio segundo a cada abrir-y-cerrar.
+   */
+  cerrarForm(mensaje?: string) {
     this.mostrarForm.set(false);
     this.itemMove = null;
     // Sin limpiar ?abrir el registro se volvería a abrir solo al recargar.
     if (this.route.snapshot.queryParamMap.has('abrir')) {
       this.router.navigate([], { relativeTo: this.route, queryParams: {} });
     }
-    this.cargar(); // recarga la lista
+    if (!mensaje) return;
+    this.mostrarExito(mensaje);
+    this.cargar();
+  }
+
+  /** El aviso se limpia solo: si no, queda pegado arriba el resto de la sesión. */
+  private mostrarExito(mensaje: string) {
+    this.success.set(mensaje);
+    setTimeout(() => this.success.set(''), 4000);
   }
 
   async eliminar(r: any) {
@@ -93,10 +117,7 @@ export class Registros implements OnInit {
     if (!confirmado) return;
     this.error.set('');
     this.api.deleteRegistro(r.id_registro).subscribe({
-      next: () => {
-        this.success.set('Registro eliminado');
-        this.cerrarForm();
-      },
+      next: () => this.cerrarForm('Registro eliminado'),
       error: (err) => {
         this.error.set(err.error?.message ?? 'Error al eliminar');
       },

@@ -45,6 +45,33 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     notificado: 'Notificado',
   },
 
+  // Rol de una persona en el caso. Deliberadamente no dice "víctima" ni
+  // "agresor": son calificaciones que el establecimiento no puede hacer antes
+  // de investigar, y el rol se asigna al activar el protocolo.
+  rol_involucrado: {
+    afectado: 'Afectado',
+    senalado: 'Señalado',
+    testigo: 'Testigo',
+    denunciante: 'Denunciante',
+  },
+
+  // A quiénes alcanza un paso. Vacío = al caso, una sola vez.
+  por_involucrado_rol: {
+    afectado: 'Una vez por cada afectado',
+    senalado: 'Una vez por cada señalado',
+    testigo: 'Una vez por cada testigo',
+    denunciante: 'Una vez por cada denunciante',
+    todos: 'Una vez por cada parte (sin testigos)',
+  },
+
+  medio_acuse: {
+    presencial: 'Presencial',
+    correo: 'Correo',
+    telefono: 'Teléfono',
+    plataforma: 'Plataforma',
+    carta: 'Carta',
+  },
+
   tipo_campo: {
     texto: 'Texto',
     numero: 'Número',

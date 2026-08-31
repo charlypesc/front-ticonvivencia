@@ -1,0 +1,156 @@
+<div class="page-header">
+    <h2>Feriados</h2>
+</div>
+
+@if (success()) {
+<div class="alert alert--success">
+    <i class="ti ti-circle-check"></i> {{ success() }}
+</div>
+}
+
+@if (error()) {
+<div class="alert alert--error">
+    <i class="ti ti-alert-circle"></i> {{ error() }}
+</div>
+}
+
+<div class="alert alert--info">
+    <i class="ti ti-info-circle"></i>
+    <span>Este calendario define qué días son hábiles. De él dependen los plazos legales:
+        los 15 días hábiles máximos de una suspensión y los 5 para informar a la
+        Superintendencia y a la SEREMI.</span>
+</div>
+
+<div class="card">
+    <div class="card__header">
+        <div class="acciones">
+            <button class="btn-icon" title="Año anterior" (click)="cambiarAnio(-1)">
+                <i class="ti ti-chevron-left"></i>
+            </button>
+            <span class="section-label">{{ anio }}</span>
+            <button class="btn-icon" title="Año siguiente" (click)="cambiarAnio(1)">
+                <i class="ti ti-chevron-right"></i>
+            </button>
+        </div>
+        <button class="btn btn--primary btn--sm" style="width:auto" [appPuede]="Permiso.FeriadoAdministrar"
+            (click)="abrirForm()">
+            <i class="ti ti-plus"></i> Agregar feriado
+        </button>
+    </div>
+
+    @if (loading()) {
+    <div class="empty-state">
+        <i class="ti ti-loader-2 spin"></i>
+        <p>Cargando...</p>
+    </div>
+    } @else if (feriados().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-calendar-off"></i>
+        <p>No hay feriados cargados para {{ anio }}</p>
+    </div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                    <th>Alcance</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (f of feriados(); track f.id_feriado) {
+                <tr>
+                    <td>{{ f.fecha }}</td>
+                    <td>
+                        {{ f.nombre }}
+                        @if (f.irrenunciable) {
+                        <span class="badge" title="Feriado irrenunciable">Irrenunciable</span>
+                        }
+                    </td>
+                    <td class="text-muted">{{ f.tipo | titlecase }}</td>
+                    <td>
+                        @if (f.id_region) {
+                        <span class="badge">{{ f.region_nombre }}</span>
+                        } @else {
+                        <span class="text-muted">Nacional</span>
+                        }
+                    </td>
+                    <td class="acciones">
+                        <button class="btn-icon btn-icon--danger" title="Eliminar"
+                            [appPuede]="Permiso.FeriadoAdministrar" (click)="eliminar(f)">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+
+@if (mostrarForm()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+        <div class="modal__header">
+            <h3><i class="ti ti-calendar-plus"></i> Agregar feriado</h3>
+            <button class="modal__close" (click)="cerrarForm()"><i class="ti ti-x"></i></button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Fecha *</label>
+                    <input type="date" [(ngModel)]="form.fecha" name="fecha" />
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select [(ngModel)]="form.tipo" name="tipo">
+                        <option value="civil">Civil</option>
+                        <option value="religioso">Religioso</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" placeholder="Ej: Día de las Glorias Navales" [(ngModel)]="form.nombre"
+                    name="nombre" />
+            </div>
+
+            <div class="form-group">
+                <label>Alcance</label>
+                <select [(ngModel)]="form.id_region" name="id_region">
+                    <option [ngValue]="null">Nacional</option>
+                    @for (r of regiones(); track r.id_region) {
+                    <option [ngValue]="r.id_region">{{ r.nombre }}</option>
+                    }
+                </select>
+            </div>
+
+            <label class="check-inline">
+                <input type="checkbox" [(ngModel)]="form.irrenunciable" name="irrenunciable" />
+                Irrenunciable
+            </label>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" (click)="guardar()">
+                <i class="ti ti-device-floppy"></i> Agregar feriado
+            </button>
+        </div>
+
+    </div>
+</div>
+}

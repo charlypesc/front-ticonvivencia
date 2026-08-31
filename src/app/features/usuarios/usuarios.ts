@@ -9,11 +9,12 @@ import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { CredencialesModal } from '../../shared/components/credenciales-modal/credenciales-modal';
 import type { VarianteCredenciales } from '../../shared/utils/credenciales-pdf';
+import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 
 @Component({
   selector: 'app-usuarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, CredencialesModal],
+  imports: [CommonModule, FormsModule, Puede, CredencialesModal, CerrarConEsc],
   templateUrl: './usuarios.html',
   styleUrl: './usuarios.scss',
 })
