@@ -45,7 +45,14 @@
             </thead>
             <tbody>
                 @for (u of usuarios(); track u.id_usuario) {
-                <tr>
+                <!-- La fila entera abre la edición: buscar el lápiz de 24px al
+                     final de la tabla es peor que pinchar donde ya se está
+                     mirando. Sin permiso para editar no reacciona. -->
+                <tr [class.fila--editable]="auth.can(Permiso.UsuarioCrear)"
+                    [attr.role]="auth.can(Permiso.UsuarioCrear) ? 'button' : null"
+                    [attr.tabindex]="auth.can(Permiso.UsuarioCrear) ? 0 : null"
+                    [attr.title]="auth.can(Permiso.UsuarioCrear) ? 'Editar ' + u.correo : null"
+                    (click)="editar(u)" (keydown.enter)="editar(u)">
                     <!-- Los usuarios creados antes de que el alta pidiera el
                          nombre no lo tienen: se marca en vez de dejar el hueco. -->
                     <td>{{ u.nombre || '—' }}</td>
@@ -67,7 +74,23 @@
                         </span>
                     </td>
                     <td>
-                        <div class="acciones">
+                        <!-- Los botones hacen lo suyo y no abren además la
+                             edición de la fila. -->
+                        <div class="acciones" (click)="$event.stopPropagation()">
+                            <button class="btn-icon" title="Editar usuario" [appPuede]="Permiso.UsuarioCrear"
+                                (click)="editar(u)">
+                                <i class="ti ti-pencil"></i>
+                            </button>
+
+                            <!-- Los roles útiles son globales y no se pueden
+                                 editar desde el colegio (afectarían a todos).
+                                 Acá se ajusta lo de UNA persona por encima de
+                                 su rol, sin tocar a nadie más. -->
+                            <button class="btn-icon" title="Permisos de esta persona"
+                                [appPuede]="Permiso.UsuarioVer" (click)="abrirPermisos(u)">
+                                <i class="ti ti-shield-cog"></i>
+                            </button>
+
                             <!-- Para el usuario que perdió su clave: emite una nueva
                                  y abre el documento a entregar. -->
                             <button class="btn-icon" title="Restablecer contraseña"
@@ -93,10 +116,13 @@
 <!-- Modal -->
 @if (mostrarForm()) {
 <div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
-    <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal modal--lg" (click)="$event.stopPropagation()">
 
         <div class="modal__header">
-            <h3><i class="ti ti-user-plus"></i> Nuevo usuario</h3>
+            <h3>
+                <i class="ti" [class.ti-user-plus]="!editando()" [class.ti-user-edit]="editando()"></i>
+                {{ editando() ? 'Editar usuario' : 'Nuevo usuario' }}
+            </h3>
             <button class="modal__close" (click)="cerrarForm()">
                 <i class="ti ti-x"></i>
             </button>
@@ -109,14 +135,52 @@
         }
 
         <div class="modal__body" [appPuede]="Permiso.UsuarioCrear">
-            <div class="form-group">
-                <label><i class="ti ti-user"></i> Nombre *</label>
-                <input type="text" placeholder="María González" [(ngModel)]="form.nombre" name="nombre" />
-            </div>
+            <!-- Nombre y correo comparten fila: son dos campos cortos, y en el
+                 modal ancho apilados dejaban media pantalla en blanco antes de
+                 llegar a los roles, que es lo que más ocupa. -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="ti ti-user"></i> Nombre *</label>
+                    <input type="text" placeholder="María González" [(ngModel)]="form.nombre" name="nombre" />
+                </div>
 
-            <div class="form-group">
-                <label><i class="ti ti-mail"></i> Correo electrónico *</label>
-                <input type="email" placeholder="usuario@colegio.cl" [(ngModel)]="form.correo" name="correo" />
+                <div class="form-group">
+                    <label><i class="ti ti-mail"></i> Correo electrónico *</label>
+                <input type="email" [placeholder]="'usuario@' + (dominioPorDefecto() || 'colegio.cl')"
+                    [(ngModel)]="form.correo" name="correo" (blur)="completarCorreo()" />
+                <!-- El dominio se deduce del establecimiento para que las
+                     cuentas de dos colegios no queden indistinguibles. Se
+                     completa solo al salir del campo si se escribió únicamente
+                     el nombre de usuario; los botones son para elegir el otro. -->
+                @if (dominioDistintoAlDelColegio()) {
+                <!-- Aviso, no bloqueo: un psicólogo externo o alguien del
+                     sostenedor son altas legítimas fuera del dominio. -->
+                <p class="hint-dominio hint-dominio--aviso">
+                    <i class="ti ti-alert-triangle"></i>
+                    <span>
+                        Las otras {{ cuentasConDominioEnUso() }} cuentas de este colegio usan
+                        <strong>{{ '@' + dominioEnUso() }}</strong>.
+                    </span>
+                    <button type="button" class="chip-dominio" (click)="usarDominio(dominioEnUso())">
+                        usar {{ '@' + dominioEnUso() }}
+                    </button>
+                </p>
+                } @else if (dominios().length > 0) {
+                <p class="hint-dominio">
+                    <i class="ti ti-at"></i>
+                    Escribe solo el nombre de usuario y se completa con
+                    <strong>{{ '@' + dominioPorDefecto() }}</strong>
+                    @if (dominios().length > 1) {
+                    <span class="hint-dominio__otros">
+                        · o usa
+                        @for (d of dominios().slice(1); track d) {
+                        <button type="button" class="chip-dominio" (click)="usarDominio(d)">{{ '@' + d }}</button>
+                        }
+                    </span>
+                    }
+                </p>
+                }
+                </div>
             </div>
 
             <!-- No hay campo de contraseña: la genera el servidor y se muestra
@@ -124,8 +188,13 @@
                  ninguna cuenta nace con una clave débil o reutilizada. -->
             <p class="hint-clave">
                 <i class="ti ti-key"></i>
+                @if (editando()) {
+                La contraseña no se cambia acá: usa "Restablecer contraseña" en la tabla, que emite
+                una nueva y arma el documento para entregarla.
+                } @else {
                 La contraseña se genera automáticamente al guardar y se muestra
                 una sola vez, en un documento listo para imprimir y entregar.
+                }
             </p>
 
             <div class="form-group">
@@ -134,27 +203,207 @@
                      así que un rol nuevo aparece acá sin tocar el frontend. -->
                 <!-- Asignar roles es un permiso aparte de crear el usuario: se
                      puede poder dar de alta a alguien y no decidir qué puede hacer. -->
-                @for (r of roles(); track r.rol_id) {
-                <label class="check-inline">
-                    <input type="checkbox" [checked]="estaSeleccionado(r.codigo)"
-                        [appPuede]="Permiso.UsuarioAsignarRol" (change)="toggleRolSeleccionado(r.codigo)" />
-                    {{ r.nombre }}
-                    @if (r.descripcion) { <small>— {{ r.descripcion }}</small> }
-                </label>
-                } @empty {
-                <p class="muted">No hay roles disponibles.</p>
-                }
+                <!-- Una tarjeta por rol, con la descripción debajo del nombre.
+                     En una sola línea el nombre se partía en dos y el guion de
+                     la descripción quedaba flotando: nombre y explicación
+                     parecían dos columnas desalineadas. -->
+                <div class="roles-grid">
+                    @for (r of roles(); track r.rol_id) {
+                    <label class="rol-check" [class.rol-check--activo]="estaSeleccionado(r.codigo)">
+                        <input type="checkbox" [checked]="estaSeleccionado(r.codigo)"
+                            [appPuede]="Permiso.UsuarioAsignarRol" (change)="toggleRolSeleccionado(r.codigo)" />
+                        <span class="rol-check__texto">
+                            <strong>{{ r.nombre }}</strong>
+                            @if (r.descripcion) { <small>{{ r.descripcion }}</small> }
+                        </span>
+                    </label>
+                    } @empty {
+                    <p class="muted">No hay roles disponibles.</p>
+                    }
+                </div>
             </div>
         </div>
 
         <div class="modal__footer">
+            <!-- Solo en edición: los permisos se ajustan sobre una cuenta que ya
+                 existe. En el alta todavía no hay a quién dárselos, y el rol que
+                 se está eligiendo acá es el que los va a definir. -->
+            @if (editando()) {
+            <button class="btn btn--outline" style="width:auto;margin-right:auto"
+                [appPuede]="Permiso.UsuarioVer" (click)="editarPermisosDelFormulario()">
+                <i class="ti ti-shield-cog"></i> Editar permisos
+            </button>
+            }
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
             <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.UsuarioCrear"
                 [disabled]="guardando()" (click)="guardar()">
                 <i class="ti" [class.ti-device-floppy]="!guardando()" [class.ti-loader-2]="guardando()"
                     [class.spin]="guardando()"></i>
-                {{ guardando() ? 'Creando...' : 'Crear usuario' }}
+                {{ guardando() ? 'Guardando...' : (editando() ? 'Guardar cambios' : 'Crear usuario') }}
             </button>
+        </div>
+
+    </div>
+</div>
+}
+
+<!-- Permisos de una persona, por encima de los de su rol.
+     Se marca lo que puede hacer y ya: quién "concede" y quién "deniega" lo
+     deduce el componente comparando contra el rol. Pedirle a un encargado que
+     razone sobre herencia de permisos sería pedirle el trabajo del sistema. -->
+@if (mostrarPermisos()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarPermisos() : null">
+    <div class="modal modal--lg" (click)="$event.stopPropagation()">
+
+        <div class="modal__header">
+            <h3>
+                <i class="ti ti-shield-cog"></i>
+                Permisos de {{ personaPermisos()?.nombre || personaPermisos()?.correo }}
+            </h3>
+            <button class="modal__close" (click)="cerrarPermisos()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        <div class="modal__body">
+            <p class="hint-clave">
+                <i class="ti ti-info-circle"></i>
+                <span>
+                    Los permisos marcados en gris vienen de su rol
+                    (<strong>{{ personaPermisos()?.roles?.join(', ') || 'sin rol' }}</strong>) y no se
+                    pueden cambiar para todos los colegios desde acá. Lo que marques o desmarques queda
+                    como una <strong>excepción solo para esta persona</strong>.
+                </span>
+            </p>
+
+            @if (cargandoPermisos()) {
+            <div class="empty-state">
+                <i class="ti ti-loader-2 spin"></i>
+                <p>Cargando permisos…</p>
+            </div>
+            } @else {
+
+            <!-- El resumen va arriba y no escondido al final: es lo que se
+                 revisa antes de guardar. -->
+            <div class="permisos-resumen">
+                <span class="badge badge--validado">
+                    +{{ diffPermisos().conceder.length }} agregados
+                </span>
+                <span class="badge badge--grave">
+                    −{{ diffPermisos().denegar.length }} quitados
+                </span>
+                <span class="muted">respecto de su rol</span>
+                <button class="btn btn--outline btn--sm" style="width:auto;margin-left:auto"
+                    [appPuede]="Permiso.UsuarioAsignarPermiso"
+                    [appPuedeSi]="diffPermisos().conceder.length > 0 || diffPermisos().denegar.length > 0"
+                    appPuedeMotivo="Esta persona ya tiene exactamente los permisos de su rol"
+                    (click)="restaurarDelRol()">
+                    <i class="ti ti-restore"></i> Volver a los del rol
+                </button>
+            </div>
+
+            <div class="form-group">
+                <label><i class="ti ti-note"></i> Motivo de las excepciones</label>
+                <input type="text" placeholder="Ej: cubre licencia del encargado hasta noviembre"
+                    [appPuede]="Permiso.UsuarioAsignarPermiso" [(ngModel)]="motivoPermisos" name="motivoPermisos" />
+                <small class="muted">
+                    Queda guardado junto a los permisos. En seis meses nadie recuerda por qué esta
+                    persona tenía algo distinto al resto de su rol.
+                </small>
+            </div>
+
+            <div class="permisos-grid">
+                @for (g of permisosPorRecurso(); track g.recurso) {
+                <div class="permiso-card">
+                    <div class="permiso-card__titulo">
+                        <span>{{ g.recurso | etiqueta:'recurso' }}</span>
+                    </div>
+                    <div class="permiso-card__items">
+                        @for (p of g.permisos; track p.permiso_id) {
+                        <label class="check-inline" [class.check-inline--excepcion]="esExcepcion(p.permiso_id)"
+                            [title]="(p.descripcion ?? p.codigo)
+                                     + (vieneDelRol(p.permiso_id) ? ' · lo trae el rol: ' + origenDe(p.permiso_id) : '')">
+                            <input type="checkbox" [checked]="tienePermiso(p.permiso_id)"
+                                [appPuede]="Permiso.UsuarioAsignarPermiso"
+                                (change)="alternarPermiso(p.permiso_id)" />
+                            <span>{{ p.accion | etiqueta:'accion' }}</span>
+                            <!-- La marca dice de un vistazo qué se está saliendo
+                                 de la plantilla del rol y en qué dirección. -->
+                            @if (esExcepcion(p.permiso_id)) {
+                            <i class="ti" [class.ti-plus]="tienePermiso(p.permiso_id)"
+                                [class.ti-minus]="!tienePermiso(p.permiso_id)"
+                                [title]="tienePermiso(p.permiso_id) ? 'Agregado a esta persona' : 'Quitado a esta persona'"></i>
+                            } @else if (vieneDelRol(p.permiso_id)) {
+                            <small class="muted">del rol</small>
+                            }
+                        </label>
+                        }
+                    </div>
+                </div>
+                } @empty {
+                <p class="muted">No hay permisos que puedas repartir.</p>
+                }
+            </div>
+            }
+        </div>
+
+        <!-- Paso de ponerle nombre al rol. Va acá adentro y no en un segundo
+             modal: es la continuación de lo que se acaba de marcar, y encimar
+             modales haría perder de vista la selección que le da sentido. -->
+        @if (modoGuardarRol()) {
+        <div class="guardar-como-rol">
+            <p class="hint-clave">
+                <i class="ti ti-users"></i>
+                <span>
+                    Se creará un rol <strong>solo de tu establecimiento</strong> con los
+                    {{ permisosPersona().size }} permisos marcados. Se le asignará a esta persona
+                    <strong>en reemplazo</strong> de los que tiene, y podrás dárselo a cualquier otro
+                    funcionario que necesite lo mismo.
+                </span>
+            </p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nombre del rol *</label>
+                    <input type="text" placeholder="Ej: Inspectoría con expedientes" [(ngModel)]="formRol.nombre"
+                        name="nombreRolNuevo" />
+                </div>
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <input type="text" placeholder="Para qué sirve este rol" [(ngModel)]="formRol.descripcion"
+                        name="descripcionRolNuevo" />
+                </div>
+            </div>
+        </div>
+        }
+
+        <div class="modal__footer">
+            @if (modoGuardarRol()) {
+            <button class="btn btn--outline" (click)="modoGuardarRol.set(false)">Volver</button>
+            <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.RolCrear"
+                [disabled]="guardandoPermisos()" (click)="guardarComoRol()">
+                <i class="ti" [class.ti-users-plus]="!guardandoPermisos()"
+                    [class.ti-loader-2]="guardandoPermisos()" [class.spin]="guardandoPermisos()"></i>
+                {{ guardandoPermisos() ? 'Creando...' : 'Crear el rol' }}
+            </button>
+            } @else {
+            <button class="btn btn--outline" (click)="cerrarPermisos()">Cancelar</button>
+
+            <!-- Las dos salidas, con la que se hereda a la derecha (la posición
+                 de la acción principal). Una excepción sirve para lo puntual;
+                 un rol es lo que otro funcionario puede recibir después. -->
+            <button class="btn btn--outline" style="width:auto" [appPuede]="Permiso.UsuarioAsignarPermiso"
+                [disabled]="guardandoPermisos() || cargandoPermisos()" (click)="guardarPermisos()">
+                <i class="ti" [class.ti-user-cog]="!guardandoPermisos()"
+                    [class.ti-loader-2]="guardandoPermisos()" [class.spin]="guardandoPermisos()"></i>
+                {{ guardandoPermisos() ? 'Guardando...' : 'Solo para esta persona' }}
+            </button>
+            <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.RolCrear"
+                [appPuedeSi]="!cargandoPermisos() && permisosPersona().size > 0"
+                appPuedeMotivo="Marca al menos un permiso para poder guardarlo como rol"
+                (click)="abrirGuardarComoRol()">
+                <i class="ti ti-users-plus"></i> Guardar como rol reutilizable
+            </button>
+            }
         </div>
 
     </div>

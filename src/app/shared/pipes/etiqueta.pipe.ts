@@ -24,6 +24,14 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     adjunto: 'Adjunto',
     aprobacion: 'Aprobación',
     notificacion_externa: 'Notificación externa',
+    // Trámites concretos que el editor precarga enteros. Ver PLANTILLAS en
+    // features/protocolo-flujo.
+    seguimiento: 'Seguimiento',
+    notificacion_apoderado: 'Notificación al apoderado',
+    notificacion_estudiante: 'Notificación al estudiante',
+    medida_proteccion: 'Medidas de protección',
+    medida_disciplinaria: 'Medidas disciplinarias',
+    medida_cautelar: 'Medida cautelar',
   },
 
   // En minúscula: se leen dentro de una frase ("2 días hábiles").
@@ -55,7 +63,52 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     denunciante: 'Denunciante',
   },
 
+  // Qué es la persona respecto del establecimiento. Cambia el procedimiento
+  // aplicable: un funcionario señalado no se tramita como un estudiante.
+  tipo_persona: {
+    estudiante: 'Estudiante',
+    funcionario: 'Funcionario',
+    externo: 'Externo',
+  },
+
+  // Cumplimiento de un paso para UNA persona del caso.
+  estado_gestion: {
+    pendiente: 'Pendiente',
+    cumplido: 'Cumplido',
+    no_aplica: 'No corresponde',
+  },
+
+  // Los dos deberes del art. 16 E letra j sobre el estudiante suspendido. Se
+  // distinguen porque en una fiscalización se preguntan por separado.
+  tipo_seguimiento: {
+    monitoreo_pedagogico: 'Monitoreo pedagógico',
+    continuidad_trayectoria: 'Continuidad de la trayectoria educativa',
+    otro: 'Otro',
+  },
+
+  // Suspensión cautelar del art. 6 letra d) del DFL 2/1998.
+  estado_suspension_cautelar: {
+    vigente: 'Vigente',
+    resuelta: 'Resuelta',
+    ampliada_por_reconsideracion: 'Ampliada por reconsideración',
+    vencida: 'Vencida sin resolver',
+  },
+
+  resultado_reconsideracion: {
+    acogida: 'Acogida',
+    rechazada: 'Rechazada',
+  },
+
   // A quiénes alcanza un paso. Vacío = al caso, una sola vez.
+  // Qué clase de medida da por cumplido un paso. Una por instituto: la cautelar
+  // recae sobre el señalado y no descarga el deber de proteger a la persona
+  // afectada, así que no cumple un paso de protección.
+  tipo_medida_requerida: {
+    proteccion: 'De protección, para la persona afectada',
+    cautelar: 'Suspensión cautelar, sobre el señalado',
+    disciplinaria: 'Disciplinaria (la sanción)',
+    cualquiera: 'Cualquiera de las tres',
+  },
   por_involucrado_rol: {
     afectado: 'Una vez por cada afectado',
     senalado: 'Una vez por cada señalado',
@@ -64,7 +117,7 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     todos: 'Una vez por cada parte (sin testigos)',
   },
 
-  medio_acuse: {
+  medio_notificacion: {
     presencial: 'Presencial',
     correo: 'Correo',
     telefono: 'Teléfono',
@@ -77,7 +130,6 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     numero: 'Número',
     fecha: 'Fecha',
     seleccion: 'Selección',
-    booleano: 'Sí / No',
   },
 
   // Opciones de los campos `seleccion` de los pasos de protocolo. El valor
@@ -89,6 +141,7 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     ambas: 'Ambas',
     apoderado_apoderado: 'Entre apoderados',
     apoderado_funcionario: 'Apoderado y funcionario',
+    arma_de_fuego: 'Arma de fuego',
     autolesion: 'Autolesión',
     carabineros: 'Carabineros',
     cesfam: 'CESFAM',
@@ -97,7 +150,9 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     consumo: 'Consumo',
     convivencia: 'Convivencia',
     disciplinaria: 'Disciplinaria',
+    elemento_incendiario: 'Elemento incendiario',
     embarazo: 'Embarazo',
+    expulsion_o_cancelacion: 'Expulsión o cancelación de matrícula',
     fiscalia: 'Fiscalía',
     fisica: 'Física',
     formativa: 'Formativa',
@@ -124,9 +179,14 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     psicologica: 'Psicológica',
     red_social: 'Red social',
     relato: 'Relato',
+    robo: 'Robo',
     salida_pedagogica: 'Salida pedagógica',
     senda: 'SENDA',
     si: 'Sí',
+    // Resolver que no corresponde medida es una respuesta válida, no un
+    // descuido: es la que apaga el aviso de medida pendiente del paso.
+    sin_medida: 'No corresponde medida',
+    suspension_cautelar: 'Suspensión cautelar',
     tercero: 'Tercero',
     trafico: 'Tráfico',
     tribunal_familia: 'Tribunal de Familia',
@@ -151,21 +211,81 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     vencido: 'Vencido',
   },
 
-  estado_validacion: {
-    pendiente: 'Pendiente',
-    validado: 'Validado',
-  },
-
   tipo_evento: {
     activacion: 'Activación',
     inicio_paso: 'Inicio de paso',
     completado_paso: 'Paso completado',
     omitido_paso: 'Paso omitido',
+    paso_en_curso: 'Paso en curso',
+    paso_reasignado: 'Paso reasignado',
+    paso_vencido: 'Paso vencido',
     transicion: 'Transición',
     vencimiento: 'Vencimiento',
     cierre: 'Cierre',
     anulacion: 'Anulación',
+    protocolo_cerrado: 'Protocolo cerrado',
+    protocolo_anulado: 'Protocolo anulado',
+    involucrado_agregado: 'Involucrado agregado',
+    involucrado_editado: 'Involucrado editado',
+    involucrado_eliminado: 'Involucrado eliminado',
+    gestion_involucrado: 'Gestión con un involucrado',
+    medida_proteccion_vencida: 'Medida de protección vencida',
+    medida_disciplinaria_aplicada: 'Medida disciplinaria aplicada',
+    medida_disciplinaria_cumplida: 'Medida disciplinaria cumplida',
+    condicionalidad_por_revisar: 'Condicionalidad por revisar',
+    expediente_exportado: 'Expediente exportado',
     nota: 'Nota',
+  },
+
+  // Medida de protección del art. 16 E letra j: resguarda a la persona
+  // afectada mientras corre el procedimiento, y por eso no es ni sanción ni
+  // cautelar. Mismo orden que TIPOS_MEDIDA en medidasProteccion.controller.js,
+  // de la menos gravosa a la más gravosa.
+  tipo_medida_proteccion: {
+    separacion_aula: 'Separación de aula',
+    prohibicion_contacto: 'Prohibición de contacto',
+    cambio_curso: 'Cambio de curso',
+    cambio_jornada: 'Cambio de jornada',
+    acompanamiento: 'Acompañamiento psicosocial',
+    derivacion_red: 'Derivación a red externa',
+    resguardo_confidencialidad: 'Resguardo de confidencialidad',
+    reorganizacion_espacios: 'Reorganización de espacios y supervisión',
+    separacion_funciones: 'Separación de funciones',
+    teletrabajo: 'Teletrabajo',
+    suspension: 'Suspensión',
+    otra: 'Otra',
+  },
+
+  // Medidas de protección y disciplinarias: el estado que llevan mientras
+  // corren, y en qué terminaron.
+  estado_medida: {
+    vigente: 'Vigente',
+    cumplida: 'Cumplida',
+    vencida: 'Vencida',
+    revocada: 'Revocada',
+    pendiente: 'Pendiente',
+  },
+
+  // Sanción del RICE (Circular 482 p. 47). Distinta de la suspensión cautelar
+  // (DFL 2 art. 6 d) y de la medida de protección (16 E letra j): esta se
+  // aplica DESPUÉS de resolver, no mientras se investiga. Los cuatro después
+  // de 'condicionalidad' son las medidas excepcionales, las únicas con plazo
+  // en días hábiles.
+  tipo_medida_disciplinaria: {
+    amonestacion: 'Amonestación',
+    citacion_apoderado: 'Citación al apoderado',
+    medida_formativa: 'Medida formativa',
+    medida_reparatoria: 'Medida reparatoria',
+    servicio_comunitario: 'Servicio comunitario',
+    derivacion: 'Derivación',
+    retiro_sala: 'Retiro de la sala de clases',
+    suspension_actividades: 'Suspensión de actividades o ceremonias',
+    condicionalidad: 'Condicionalidad de matrícula',
+    suspension: 'Suspensión',
+    reduccion_jornada: 'Reducción de jornada',
+    separacion_temporal: 'Separación temporal de actividades',
+    asistencia_solo_evaluaciones: 'Asistencia solo a evaluaciones',
+    otra: 'Otra',
   },
 
   // Los dos de abajo son el catálogo de permisos: cada fila de PERMISOS tiene
@@ -241,7 +361,10 @@ export function etiquetaDe(codigo: string | null | undefined, dominio?: string):
 
 @Pipe({ name: 'etiqueta', standalone: true })
 export class EtiquetaPipe implements PipeTransform {
-  transform(codigo: string | null | undefined, dominio?: string): string {
+  // Acepta una lista además de un código suelto: los roles de una persona en el
+  // caso vienen como arreglo y, unidos con join, se imprimían crudos.
+  transform(codigo: string | string[] | null | undefined, dominio?: string): string {
+    if (Array.isArray(codigo)) return codigo.map((c) => etiquetaDe(c, dominio)).join(', ');
     return etiquetaDe(codigo, dominio);
   }
 }

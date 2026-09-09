@@ -48,7 +48,7 @@
                 <tr class="fila-clickeable" (click)="abrirForm(t)">
                     <td>{{ t.nombre }}</td>
                     <td>
-                        <span class="badge badge--{{ t.gravedad }}">{{ t.gravedad | titlecase }}</span>
+                        <span class="badge badge--{{ t.gravedad }}">{{ t.gravedad | etiqueta:'opcion_campo' }}</span>
                     </td>
                     <td class="text-muted">{{ t.medida_sugerida ?? '—' }}</td>
                     <td>
@@ -57,7 +57,7 @@
                         } @else {
                         @for (p of t.protocolos; track p.id_protocolo_establecimiento) {
                         <span class="badge" [class.badge--gravísima]="p.obligatorio"
-                            [title]="p.obligatorio ? 'Obligatorio: sin activarlo no se puede validar el registro' : 'Sugerido'">
+                            [title]="p.obligatorio ? 'Obligatorio: se avisa con más fuerza al registrar, pero no bloquea el registro' : 'Sugerido'">
                             {{ p.protocolo_nombre }}
                         </span>
                         }

@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ConfirmService } from './confirm.service';
+import { formatearFecha } from '../../shared/utils/fecha';
 
 // Un registro confidencial se puede listar desde varias pantallas (registros,
 // dashboard, consultar RUT). Sin esto cada una repetía el chequeo a su manera y
@@ -18,11 +19,7 @@ export class ConfidencialService {
   // bloqueo: sin ellos el usuario ve una pared y no sabe a quién pedirle
   // acceso. USUARIO no guarda nombre, así que el correo es el identificador.
   private formatearFecha(valor: any): string | null {
-    if (!valor) return null;
-    return new Date(valor).toLocaleString('es-CL', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
+    return formatearFecha(valor, true) || null;
   }
 
   private linea(etiqueta: string, correo: any, valorFecha: any): string | null {
@@ -35,12 +32,16 @@ export class ConfidencialService {
 
   private autoria(registro: any): string {
     return [
-      this.linea('Primer registro', registro?.autor_correo, registro?.fecha_creacion),
+      this.linea(
+        'Primer registro',
+        registro?.autor_nombre ?? registro?.autor_correo,
+        registro?.fecha_creacion,
+      ),
       // La línea de modificación solo aparece si el registro fue editado alguna
       // vez: en uno intacto fecha_modificacion es NULL.
       this.linea(
         'Última modificación realizada',
-        registro?.editor_correo,
+        registro?.editor_nombre ?? registro?.editor_correo,
         registro?.fecha_modificacion,
       ),
     ]

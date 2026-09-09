@@ -9,11 +9,12 @@ import { AutoAjustarTextarea } from '../../shared/directives/auto-ajustar-textar
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
+import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
 
 @Component({
   selector: 'app-protocolos-establecimiento',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AutoAjustarTextarea, Puede, CerrarConEsc],
+  imports: [CommonModule, FormsModule, RouterLink, AutoAjustarTextarea, Puede, CerrarConEsc, GuardarConCmdEnter],
   templateUrl: './protocolos-establecimiento.html',
   styleUrl: './protocolos-establecimiento.scss',
 })
@@ -90,7 +91,10 @@ export class ProtocolosEstablecimiento implements OnInit {
     this.success.set('');
     this.creandoPropio.set(false);
     if (protocolo) {
-      if (!this.puedeEditar()) return;
+      // Abrir la ficha de un protocolo ya adoptado no pide permiso de edición:
+      // el modal es también la forma de mirarlo y de saltar a su diagrama, y
+      // los campos ya salen apagados para quien no puede guardar (ver el
+      // `appPuede` del `modal__body`). Igual que en protocolos genéricos.
       this.editando.set(protocolo);
       // Se precarga el texto efectivo (propio o heredado) para que el encargado
       // parta del genérico y lo ajuste, en vez de escribirlo desde cero.

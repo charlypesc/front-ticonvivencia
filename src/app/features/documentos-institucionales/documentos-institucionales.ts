@@ -1,11 +1,14 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { hoyIso } from '../../shared/utils/fecha';
+import { FechaPipe } from '../../shared/pipes/fecha.pipe';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.services';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
+import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
 
 /**
  * RICE y Plan de Gestión, y las constancias de que se entregaron (art. 16 G).
@@ -21,7 +24,7 @@ import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 @Component({
   selector: 'app-documentos-institucionales',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, CerrarConEsc],
+  imports: [FechaPipe, CommonModule, FormsModule, Puede, CerrarConEsc, GuardarConCmdEnter],
   templateUrl: './documentos-institucionales.html',
   styleUrl: './documentos-institucionales.scss',
 })
@@ -58,7 +61,7 @@ export class DocumentosInstitucionales implements OnInit {
     apoderado_run: '',
     canal: 'impreso',
     motivo: 'matricula',
-    fecha_entrega: new Date().toISOString().slice(0, 10),
+    fecha_entrega: hoyIso(),
     observaciones: '',
   };
 
@@ -204,7 +207,7 @@ export class DocumentosInstitucionales implements OnInit {
       apoderado_run: '',
       canal: 'impreso',
       motivo: 'matricula',
-      fecha_entrega: new Date().toISOString().slice(0, 10),
+      fecha_entrega: hoyIso(),
       observaciones: '',
     };
     this.mostrarFormConstancia.set(true);

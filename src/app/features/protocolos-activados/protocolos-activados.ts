@@ -1,5 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FechaPipe } from '../../shared/pipes/fecha.pipe';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.services';
@@ -8,11 +9,12 @@ import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
+import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
 
 @Component({
   selector: 'app-protocolos-activados',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, EtiquetaPipe, CerrarConEsc],
+  imports: [FechaPipe, CommonModule, FormsModule, Puede, EtiquetaPipe, CerrarConEsc, GuardarConCmdEnter],
   templateUrl: './protocolos-activados.html',
   styleUrl: './protocolos-activados.scss',
 })

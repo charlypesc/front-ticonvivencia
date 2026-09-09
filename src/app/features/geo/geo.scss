@@ -133,6 +133,24 @@
   }
 }
 
+// Mismo formato que `.badge-usuarios` pero en rojo: marca las filas cuyo acceso
+// está suspendido, que es lo contrario de "operando el sistema".
+.badge-bloqueado {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: middle;
+
+  i { font-size: 12px; }
+}
+
 .badge-usuarios {
   display: inline-flex;
   align-items: center;

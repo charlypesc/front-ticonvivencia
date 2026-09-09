@@ -19,9 +19,6 @@ export class ApiService {
   createRegistro(data: any) {
     return this.http.post(`${this.base}/registros`, data);
   }
-  validarRegistro(id: number) {
-    return this.http.patch(`${this.base}/registros/${id}/validar`, {});
-  }
   updateRegistro(data: any) {
     return this.http.put(`${this.base}/registros/${data.id_registro}`, data);
   }
@@ -126,6 +123,21 @@ export class ApiService {
       params: { id_establecimiento: String(idEstablecimiento) },
     });
   }
+
+  /**
+   * Usuarios de un establecimiento puntual (se usa desde Geo, para saber qué
+   * dominio de correo usan las cuentas que ese colegio ya tiene). Mismo motivo
+   * que `createUsuarioEn` para mandar el id por query y no por body.
+   */
+  getUsuariosDe(idEstablecimiento: number) {
+    return this.http.get<any[]>(`${this.base}/usuarios`, {
+      params: { id_establecimiento: String(idEstablecimiento) },
+    });
+  }
+  /** Corrige nombre, correo y roles. La contraseña va por su propio endpoint. */
+  updateUsuario(id: number, data: { correo: string; nombre: string; roles?: string[] }) {
+    return this.http.put(`${this.base}/usuarios/${id}`, data);
+  }
   toggleUsuario(id: number) {
     return this.http.patch(`${this.base}/usuarios/${id}/toggle`, {});
   }
@@ -151,6 +163,63 @@ export class ApiService {
   }
   quitarRol(id: number, rolId: number) {
     return this.http.delete(`${this.base}/usuarios/${id}/roles/${rolId}`);
+  }
+
+  // Permisos por persona
+  //
+  // Los roles útiles (Inspectoría, Psicólogo, Orientador…) son globales: los
+  // comparten todos los colegios y solo un ADMIN puede cambiarlos. Esto es la
+  // capa fina de excepciones por persona encima del rol:
+  //   permisos efectivos = los del rol + concedidos - denegados
+
+  /**
+   * Las tres capas por separado —lo que trae el rol, las excepciones y el
+   * resultado— y no una lista plana: la pantalla tiene que poder distinguir
+   * "esto lo trae Inspectoría" de "esto se lo agregamos a mano".
+   */
+  getPermisosDeUsuario(id: number) {
+    return this.http.get<{
+      heredados: { permiso_id: number; roles: string[] }[];
+      overrides: {
+        permiso_id: number;
+        efecto: 'conceder' | 'denegar';
+        motivo: string | null;
+        asignado_at: string;
+        expira_at: string | null;
+        asignado_por_nombre: string | null;
+      }[];
+      efectivos: number[];
+    }>(`${this.base}/usuarios/${id}/permisos`);
+  }
+
+  /**
+   * Convierte los permisos ajustados de una persona en un ROL del
+   * establecimiento, para que otros funcionarios lo hereden en vez de repetirle
+   * las excepciones a cada uno. El backend crea el rol, se lo asigna
+   * REEMPLAZANDO los que tenía y le borra los overrides, todo en una
+   * transacción.
+   */
+  guardarPermisosComoRol(
+    id: number,
+    data: { nombre: string; descripcion?: string; permisos: number[] },
+  ) {
+    return this.http.post<{
+      rol_id: number;
+      codigo: string;
+      message: string;
+      advertencia?: string;
+    }>(`${this.base}/usuarios/${id}/permisos/rol`, data);
+  }
+
+  /** Reemplaza TODAS las excepciones de la persona (no es un parche incremental). */
+  setPermisosDeUsuario(
+    id: number,
+    data: { conceder: number[]; denegar: number[]; motivo?: string },
+  ) {
+    return this.http.put<{ message: string; advertencia?: string }>(
+      `${this.base}/usuarios/${id}/permisos`,
+      data,
+    );
   }
 
   // Roles y permisos
@@ -299,6 +368,13 @@ export class ApiService {
   updateEstablecimientoGeo(id: number, data: any) {
     return this.http.put(`${this.base}/geo/establecimientos/${id}`, data);
   }
+  /** Suspende o restablece el acceso de los usuarios del establecimiento. */
+  cambiarAccesoEstablecimientoGeo(id: number, acceso_bloqueado: boolean) {
+    return this.http.patch<{ acceso_bloqueado: number; message: string }>(
+      `${this.base}/geo/establecimientos/${id}/acceso`,
+      { acceso_bloqueado },
+    );
+  }
   deleteEstablecimientoGeo(id: number) {
     return this.http.delete(`${this.base}/geo/establecimientos/${id}`);
   }
@@ -310,6 +386,35 @@ export class ApiService {
   }
   getProgresoImportacionEstablecimientosGeo(jobId: string) {
     return this.http.get<any>(`${this.base}/geo/establecimientos/importar/${jobId}/progreso`);
+  }
+
+  // Sostenedores — catálogo global (un sostenedor puede tener varios colegios)
+  getSostenedores() {
+    return this.http.get<any[]>(`${this.base}/sostenedores`);
+  }
+  createSostenedor(data: { rut: string; representante_legal: string; direccion?: string; mail?: string }) {
+    return this.http.post<{ id_sostenedor: number }>(`${this.base}/sostenedores`, data);
+  }
+  updateSostenedor(id: number, data: any) {
+    return this.http.put(`${this.base}/sostenedores/${id}`, data);
+  }
+  deleteSostenedor(id: number) {
+    return this.http.delete(`${this.base}/sostenedores/${id}`);
+  }
+  getEstablecimientosDelSostenedor(id: number) {
+    return this.http.get<any[]>(`${this.base}/sostenedores/${id}/establecimientos`);
+  }
+  /** Vincula el colegio al sostenedor (setea ESTABLECIMIENTO.id_sostenedor). */
+  asignarEstablecimientoASostenedor(idSostenedor: number, idEstablecimiento: number) {
+    return this.http.put(
+      `${this.base}/sostenedores/${idSostenedor}/establecimientos/${idEstablecimiento}`,
+      {},
+    );
+  }
+  desasignarEstablecimientoDeSostenedor(idSostenedor: number, idEstablecimiento: number) {
+    return this.http.delete(
+      `${this.base}/sostenedores/${idSostenedor}/establecimientos/${idEstablecimiento}`,
+    );
   }
 
   // Protocolos activados
@@ -340,6 +445,22 @@ export class ApiService {
   }
   publicarFlujoGenerico(idProtocolo: number) {
     return this.http.post(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/publicar`, {});
+  }
+  /**
+   * Guarda el paso entero de una vez: sus datos, responsables, preguntas y
+   * salidas, en una transacción del lado del servidor. Devuelve el grafo ya
+   * escrito, así que quien llama no necesita recargarlo.
+   *
+   * Los endpoints de a uno de más abajo siguen para las ediciones sueltas
+   * (mover o borrar algo desde el diagrama); el formulario del paso guarda por
+   * acá porque encadenar nueve requests contra la base remota costaba unos
+   * quince segundos y podía dejar el paso a medio escribir.
+   */
+  guardarPasoCompletoGenerico(idProtocolo: number, idPaso: number | null, data: any) {
+    const base = `${this.base}/protocolos-genericos/${idProtocolo}/flujo/pasos`;
+    return idPaso
+      ? this.http.put(`${base}/${idPaso}/completo`, data)
+      : this.http.post(`${base}/completo`, data);
   }
   createPasoGenerico(idProtocolo: number, data: any) {
     return this.http.post(`${this.base}/protocolos-genericos/${idProtocolo}/flujo/pasos`, data);
@@ -386,6 +507,13 @@ export class ApiService {
   }
   restaurarFlujoEstablecimiento(idPE: number) {
     return this.http.delete(`${this.base}/protocolos-establecimiento/${idPE}/flujo/personalizar`);
+  }
+  /** Ver `guardarPasoCompletoGenerico`: lo mismo sobre la copia del colegio. */
+  guardarPasoCompletoEstablecimiento(idPE: number, idPaso: number | null, data: any) {
+    const base = `${this.base}/protocolos-establecimiento/${idPE}/flujo/pasos`;
+    return idPaso
+      ? this.http.put(`${base}/${idPaso}/completo`, data)
+      : this.http.post(`${base}/completo`, data);
   }
   createPasoEstablecimiento(idPE: number, data: any) {
     return this.http.post(`${this.base}/protocolos-establecimiento/${idPE}/flujo/pasos`, data);
@@ -466,6 +594,19 @@ export class ApiService {
   registrarGestion(id: number, idPasoInvolucrado: number, data: any) {
     return this.http.post(`${this.base}/protocolos-activados/${id}/gestiones/${idPasoInvolucrado}`, data);
   }
+  /**
+   * El acta de notificación firmada, escaneada o fotografiada. Va como FormData:
+   * NO fijar Content-Type a mano, el navegador tiene que poner el boundary.
+   */
+  subirActaFirmada(id: number, idPasoInvolucrado: number, data: FormData) {
+    return this.http.put(`${this.base}/protocolos-activados/${id}/gestiones/${idPasoInvolucrado}/acta`, data);
+  }
+  /** Blob y no URL directa: el token viaja en la cabecera del interceptor. */
+  getActaFirmada(id: number, idPasoInvolucrado: number) {
+    return this.http.get(`${this.base}/protocolos-activados/${id}/gestiones/${idPasoInvolucrado}/acta`, {
+      responseType: 'blob',
+    });
+  }
 
   // Notificaciones (la campana de la barra superior)
   /** Las últimas 30 del usuario en sesión, sin leer primero. */
@@ -498,6 +639,11 @@ export class ApiService {
   createMedidaProteccion(idCaso: number, data: any) {
     return this.http.post<any>(`${this.base}/protocolos-activados/${idCaso}/medidas-proteccion`, data);
   }
+  // Corregir una medida mal cargada. El backend solo lo permite mientras está
+  // vigente y sin seguimientos encima.
+  updateMedidaProteccion(idMedida: number, data: any) {
+    return this.http.put<any>(`${this.base}/medidas-proteccion/${idMedida}`, data);
+  }
   finalizarMedidaProteccion(idMedida: number, id_medida_sustituye?: number) {
     return this.http.patch(`${this.base}/medidas-proteccion/${idMedida}/finalizar`, { id_medida_sustituye });
   }
@@ -524,6 +670,11 @@ export class ApiService {
   }
   createSuspensionCautelar(idCaso: number, data: any) {
     return this.http.post<any>(`${this.base}/protocolos-activados/${idCaso}/suspensiones-cautelares`, data);
+  }
+  // Igual que en protección: solo mientras no haya reconsideración ni
+  // resolución, que es cuando el backend cierra la ventana.
+  updateSuspensionCautelar(idSuspension: number, data: any) {
+    return this.http.put<any>(`${this.base}/suspensiones-cautelares/${idSuspension}`, data);
   }
   registrarReconsideracionCautelar(idSuspension: number, data: any) {
     return this.http.patch<any>(`${this.base}/suspensiones-cautelares/${idSuspension}/reconsideracion`, data);

@@ -3,20 +3,66 @@
 .campana {
   position: relative;
 
+  // Botón redondo, del tamaño de un objetivo táctil cómodo. El fondo aparece al
+  // pasar por encima y se queda mientras el panel está abierto, así se ve de
+  // dónde salió el panel.
+  &__btn {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: $gray-400;
+    font-size: 19px;
+    cursor: pointer;
+    transition: color .18s, background .18s;
+
+    &:hover { color: $primary; background: rgba($primary, .08); }
+    &:focus-visible { outline: 2px solid rgba($primary, .5); outline-offset: 2px; }
+
+    &--abierta { color: $primary; background: rgba($primary, .1); }
+
+    // Con algo sin leer la campana deja de ser un adorno: se tiñe y saluda una
+    // vez al aparecer. La animación no se repite en loop — un ícono que se
+    // mueve todo el rato termina ignorándose igual que uno apagado.
+    &--activa {
+      color: $primary;
+
+      i { animation: campanear .9s ease-in-out 1; transform-origin: top center; }
+    }
+  }
+
+  @keyframes campanear {
+    0%, 100% { transform: rotate(0); }
+    15% { transform: rotate(12deg); }
+    30% { transform: rotate(-10deg); }
+    45% { transform: rotate(7deg); }
+    60% { transform: rotate(-4deg); }
+    75% { transform: rotate(2deg); }
+  }
+
   &__badge {
     position: absolute;
-    top: 2px;
-    right: 2px;
-    min-width: 16px;
-    height: 16px;
+    top: 1px;
+    right: 1px;
+    min-width: 17px;
+    height: 17px;
     padding: 0 4px;
-    border-radius: 8px;
+    border-radius: 9px;
+    // El anillo del color de la barra separa el número del ícono: sin él, el
+    // rojo se pegaba a la campana y se leía como una mancha.
+    border: 2px solid $white;
     background: $accent-danger;
     color: #fff;
     font-size: 10px;
     font-weight: 700;
-    line-height: 16px;
+    line-height: 13px;
     text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
   }
 
   // Tapa la pantalla para capturar el click de afuera. Va bajo el panel pero

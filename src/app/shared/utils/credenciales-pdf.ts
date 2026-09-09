@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { LOGO_CREDENCIALES_PNG } from './credenciales-logo';
+import { formatearFecha } from './fecha';
 
 /**
  * Qué hoja es. No son dos plantillas distintas sino dos versiones de la misma:
@@ -89,11 +90,7 @@ export function construirCredencialesPdf(datos: DatosCredencialesPdf): jsPDF {
   const esAlta = variante === 'creacion';
   const distintivo = DISTINTIVO[variante];
 
-  const fecha = new Date().toLocaleDateString('es-CL', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  });
+  const fecha = formatearFecha(new Date());
 
   // Solo el primer nombre: el saludo con nombre completo suena a carta formal,
   // y esto lo entrega alguien del colegio en mano.

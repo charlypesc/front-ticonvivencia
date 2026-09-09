@@ -170,35 +170,26 @@
                     <th>Tipo de falta</th>
                     <th>Rol</th>
                     <th>Gravedad</th>
-                    <!-- Dos columnas distintas a propósito: "Validación" es si
-                         el director ya dio por bueno el registro, "Protocolo"
-                         es si el caso tiene un protocolo andando. Cuando las
-                         dos se llamaban "Estado" se leían como lo mismo. -->
-                    <th>Validación</th>
                     <th>Protocolo</th>
                 </tr>
             </thead>
             <tbody>
                 @for (r of registros(); track r.id_registro) {
                 <tr class="fila-clickeable" (click)="abrirRegistro(r)">
-                    <td>{{ r.fecha_incidente | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ r.fecha_incidente | fecha }}</td>
                     @if (esConfidencialBloqueado(r)) {
                     <td colspan="5" class="celda-confidencial">
                         <i class="ti ti-lock"></i>
                         <strong>Confidencial</strong> — {{ r.nota_confidencial ?? 'Sin nota' }}
                     </td>
-                    <td colspan="2"><span class="badge badge--confidencial">reservado</span></td>
+                    <td><span class="badge badge--confidencial">reservado</span></td>
                     } @else {
                     <td>{{ r.asunto }}</td>
                     <td class="celda-folio">#{{ r.id_registro }}</td>
                     <td>{{ r.tipo_falta_nombre }}</td>
-                    <td>{{ r.rol_en_incidente | titlecase }}</td>
+                    <td>{{ r.rol_en_incidente | etiqueta:'rol_involucrado' }}</td>
                     <td>
-                        <span class="badge badge--{{ r.gravedad }}">{{ r.gravedad | titlecase }}</span>
-                    </td>
-                    <td>
-                        <span class="badge badge--{{ r.estado_validacion }}">{{ r.estado_validacion |
-                            etiqueta:'estado_validacion' }}</span>
+                        <span class="badge badge--{{ r.gravedad }}">{{ r.gravedad | etiqueta:'opcion_campo' }}</span>
                     </td>
                     <!-- stopPropagation: el clic de la fila abre el registro,
                          y acá se quiere ir al protocolo, no al registro. -->

@@ -47,14 +47,14 @@
                     <th>Fecha</th>
                     <th>Asunto</th>
                     <th>Tipo de falta</th>
-                    <th>Estado</th>
+                    <th>Protocolo</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 @for (r of filtrados(); track r.id_registro) {
                 <tr class="fila-clickeable" (click)="abrirForm(r)">
-                    <td>{{ r.fecha_incidente | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ r.fecha_incidente | fecha }}</td>
                     @if (esConfidencialBloqueado(r)) {
                     <td colspan="2" title="{{ r.nota_confidencial }}">
                         <i class="ti ti-lock"></i>
@@ -73,15 +73,12 @@
                         @if (r.protocolos_pendientes > 0) {
                         <!-- Ley 21.809: el tipo de falta obliga a un protocolo
                              que nadie activó. Se muestra en la lista porque si
-                             solo se viera al abrir el caso, nadie se entera
-                             hasta que el director intenta validar y rebota. -->
+                             solo se viera al abrir el caso, nadie se enteraría
+                             hasta que alguien entra registro por registro. -->
                         <span class="badge badge--gravísima" title="El tipo de falta obliga a activar un protocolo que todavía no se activó">
                             <i class="ti ti-alert-octagon"></i> Protocolo pendiente
                         </span>
                         }
-                        <span class="badge badge--{{ r.estado_validacion }}">
-                            {{ r.estado_validacion | etiqueta:'estado_validacion' }}
-                        </span>
                         }
                     </td>
                     <td class="acciones" (click)="$event.stopPropagation()">

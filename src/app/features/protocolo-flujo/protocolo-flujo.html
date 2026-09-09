@@ -117,17 +117,19 @@
 </div>
 } @else if (vista() === 'diagrama') {
 <div class="card">
-    <app-grafo-protocolo [nodos]="nodosGrafo()" [aristas]="aristasGrafo()" [acciones]="puedeEditar()"
-        [seleccionado]="pasoSeleccionadoId()" (seleccionar)="seleccionarDelGrafo($event)"
-        (accion)="accionDesdeGrafo($event)" />
+    <!-- Encabeza el diagrama, junto a la leyenda del componente: se lee qué se
+         puede hacer antes de mirarlo, no después de bajar hasta el último paso. -->
     @if (puedeEditar()) {
-    <p class="text-sm text-muted">
+    <p class="text-sm text-muted grafo-ayuda">
         Haz click en un paso —o en su <i class="ti ti-pencil"></i>— para editarlo completo: nombre, plazo,
         responsables, preguntas y salidas. Con <i class="ti ti-trash"></i> se elimina.
     </p>
     } @else {
-    <p class="text-sm text-muted">Haz click en un paso para ver su detalle.</p>
+    <p class="text-sm text-muted grafo-ayuda">Haz click en un paso para ver su detalle.</p>
     }
+    <app-grafo-protocolo [nodos]="nodosGrafo()" [aristas]="aristasGrafo()" [acciones]="puedeEditar()"
+        [seleccionado]="pasoSeleccionadoId()" (seleccionar)="seleccionarDelGrafo($event)"
+        (accion)="accionDesdeGrafo($event)" />
 </div>
 } @else {
 <div class="pasos">
@@ -157,7 +159,16 @@
                     (p.por_involucrado_rol | etiqueta:'rol_involucrado') | lowercase }}
                 </span>
                 }
-                @if (p.requiere_acuse) { <span class="badge badge--confidencial">con firma</span> }
+                @if (p.requiere_notificacion) { <span class="badge badge--confidencial">con notificación</span> }
+                @if (p.requiere_medida) {
+                <span class="badge badge--confidencial"
+                    [title]="p.tipo_medida_requerida | etiqueta:'tipo_medida_requerida'">
+                    <i class="ti ti-shield-check"></i>
+                    ordena medida{{ p.tipo_medida_requerida === 'disciplinaria' ? ' disciplinaria' :
+                    p.tipo_medida_requerida === 'proteccion' ? ' de protección' :
+                    p.tipo_medida_requerida === 'cautelar' ? ' cautelar' : '' }}
+                </span>
+                }
             </div>
             <div class="acciones">
                 <button class="btn btn--outline btn--sm" style="width:auto" title="Editar el paso completo"
@@ -321,29 +332,114 @@
                         </button>
                     </div>
 
-                    <div class="contexto-flujo__lado">
+                    <div class="contexto-flujo__lado contexto-flujo__lado--salidas">
                         <span class="contexto-flujo__titulo"><i class="ti ti-arrow-narrow-right"></i> Continúa
                             en</span>
-                        @if (pasosSiguientes().length) {
-                        @for (n of pasosSiguientes(); track n) { <span class="contexto-flujo__paso">{{ n }}</span> }
-                        } @else {
+                        <!-- Las bifurcaciones Sí/No siguen adentro de su pregunta
+                             (más abajo): condicionan una sola respuesta y separarlas
+                             acá obligaba a recordar el código del campo. Acá van las
+                             salidas propias del paso — antes en una sección aparte
+                             "Otras salidas", migradas acá para no repetir el mismo
+                             "continúa en" dos veces en el modal. Es la única lado que
+                             pasa a ancho completo: es la única con un editor de varias
+                             filas, y en la mitad del modal no entraba nada legible. -->
+                        @if (pasosSiguientesPregunta().length) {
                         <span class="contexto-flujo__vacio">
-                            {{ formPaso.es_paso_final ? 'Es un paso final: aquí termina el protocolo.' : 'Todavía no
-                            continúa en ningún paso. Se asigna más abajo, en las preguntas Sí/No o en Otras salidas.' }}
+                            Según la respuesta de una pregunta: {{ pasosSiguientesPregunta().join(', ') }}
                         </span>
                         }
+                        @if (salidasEdit.length === 0) {
+                        <span class="contexto-flujo__vacio">
+                            {{ formPaso.es_paso_final ? 'Es un paso final: aquí termina el protocolo.' : 'Sin salidas
+                            propias. Si el paso no es final y ninguna pregunta abre un camino, el caso quedaría
+                            detenido aquí.' }}
+                        </span>
+                        }
+                        <div class="salidas">
+                            @for (s of salidasEdit; track $index; let i = $index) {
+                            <div class="salida">
+                                <div class="salida__head">
+                                    <span class="salida__num">{{ i + 1 }}</span>
+                                    <select [(ngModel)]="s.id_paso_destino" [name]="'dest' + $index">
+                                        <option [ngValue]="null" disabled>Continúa en...</option>
+                                        @for (p of pasosDestino(); track idPaso(p)) {
+                                        <option [ngValue]="idPaso(p)">{{ p.nombre }}</option>
+                                        }
+                                    </select>
+                                    <button class="btn-icon btn-icon--danger" title="Quitar salida"
+                                        (click)="quitarSalida($index)">
+                                        <i class="ti ti-trash"></i>
+                                    </button>
+                                </div>
+                                <label class="salida__campo">
+                                    <span>Etiqueta</span>
+                                    <input type="text" [(ngModel)]="s.etiqueta" [name]="'etqT' + $index"
+                                        placeholder="ej: Reviste delito" />
+                                </label>
+                                @if (camposDecidibles().length) {
+                                <div class="salida__condicion">
+                                    <span class="salida__condicion-si">Si</span>
+                                    <select [(ngModel)]="s.condicionCampo" [name]="'cCampo' + $index"
+                                        (ngModelChange)="onCondicionSalida(s)">
+                                        <option value="">— sin condición —</option>
+                                        @for (c of camposDecidibles(); track c.codigo) {
+                                        <option [value]="c.codigo">{{ c.etiqueta }}</option>
+                                        }
+                                    </select>
+                                    <span class="salida__condicion-es">es</span>
+                                    <select [(ngModel)]="s.condicionValor" [name]="'cValor' + $index"
+                                        [disabled]="!s.condicionCampo" (ngModelChange)="onCondicionSalida(s)">
+                                        <option value="">valor...</option>
+                                        @for (o of opcionesDe(s.condicionCampo); track o) {
+                                        <option [value]="o">{{ o | etiqueta:'opcion_campo' }}</option>
+                                        }
+                                    </select>
+                                </div>
+                                }
+                                <label class="check salida__default">
+                                    <input type="checkbox" [(ngModel)]="s.es_default" [name]="'def' + $index"
+                                        [disabled]="!!(s.condicionCampo && s.condicionValor)" />
+                                    Salida por defecto — se toma si ninguna condición se cumple
+                                </label>
+                            </div>
+                            }
+                        </div>
                         @if (!formPaso.es_paso_final) {
                         <button class="btn btn--outline btn--sm mt-2" style="width:auto" (click)="agregarSalida()">
-                            <i class="ti ti-plus"></i> Asignar paso siguiente
+                            <i class="ti ti-plus"></i> Agregar salida
                         </button>
                         }
                     </div>
+                </div>
+
+                <!-- Inicial y final también son ubicación en el flujo, no un
+                     dato del paso: dicen dónde arranca y dónde puede terminar
+                     el protocolo, así que van acá y no mezclados con nombre,
+                     plazo o tipo. -->
+                <div class="form-row mt-2">
+                    @if (otroPasoInicial(); as oi) {
+                    <label class="check" [title]="'Ya es el paso inicial: ' + oi.nombre + '. Sácaselo ahí antes de asignarlo acá.'">
+                        <input type="checkbox" [(ngModel)]="formPaso.es_paso_inicial" name="es_paso_inicial"
+                            disabled />
+                        Es el paso inicial
+                    </label>
+                    <span class="text-sm text-muted">Ya lo es "{{ oi.nombre }}" — un flujo tiene un solo paso
+                        inicial.</span>
+                    } @else {
+                    <label class="check">
+                        <input type="checkbox" [(ngModel)]="formPaso.es_paso_inicial" name="es_paso_inicial" />
+                        Es el paso inicial
+                    </label>
+                    }
+                    <label class="check"><input type="checkbox" [(ngModel)]="formPaso.es_paso_final"
+                            name="es_paso_final" /> Es un paso final</label>
                 </div>
             </div>
 
             <!-- 1. Datos del paso -->
             <div class="seccion">
                 <h4 class="seccion__titulo"><i class="ti ti-file-description"></i> Datos del paso</h4>
+
                 <div class="form-group">
                     <label>Nombre *</label>
                     <input type="text" [(ngModel)]="formPaso.nombre" name="nombre" />
@@ -355,7 +451,12 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Tipo de paso</label>
-                        <select [(ngModel)]="formPaso.tipo_paso" name="tipo_paso">
+                        <!-- Los tipos que son un trámite concreto (Seguimiento,
+                             Notificación al apoderado, Medidas de protección…)
+                             precargan el paso entero: texto, plazo, a quién
+                             alcanza y preguntas. No pisan lo ya escrito. -->
+                        <select [(ngModel)]="formPaso.tipo_paso" name="tipo_paso"
+                            (ngModelChange)="onTipoPaso()">
                             @for (t of TIPOS_PASO; track t) { <option [value]="t">{{ t | etiqueta:'tipo_paso' }}</option> }
                         </select>
                     </div>
@@ -366,6 +467,14 @@
                         </select>
                     </div>
                 </div>
+                <!-- Lo que trae la tarjeta y no se ve en ningún campo del modal:
+                     el acta que emite, cómo se resuelve, dónde queda registrado
+                     lo que decide. -->
+                @if (notaDelTipo(); as nota) {
+                <p class="text-sm text-muted nota-tipo">
+                    <i class="ti ti-info-circle"></i> {{ nota }}
+                </p>
+                }
                 <div class="form-row">
                     <div class="form-group">
                         <label>Plazo</label>
@@ -381,13 +490,6 @@
                         </select>
                     </div>
                 </div>
-                <div class="form-row">
-                    <label class="check"><input type="checkbox" [(ngModel)]="formPaso.es_paso_inicial"
-                            name="es_paso_inicial" /> Es el paso inicial</label>
-                    <label class="check"><input type="checkbox" [(ngModel)]="formPaso.es_paso_final"
-                            name="es_paso_final" /> Es un paso final</label>
-                </div>
-
                 <!-- Un caso con dos señalados se notifica dos veces, y cada
                      apoderado tiene su propio plazo. El paso sigue siendo uno
                      solo en el diagrama: lo que se repite es su cumplimiento. -->
@@ -408,12 +510,50 @@
                 @if (formPaso.por_involucrado_rol) {
                 <div class="form-group">
                     <label class="check">
-                        <input type="checkbox" [(ngModel)]="formPaso.requiere_acuse" name="requiere_acuse" />
-                        Necesita firma de recepción de cada persona
+                        <input type="checkbox" [(ngModel)]="formPaso.requiere_notificacion" name="requiere_notificacion" />
+                        Hay que notificar a cada persona
                     </label>
                     <span class="text-sm text-muted">
-                        Que falte una firma no detiene el protocolo: queda marcada en rojo, y al cerrar el caso se
-                        pide un motivo si todavía falta.
+                        No se le pide firma: se registra que se le notificó, cuándo y por qué vía. Que falte esa
+                        constancia no detiene el protocolo: queda marcada en rojo, y al cerrar el caso se pide un
+                        motivo si todavía falta.
+                        @if (!formPaso.requiere_notificacion && (formPaso.tipo_paso === 'notificacion_apoderado' ||
+                        formPaso.tipo_paso === 'notificacion_estudiante')) {
+                        <strong> Sin esto, un paso de notificación no deja constancia de a quién se notificó ni
+                            emite acta.</strong>
+                        }
+                    </span>
+                </div>
+                }
+
+                <!-- La medida no se registra en el paso: se registra en su
+                     tarjeta (protección, cautelar o disciplinaria) y queda
+                     atada a este paso. Esto es lo que hace que el paso sepa
+                     que la está esperando. -->
+                <div class="form-group">
+                    <label class="check">
+                        <input type="checkbox" [ngModel]="formPaso.requiere_medida" name="requiere_medida"
+                            (ngModelChange)="alCambiarRequiereMedida($event)" />
+                        Este paso ordena una medida
+                    </label>
+                    <span class="text-sm text-muted">
+                        Igual que la notificación: no detiene el protocolo, se marca en rojo mientras la medida no
+                        conste y al cerrar el caso se pide un motivo si todavía falta.
+                    </span>
+                </div>
+
+                @if (formPaso.requiere_medida) {
+                <div class="form-group">
+                    <label>¿Qué medida da por cumplido el paso?</label>
+                    <select [(ngModel)]="formPaso.tipo_medida_requerida" name="tipo_medida_requerida">
+                        @for (t of TIPOS_MEDIDA; track t) {
+                        <option [value]="t">{{ t | etiqueta:'tipo_medida_requerida' }}</option>
+                        }
+                    </select>
+                    <span class="text-sm text-muted">
+                        Son tres institutos distintos y ninguno cumple por otro: la de protección resguarda a la
+                        persona afectada, la cautelar suspende al señalado mientras se resuelve, y la disciplinaria
+                        sanciona lo resuelto. Si el paso pide una y se registra otra, el paso sigue esperando.
                     </span>
                 </div>
                 }
@@ -422,6 +562,13 @@
             <!-- 2. Responsables -->
             <div class="seccion">
                 <h4 class="seccion__titulo"><i class="ti ti-users"></i> Responsables</h4>
+                @if (faltaAprobador()) {
+                <p class="text-sm nota-falta">
+                    <i class="ti ti-alert-triangle"></i>
+                    Este paso se resuelve aprobando o rechazando: necesita un responsable con
+                    participación <strong>Aprobador</strong>, o el guardado lo rechaza.
+                </p>
+                }
                 @if (rolesSeleccionados.length === 0) {
                 <p class="text-sm text-muted">Sin responsables. Todo paso necesita al menos un ejecutor.</p>
                 }
@@ -454,11 +601,18 @@
             <!-- 3. Preguntas del paso, con la bifurcación Sí/No adentro -->
             <div class="seccion">
                 <h4 class="seccion__titulo"><i class="ti ti-forms"></i> Preguntas que se responden en este paso</h4>
+                @if (esDeAprobacion()) {
+                <p class="text-sm text-muted">
+                    <i class="ti ti-check"></i>
+                    Este paso ya pregunta <strong>¿Aprobado?</strong> por sí solo —lo produce el acto de aprobar o
+                    rechazar— y desde ahí ramifica en las salidas. Lo de acá abajo es lo que se pida además.
+                </p>
+                }
                 @if (camposEdit.length === 0) {
                 <p class="text-sm text-muted">Sin preguntas. Una pregunta Sí/No es lo que permite que el protocolo
                     tome un camino u otro.</p>
                 }
-                @for (c of camposEdit; track $index) {
+                @for (c of camposEdit; track $index; let i = $index) {
                 <div class="campo-edit">
                     <div class="fila-edit">
                         <input type="text" [(ngModel)]="c.etiqueta" [name]="'etq' + $index"
@@ -471,13 +625,35 @@
                         </button>
                     </div>
 
+                    <!-- Una opción por input: escritas todas en una línea
+                         separadas por coma, una opción que llevaba coma adentro
+                         se partía en dos sin aviso y no había cómo borrar una
+                         sola sin reescribir el resto. -->
                     @if (c.tipo_campo === 'seleccion') {
                     <div class="form-group">
                         <label>Opciones *</label>
-                        <input type="text" [(ngModel)]="c.opcionesTexto" [name]="'ops' + $index"
-                            (ngModelChange)="sincronizarRamas(c)" placeholder="leve, grave, gravisima" />
-                        <span class="text-sm text-muted">Separadas por coma. Si son exactamente "si, no" se puede
-                            abrir un camino para cada respuesta.</span>
+                        <!-- Se escribe y se ve la respuesta en castellano ("Sí");
+                             lo que se guarda es su código ('si'), que es lo que
+                             evalúan las condiciones del flujo. -->
+                        @for (o of c.opcionesTexto; track $index; let oi = $index, ultima = $last) {
+                        <div class="fila-edit">
+                            <input type="text" [ngModel]="o" [name]="'ops' + i + '_' + oi"
+                                (ngModelChange)="onOpcion(c, oi, $event)"
+                                (keydown.enter)="ultima && agregarOpcion(c)"
+                                [placeholder]="'Opción ' + (oi + 1)" />
+                            <button class="btn-icon btn-icon--danger" title="Quitar opción"
+                                (click)="quitarOpcion(c, oi)">
+                                <i class="ti ti-trash"></i>
+                            </button>
+                        </div>
+                        }
+                        <span class="text-sm text-muted">Si son exactamente "Sí" y "No" se puede abrir un camino
+                            para cada respuesta.</span>
+                        <div class="acciones mt-2">
+                            <button class="btn btn--outline btn--sm" style="width:auto" (click)="agregarOpcion(c)">
+                                <i class="ti ti-plus"></i> Agregar opción
+                            </button>
+                        </div>
                     </div>
                     }
 
@@ -511,20 +687,27 @@
                     </div>
                     }
 
-                    <!-- La bifurcación: los dos pasos siguientes se nombran acá
-                         mismo, sin salir del modal ni crearlos antes a mano. -->
-                    @if (esSiNo(c)) {
+                    <!-- La bifurcación: los pasos siguientes se nombran acá
+                         mismo, sin salir del modal ni crearlos antes a mano. En
+                         un seguimiento solo se elige el del "Sí": el "No" no
+                         continúa en otro paso, repite este. -->
+                    @if (esRamificable(c)) {
                     <div class="rama">
                         <p class="rama__titulo">
-                            <i class="ti ti-arrow-ramp-right"></i> ¿En qué paso continúa según la respuesta?
+                            <i class="ti ti-arrow-ramp-right"></i>
+                            ¿En qué paso continúa según la respuesta?
                         </p>
                         @for (r of c.ramas; track r.valor) {
                         <div class="rama__fila">
                             <span class="rama__valor" [class.rama__valor--no]="r.valor === 'no'">
-                                {{ r.valor === 'si' ? 'Sí' : 'No' }}
+                                {{ r.valor | etiqueta:'opcion_campo' }}
                             </span>
                             <select [(ngModel)]="r.destino" [name]="'ramaDest' + $index + r.valor">
                                 <option value="__nuevo__">➕ Crear un paso nuevo…</option>
+                                <!-- Volver a este mismo paso es una salida como
+                                     cualquier otra: es cómo se dice "con esta
+                                     respuesta, el paso se vuelve a hacer". -->
+                                <option [value]="MISMO_PASO">↻ Este mismo paso (se repite)</option>
                                 <option value="">— sin salida por ahora —</option>
                                 @for (p of pasosDestino(); track idPaso(p)) {
                                 <option [value]="idPaso(p)">{{ p.nombre }}</option>
@@ -532,7 +715,7 @@
                             </select>
                             @if (r.destino === '__nuevo__') {
                             <input type="text" [(ngModel)]="r.nombreNuevo" [name]="'ramaNom' + $index + r.valor"
-                                [placeholder]="r.valor === 'si' ? 'Nombre del paso si responde Sí' : 'Nombre del paso si responde No'" />
+                                [placeholder]="'Nombre del paso si responde ' + (r.valor | etiqueta:'opcion_campo')" />
                             } @else {
                             <span class="rama__hueco"></span>
                             }
@@ -542,70 +725,17 @@
                     }
                 </div>
                 }
+                <!-- Ya no hay un botón aparte para "Sí/No": una pregunta de
+                     Selección abre un camino por opción (lo decide
+                     esRamificable()), así que era el mismo tipo de pregunta
+                     contado dos veces. Elegir "Selección" ya precarga Sí y No. -->
                 <div class="acciones mt-2">
-                    <button class="btn btn--outline btn--sm" style="width:auto" (click)="agregarCampo('libre')">
+                    <button class="btn btn--outline btn--sm" style="width:auto" (click)="agregarCampo()">
                         <i class="ti ti-plus"></i> Agregar pregunta
-                    </button>
-                    <button class="btn btn--outline btn--sm" style="width:auto" (click)="agregarCampo('sino')">
-                        <i class="ti ti-arrows-split-2"></i> Agregar pregunta Sí/No
                     </button>
                 </div>
             </div>
 
-            <!-- 4. Salidas que no vienen de una pregunta Sí/No -->
-            <div class="seccion">
-                <h4 class="seccion__titulo"><i class="ti ti-arrow-narrow-right"></i> Otras salidas</h4>
-                @if (salidasEdit.length === 0) {
-                <p class="text-sm text-muted">
-                    {{ formPaso.es_paso_final ? 'Es un paso final: aquí termina el protocolo.' : 'Sin salidas propias.
-                    Si el paso no es final y ninguna pregunta abre un camino, el caso quedaría detenido aquí.' }}
-                </p>
-                }
-                @for (s of salidasEdit; track $index) {
-                <div class="campo-edit">
-                    <div class="fila-edit">
-                        <select [(ngModel)]="s.id_paso_destino" [name]="'dest' + $index">
-                            <option [ngValue]="null" disabled>Continúa en...</option>
-                            @for (p of pasosDestino(); track idPaso(p)) {
-                            <option [ngValue]="idPaso(p)">{{ p.nombre }}</option>
-                            }
-                        </select>
-                        <input type="text" [(ngModel)]="s.etiqueta" [name]="'etqT' + $index"
-                            placeholder="Etiqueta (ej: Reviste delito)" />
-                        <button class="btn-icon btn-icon--danger" title="Quitar salida" (click)="quitarSalida($index)">
-                            <i class="ti ti-trash"></i>
-                        </button>
-                    </div>
-                    @if (camposDecidibles().length) {
-                    <div class="fila-edit">
-                        <select [(ngModel)]="s.condicionCampo" [name]="'cCampo' + $index"
-                            (ngModelChange)="onCondicionSalida(s)">
-                            <option value="">— sin condición —</option>
-                            @for (c of camposDecidibles(); track c.codigo) {
-                            <option [value]="c.codigo">{{ c.etiqueta }}</option>
-                            }
-                        </select>
-                        <select [(ngModel)]="s.condicionValor" [name]="'cValor' + $index"
-                            [disabled]="!s.condicionCampo" (ngModelChange)="onCondicionSalida(s)">
-                            <option value="">valor...</option>
-                            @for (o of opcionesDe(s.condicionCampo); track o) {
-                            <option [value]="o">{{ o | etiqueta:'opcion_campo' }}</option>
-                            }
-                        </select>
-                        <span class="rama__hueco"></span>
-                    </div>
-                    }
-                    <label class="check">
-                        <input type="checkbox" [(ngModel)]="s.es_default" [name]="'def' + $index"
-                            [disabled]="!!(s.condicionCampo && s.condicionValor)" />
-                        Es la salida por defecto (se toma si ninguna condición se cumple)
-                    </label>
-                </div>
-                }
-                <button class="btn btn--outline btn--sm mt-2" style="width:auto" (click)="agregarSalida()">
-                    <i class="ti ti-plus"></i> Agregar salida
-                </button>
-            </div>
         </div>
         <div class="modal__footer">
             <button class="btn btn--outline" [disabled]="guardando()" (click)="mostrarPaso.set(false)">Cancelar</button>

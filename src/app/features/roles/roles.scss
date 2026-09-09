@@ -53,32 +53,12 @@
   }
 }
 
-.permiso-grupo {
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--border, #eaecf0);
-
-  &__titulo {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-    text-transform: capitalize;
-  }
-
-  &__items {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-top: 0.5rem;
-    padding-left: 1.5rem;
-  }
-}
-
-.check-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
+// Grilla de tarjetas: el catálogo entra en varias columnas según el ancho
+// disponible, en vez de una lista de una sola columna con la mitad derecha
+// vacía. `auto-fill` + minmax evita tener que fijar la cantidad de columnas.
+// La grilla de permisos (.permisos-grid / .permiso-card / .check-inline) se
+// mudó a styles.scss: la comparten esta pantalla y el modal de permisos por
+// persona de features/usuarios.
 
 @media (max-width: 800px) {
   .roles-layout { grid-template-columns: 1fr; }

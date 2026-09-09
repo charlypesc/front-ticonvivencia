@@ -39,6 +39,8 @@
 // actuar, y en una pantalla llena de historial tiene que saltar a la vista.
 .paso-actual {
   border-left: 3px solid $primary;
+  // Aire arriba cuando se hace scroll automático hacia acá al completar un paso.
+  scroll-margin-top: 16px;
 
   &--vencido { border-left-color: $accent-danger; }
 
@@ -252,6 +254,24 @@
   }
 }
 
+// Qué exige la ley según la medida que se está notificando. Se lee antes de
+// registrar la gestión, no después: es lo que decide si basta con la constancia
+// o hace falta el acta firmada.
+.aviso-legal {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 4px;
+  padding: 10px 12px;
+  border-left: 3px solid $primary;
+  border-radius: 6px;
+  background: rgba($primary, .06);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: $gray-900;
+
+  > i { font-size: 16px; color: $primary; }
+}
+
 .gestion {
   display: flex;
   flex-direction: column;
@@ -276,7 +296,7 @@
     color: $gray-400;
   }
 
-  // Empuja el estado de la firma al extremo derecho: la pregunta que se hace al
+  // Empuja el estado de la notificación al extremo derecho: la pregunta que se hace al
   // mirar la lista es "¿quién falta?", y así se responde leyendo una columna.
   &__estado { margin-left: auto; }
 
@@ -288,6 +308,39 @@
     flex-wrap: wrap;
     align-items: flex-end;
     gap: 10px 12px;
+
+    // La notificación que se registra tarde, sobre un paso ya cerrado: se
+    // encuadra para que no se confunda con los datos que el paso ya dejó
+    // asentados y se lea como lo único que queda por hacer ahí.
+    &--rezagada {
+      margin-top: 8px;
+      padding: 10px;
+      border: 1px dashed $accent-danger;
+      border-radius: 8px;
+
+      .btn { height: 38px; }
+    }
+  }
+
+  // Imprimir el acta y subirla firmada: son el papel del mismo trámite, así que
+  // van juntos en una línea propia debajo de los datos de la persona.
+  &__acta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+
+    .btn { width: auto; }
+    // El "Subir firmada" es un <label> con el input escondido: sin esto no se
+    // alinea con los botones de al lado.
+    label.btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+      cursor: pointer;
+    }
   }
 
   &__campo {
@@ -331,4 +384,41 @@
 
   h4 { font-weight: 600; margin-bottom: 4px; }
   p { margin-bottom: 10px; }
+}
+
+// El estudiante ya elegido, en lugar del buscador. Se muestra como una ficha y
+// no como texto suelto para que se lea como una decisión tomada y no como una
+// sugerencia más: acá el error caro es incorporar al alumno equivocado al caso.
+.elegido {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid $gray-200;
+  border-radius: 8px;
+  background: $gray-50;
+
+  span { display: flex; flex-direction: column; gap: 2px; }
+}
+
+// Nota de formato del expediente: no es una opción a elegir, es el aviso de
+// que la única salida es PDF. Las acciones siguen en el pie del modal.
+.formato-unico {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--bg-soft, #f9fafb);
+
+  i { font-size: 18px; }
+}
+
+// Va encima del diagrama, así que el margen empuja hacia abajo: separa la
+// ayuda de la leyenda del grafo en vez de dejar un hueco sobre ella.
+.grafo-ayuda {
+  margin: 0 0 8px;
 }

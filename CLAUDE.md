@@ -1,5 +1,30 @@
 # MiConvivencia — Convenciones del proyecto
 
+## Antes de explorar el código: usar graphify
+
+Este proyecto tiene un grafo de conocimiento ya construido en
+`graphify-out/` (`graph.json`, `graph.html`, `GRAPH_REPORT.md`). Ante
+**cualquier** pregunta sobre cómo funciona algo, qué depende de qué, dónde
+vive una feature o cómo fluye un dato, la primera acción es consultar el
+grafo — no arrancar con `grep`/`Explore` sobre todo el repo:
+
+```bash
+graphify query "¿cómo funciona X?"     # contexto amplio (BFS)
+graphify query "..." --dfs             # trazar un camino concreto
+graphify path "ProtocoloCaso" "ApiService"   # camino más corto entre dos nodos
+graphify explain "ExpedienteService"   # explicación en lenguaje simple de un nodo
+```
+
+Recién si el grafo no alcanza (código muy nuevo, detalle línea a línea) se
+pasa a leer archivos directamente.
+
+- **Mantenerlo al día**: después de cambios grandes (features nuevas,
+  refactors de varios archivos), correr `graphify . --update` desde la raíz
+  del front — es incremental, solo re-extrae lo que cambió.
+- El grafo cubre **solo el front**. Para preguntas de backend, seguir
+  explorando `../backticonvivencia` a mano (o construirle su propio grafo).
+- No commitear `graphify-out/` con cada cambio: es salida generada.
+
 ## Patrón CRUD de mantenedores (feature simple)
 
 Todo mantenedor nuevo (ej: Establecimientos, Cursos) debe replicar exactamente la
@@ -176,3 +201,53 @@ nombre en el modal de alta/edición de **curso** en `features/cursos`
 editando el identificador mismo, no seleccionando uno de una lista. Si
 aparece en una pantalla nueva, aplicar el mismo pipe ahí también en vez de
 reinventar el formateo.
+
+## Formato de fecha: siempre dd/MM/yyyy
+
+Toda fecha que ve el usuario se muestra `dd/MM/yyyy` (o `dd/MM/yyyy HH:mm`
+cuando la hora importa). No conviven `dd-MM-yyyy`, `dd/MM` ni el `yyyy-MM-dd`
+crudo del backend.
+
+- **En templates**: `{{ valor | fecha }}` y `{{ valor | fecha:true }}` con hora
+  (`shared/pipes/fecha.pipe.ts`). **No usar el `date` de Angular**: además de
+  dejar el formato suelto en cada template, con un `'yyyy-MM-dd'` del backend
+  lo interpreta como medianoche UTC y en Chile muestra el día anterior.
+- **En TypeScript** (PDFs, avisos, textos armados a mano):
+  `formatearFecha(valor, conHora?)` de `shared/utils/fecha.ts`. Devuelve `''`
+  si no hay fecha, así el llamador decide qué poner ('—', nada).
+- **Lo que se guarda sigue siendo ISO**: `<input type="date">` y el backend
+  trabajan en `yyyy-MM-dd`. Para el valor por defecto de esos inputs usar
+  `hoyIso()` / `ahoraIso()` del mismo util, nunca
+  `new Date().toISOString().slice(0, 10)` — eso es UTC y de noche adelanta un
+  día en Chile.
+
+## Nunca mostrar códigos crudos de la base
+
+Los ENUM y códigos de la BD están escritos como identificadores técnicos:
+guion bajo, sin tildes y sin ñ (`inicio_paso`, `gestion_involucrado`,
+`senalado`, `dias_habiles`, `tribunal_familia`). **Eso nunca se le muestra al
+usuario**, ni en pantalla ni en un PDF ni en un mensaje de confirmación.
+
+- **En templates**: `{{ codigo | etiqueta:'<dominio>' }}`
+  (`shared/pipes/etiqueta.pipe.ts`). El pipe acepta también un arreglo de
+  códigos y los une con coma. Si el dominio no está en `ETIQUETAS`, agregarlo
+  ahí — no escribir la traducción suelta en el template.
+- **`| titlecase` no sirve** para esto: deja el guion bajo (`en_curso` →
+  `En_curso`) y no repone tildes ni la ñ.
+- **En TypeScript**: `etiquetaDe(codigo, dominio)` del mismo archivo.
+- Al agregar un `tipo_evento`, estado o `opcion_campo` nuevo en el backend,
+  agregar su etiqueta en `ETIQUETAS`. Un código sin traducir cae en
+  `humanizar()` (guiones bajos por espacios), que evita el papelón pero no
+  repone tildes.
+
+Las descripciones que arma el backend traen la fecha ISO adentro de la frase
+("con plazo hasta 2026-09-01T06:34:33.486Z"): pasarlas por
+`{{ texto | fechasEnTexto }}` / `formatearFechasEnTexto(texto)`.
+
+### PDFs con jsPDF: sólo Latin-1
+Las fuentes estándar de jsPDF (helvetica) no soportan caracteres fuera de
+Latin-1. Uno solo (`→`, `—`, `“ ”`, `…`) hace que **toda la línea** salga con
+las letras separadas y se vaya del margen. Antes de dibujar, pasar el texto por
+un saneo que los reemplace por su equivalente ASCII (ver `plano()` en
+`core/services/expediente.service.ts`). Las tildes y la ñ sí están en Latin-1 y
+se conservan.

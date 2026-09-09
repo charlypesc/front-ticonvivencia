@@ -32,6 +32,24 @@
   color: $gray-400;
 }
 
+// Quién registró el caso y cuándo (y quién lo editó, si corresponde). Va
+// pegado abajo del header, con su propia línea divisoria, para que se lea
+// como metadata del registro y no como parte del formulario que se llena.
+.autoria {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 24px;
+  font-size: 12px;
+  color: $gray-600;
+  background: $gray-50;
+  border-bottom: 1px solid $gray-200;
+  flex-shrink: 0;
+
+  i { color: $gray-400; }
+}
+
 // Aire entre el buscador y la lista de involucrados que arma debajo.
 app-buscador { margin-bottom: 8px; }
 
@@ -106,5 +124,22 @@ app-buscador { margin-bottom: 8px; }
   outline: none;
 }
 
+// Sin rol elegido todavía: el select es obligatorio, así que se marca en vez
+// de parecer un campo ya resuelto.
+.rol-select--vacio {
+  border-color: $danger;
+  color: $gray-400;
+}
+
+.mt-2 { margin-top: 8px; }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { display: inline-block; animation: spin .8s linear infinite; }
+// Pie del panel plegable de "otros involucrados": "Agregar" suma otra persona
+// sin cerrar (sumar dos testigos seguidos es normal) y "Listo" pliega.
+.acciones-personal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}

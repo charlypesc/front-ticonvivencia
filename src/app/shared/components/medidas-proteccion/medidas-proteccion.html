@@ -30,7 +30,7 @@
     <div class="medida" [class.medida--vencida]="m.vencida">
         <div class="medida__cab">
             <div>
-                <strong>{{ m.tipo | titlecase }}</strong>
+                <strong>{{ m.tipo | etiqueta:'tipo_medida_proteccion' }}</strong>
                 @if (m.es_reaplicacion) {
                 <span class="badge badge--gravísima" title="Reaplicación: la investigación debe concluir antes del término de esta medida">
                     Reaplicación
@@ -43,6 +43,15 @@
             </div>
             <div class="medida__acciones">
                 @if (m.estado === 'vigente') {
+                <!-- Corregir el error de carga, no reescribir el expediente:
+                     desaparece apenas la medida tiene un seguimiento encima,
+                     que es la misma regla que aplica el backend. -->
+                @if (puedeEditar(m) && casoActivo) {
+                <button class="btn-icon" title="Corregir la medida" [appPuede]="Permiso.MedidaProteccionCrear"
+                    (click)="abrirForm(m)">
+                    <i class="ti ti-pencil"></i>
+                </button>
+                }
                 <button class="btn-icon" title="Registrar seguimiento"
                     [appPuede]="Permiso.MedidaProteccionRegistrarSeguimiento" (click)="abrirSeguimiento(m)">
                     <i class="ti ti-notes"></i>
@@ -56,8 +65,8 @@
         </div>
 
         <div class="text-muted">
-            Desde el {{ m.fecha_inicio }}
-            @if (m.fecha_termino) { hasta el {{ m.fecha_termino }}
+            Desde el {{ m.fecha_inicio | fecha }}
+            @if (m.fecha_termino) { hasta el {{ m.fecha_termino | fecha }}
             @if (m.dias_habiles) { ({{ m.dias_habiles }} días hábiles) }
             }
         </div>
@@ -99,7 +108,7 @@
         @if (m.seguimientos?.length) {
         <div class="seguimientos">
             @for (s of m.seguimientos; track s.id_seguimiento) {
-            <div>{{ s.fecha }} — {{ s.descripcion }}</div>
+            <div>{{ s.fecha | fecha }} — {{ s.descripcion }}</div>
             }
         </div>
         } @else if (m.tipo === 'suspension' && m.estado === 'vigente') {
@@ -112,12 +121,16 @@
     }
 </div>
 
-<!-- Alta de medida -->
+<!-- Alta y corrección de medida: el mismo formulario, porque son los mismos
+     campos y las mismas validaciones. -->
 @if (mostrarForm()) {
 <div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarForm() : null">
     <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal__header">
-            <h3><i class="ti ti-shield-half"></i> Aplicar medida de protección</h3>
+            <h3>
+                <i class="ti ti-shield-half"></i>
+                {{ editando() ? 'Corregir medida de protección' : 'Aplicar medida de protección' }}
+            </h3>
             <button class="modal__close" (click)="cerrarForm()"><i class="ti ti-x"></i></button>
         </div>
 
@@ -133,11 +146,9 @@
                     <label>Tipo de medida *</label>
                     <select [(ngModel)]="form.tipo" name="tipo">
                         <option value="" disabled>Seleccione...</option>
-                        <option value="acompanamiento">Acompañamiento</option>
-                        <option value="cambio_curso">Cambio de curso</option>
-                        <option value="separacion_funciones">Separación de funciones</option>
-                        <option value="suspension">Suspensión</option>
-                        <option value="otra">Otra</option>
+                        @for (t of TIPOS_MEDIDA; track t) {
+                        <option [value]="t">{{ t | etiqueta:'tipo_medida_proteccion' }}</option>
+                        }
                     </select>
                 </div>
                 <div class="form-group">
@@ -150,6 +161,23 @@
                     </select>
                 </div>
             </div>
+
+            <!-- De qué paso del protocolo salió. Opcional: la ley permite
+                 adoptar la medida desde que se toma conocimiento de los hechos,
+                 antes de llegar al paso que la ordena. -->
+            @if (pasosDeProteccion.length) {
+            <div class="form-group">
+                <label>Paso que la ordena</label>
+                <select [(ngModel)]="form.id_activado_paso" name="id_activado_paso">
+                    <option [ngValue]="null">Sin paso asociado</option>
+                    @for (p of pasosDeProteccion; track p.id_activado_paso) {
+                    <option [ngValue]="p.id_activado_paso">
+                        {{ p.nombre }}{{ p.pendiente ? ' — sin medida' : '' }}
+                    </option>
+                    }
+                </select>
+            </div>
+            }
 
             <div class="form-row">
                 <div class="form-group">
@@ -204,7 +232,7 @@
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
             <button class="btn btn--primary" style="width:auto" (click)="guardar()">
-                <i class="ti ti-device-floppy"></i> Aplicar medida
+                <i class="ti ti-device-floppy"></i> {{ editando() ? 'Guardar cambios' : 'Aplicar medida' }}
             </button>
         </div>
     </div>

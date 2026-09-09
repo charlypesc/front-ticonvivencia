@@ -8,9 +8,32 @@
             </button>
         </div>
 
+        <!-- Quién lo llenó y cuándo. Solo en edición: un registro nuevo
+             todavía no tiene autor guardado (lo será quien lo está llenando
+             ahora mismo), así que mostrarlo ahí sería redundante. -->
+        @if (registro?.autor_nombre || registro?.autor_correo) {
+        <p class="autoria">
+            <i class="ti ti-user"></i>
+            Registrado por {{ registro.autor_nombre ?? registro.autor_correo }} el {{ registro.fecha_creacion | fecha:true }}
+            @if ((registro.editor_nombre || registro.editor_correo) && registro.fecha_modificacion) {
+            · editado por {{ registro.editor_nombre ?? registro.editor_correo }} el {{ registro.fecha_modificacion | fecha:true }}
+            }
+        </p>
+        }
+
         @if (error()) {
         <div class="alert alert--error">
             <i class="ti ti-alert-circle"></i> {{ error() }}
+            <!-- El detalle va acá y no en un tooltip ni en la consola: dice qué
+                 paso y qué campo hay que corregir en la plantilla, que es lo
+                 único accionable cuando un flujo se rechaza. -->
+            @if (errorDetalle().length) {
+            <ul class="alert__detalle">
+                @for (p of errorDetalle(); track p) {
+                <li>{{ p }}</li>
+                }
+            </ul>
+            }
         </div>
         }
 
@@ -35,7 +58,7 @@
                         <option [ngValue]="null" disabled>Seleccione...</option>
                         @for (tf of tiposFalta(); track tf.id_tipo_falta) {
                         <option [ngValue]="tf.id_tipo_falta">
-                            {{ tf.nombre }} — {{ tf.gravedad | titlecase }}
+                            {{ tf.nombre }} — {{ tf.gravedad | etiqueta:'opcion_campo' }}
                         </option>
                         }
                     </select>
@@ -71,7 +94,9 @@
                             <span class="estudiante-run">{{ e.run }}-{{ e.dv }}</span>
                         </span>
                         <select [ngModel]="getRol(e.id_estudiante)" (ngModelChange)="setRol(e.id_estudiante, $event)"
-                            [name]="'rol_' + e.id_estudiante" class="rol-select">
+                            [name]="'rol_' + e.id_estudiante" class="rol-select"
+                            [class.rol-select--vacio]="!getRol(e.id_estudiante)">
+                            <option value="" disabled>Rol *</option>
                             @if (getRol(e.id_estudiante) && !esRolConocido(getRol(e.id_estudiante))) {
                             <option [value]="getRol(e.id_estudiante)">Involucrado</option>
                             }
@@ -86,6 +111,111 @@
                     </div>
                     }
                 </div>
+            </div>
+
+            <!-- Involucrados que no son estudiantes: el denunciante muchas veces
+                 es un inspector o un profesor, no un alumno. La lista de arriba
+                 solo busca entre estudiantes, así que sin esto ese dato no
+                 tenía dónde quedar. -->
+            <div class="form-group">
+                <label>Otros involucrados (funcionario o externo)</label>
+
+                @if (involucradosPersonal.length > 0) {
+                <div class="estudiantes-list">
+                    @for (p of involucradosPersonal; track $index) {
+                    <div class="estudiante-item">
+                        <span class="estudiante-check estudiante-check--fila">
+                            <i class="ti" [class.ti-shield]="p.tipo_persona === 'funcionario'"
+                                [class.ti-user]="p.tipo_persona === 'externo'"></i>
+                            <span class="estudiante-nombre">{{ p.nombre }}</span>
+                            <span class="estudiante-run">
+                                {{ p.tipo_persona === 'funcionario' ? 'Funcionario' : 'Externo' }}
+                            </span>
+                        </span>
+                        <select [(ngModel)]="p.rol_en_incidente" [name]="'rol_personal_' + $index"
+                            class="rol-select">
+                            <option value="afectado">Afectado</option>
+                            <option value="senalado">Señalado</option>
+                            <option value="testigo">Testigo</option>
+                            <option value="denunciante">Denunciante</option>
+                        </select>
+                        <button type="button" class="btn-icon" title="Quitar"
+                            (click)="quitarInvolucradoPersonal($index)">
+                            <i class="ti ti-x"></i>
+                        </button>
+                    </div>
+                    }
+                </div>
+                }
+
+                <!-- El formulario arranca plegado: la mayoría de los registros
+                     son solo entre estudiantes, y tenerlo siempre abierto
+                     empujaba el asunto y el relato fuera de la pantalla. -->
+                @if (!mostrarFormPersonal()) {
+                <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                    (click)="abrirFormPersonal()">
+                    <i class="ti ti-user-plus"></i>
+                    {{ involucradosPersonal.length > 0 ? 'Agregar otra persona' : 'Agregar funcionario o externo' }}
+                </button>
+                } @else {
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <select [(ngModel)]="formPersonal.tipo_persona" name="tipo_persona_nuevo">
+                            <option value="funcionario">Funcionario</option>
+                            <option value="externo">Externo (apoderado, tercero)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <select [(ngModel)]="formPersonal.rol_en_incidente" name="rol_personal_nuevo">
+                            <option value="denunciante">Denunciante</option>
+                            <option value="afectado">Afectado</option>
+                            <option value="senalado">Señalado</option>
+                            <option value="testigo">Testigo</option>
+                        </select>
+                    </div>
+                </div>
+
+                @if (formPersonal.tipo_persona === 'funcionario') {
+                <!-- No todo funcionario tiene cuenta en el sistema (un
+                     reemplazante, un asistente). Si no está en la lista se
+                     escribe a mano. -->
+                <select [(ngModel)]="formPersonal.id_usuario" name="id_usuario_personal">
+                    <option [ngValue]="null" disabled>Seleccione al funcionario...</option>
+                    @for (u of usuarios(); track u.id_usuario) {
+                    <option [ngValue]="u.id_usuario">{{ u.nombre || u.correo }}</option>
+                    }
+                    <option [ngValue]="SIN_CUENTA">No está en la lista (escribir a mano)</option>
+                </select>
+                @if (formPersonal.id_usuario === SIN_CUENTA) {
+                <div class="form-row">
+                    <input type="text" placeholder="Nombre *" [(ngModel)]="formPersonal.nombre"
+                        name="nombre_personal_nuevo" />
+                    <input type="text" placeholder="RUT" [(ngModel)]="formPersonal.rut"
+                        name="rut_personal_nuevo" />
+                </div>
+                }
+                } @else {
+                <div class="form-row">
+                    <input type="text" placeholder="Nombre *" [(ngModel)]="formPersonal.nombre"
+                        name="nombre_externo_nuevo" />
+                    <input type="text" placeholder="RUT" [(ngModel)]="formPersonal.rut" name="rut_externo_nuevo" />
+                </div>
+                }
+
+                <!-- "Agregar" no cierra el panel: sumar dos testigos seguidos es
+                     un caso normal, y los campos ya quedan limpios para el
+                     siguiente. Se cierra con "Listo". -->
+                <div class="acciones-personal">
+                    <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                        (click)="agregarInvolucradoPersonal()">
+                        <i class="ti ti-plus"></i> Agregar
+                    </button>
+                    <button type="button" class="btn-ver" (click)="cerrarFormPersonal()">
+                        Listo
+                    </button>
+                </div>
+                }
             </div>
 
             <div class="form-group">
@@ -140,7 +270,7 @@
                     @for (p of protocolosActivados(); track p.id_protocolo_activado) {
                     <div class="estudiante-item">
                         <span class="estudiante-check estudiante-check--fila">
-                            <i class="ti ti-shield-check"></i> {{ p.nombre }} — {{ p.estado }}
+                            <i class="ti ti-shield-check"></i> {{ p.nombre }} — {{ p.estado | etiqueta:'estado_paso' }}
                         </span>
                     </div>
                     }

@@ -1,5 +1,8 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { hoyIso } from '../../shared/utils/fecha';
+import { FechaPipe } from '../../shared/pipes/fecha.pipe';
+import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.services';
@@ -22,7 +25,7 @@ import { Puede } from '../../shared/directives/permiso.directive';
 @Component({
   selector: 'app-informe-expulsion',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Puede],
+  imports: [FechaPipe, EtiquetaPipe, CommonModule, FormsModule, RouterLink, Puede],
   templateUrl: './informe-expulsion.html',
   styleUrl: './informe-expulsion.scss',
 })
@@ -68,8 +71,17 @@ export class InformeExpulsion implements OnInit {
   formDecision = {
     decision: '',
     fundamento_director: '',
-    fecha_notificacion_apoderado: new Date().toISOString().slice(0, 10),
+    fecha_notificacion_apoderado: hoyIso(),
+    medio_notificacion_apoderado: 'presencial',
   };
+
+  /**
+   * Sin 'telefono' a propósito, igual que en la suspensión cautelar: de esta
+   * notificación cuelgan el plazo de reconsideración y los 5 días hábiles para
+   * informar a la Superintendencia, y una llamada no deja constancia de qué se
+   * comunicó.
+   */
+  readonly MEDIOS_NOTIFICACION = ['presencial', 'correo', 'plataforma', 'carta'];
 
   formEnvios = { fecha_informe_superintendencia: '', fecha_informe_seremi: '' };
 
