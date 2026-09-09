@@ -11,9 +11,21 @@
     <div class="navbar__right">
         <app-campana-notificaciones />
 
-        <div class="navbar__user">
+        <!-- Quién eres y dónde estás trabajando. El establecimiento va acá y no
+             en el sidebar porque es lo que distingue una sesión de otra: con
+             varios colegios abiertos en pestañas, el nombre y el RBD son lo
+             único que evita registrar el caso en el colegio equivocado. -->
+        <div class="navbar__user" [title]="usuario()?.correo">
             <div class="navbar__avatar">{{ iniciales() }}</div>
-            <span class="navbar__correo">{{ usuario()?.correo }}</span>
+            <div class="navbar__quien">
+                <span class="navbar__saludo">Bienvenido, <strong>{{ nombreCorto() }}</strong></span>
+                @if (establecimiento(); as est) {
+                <span class="navbar__establecimiento">
+                    <i class="ti ti-school"></i>
+                    {{ est.nombre }}@if (est.rbd) { · RBD {{ est.rbd }} }
+                </span>
+                }
+            </div>
         </div>
 
         <button class="navbar__icon-btn" (click)="mostrarCambiarPassword.set(true)"

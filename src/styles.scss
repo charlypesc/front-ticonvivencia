@@ -195,6 +195,60 @@ h3 { font-size: 1rem; font-weight: 600; }
   }
 }
 
+// Sugerencia de dominio bajo el campo de correo, en las dos pantallas que dan
+// de alta usuarios (Usuarios y el alta desde Geo). Va global y no en el scss de
+// cada feature porque el bloque es el mismo en las dos.
+.hint-dominio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: -10px 0 16px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: $gray-600;
+
+  i { color: $gray-400; font-size: 14px; }
+
+  strong { color: $gray-900; font-weight: 600; }
+
+  &__otros {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+
+  // El correo se sale del dominio que usa el resto del colegio. No impide
+  // guardar: solo se asegura de que sea una decisión y no un descuido.
+  // Mismos colores que `.alert--warning`, para que un aviso se lea igual en
+  // todo el sistema sin importar dónde aparezca.
+  &--aviso {
+    background: #fef3c7;
+    border-radius: $radius;
+    padding: 9px 11px;
+    color: #92400e;
+
+    i, strong { color: #92400e; }
+  }
+}
+
+// El dominio alternativo se aplica con un clic: escribirlo a mano es
+// exactamente el trabajo que la sugerencia viene a ahorrar.
+.chip-dominio {
+  border: 1px solid $gray-200;
+  background: $white;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: $primary;
+  cursor: pointer;
+  transition: background .2s, border-color .2s;
+
+  &:hover { background: $primary-bg; border-color: $primary-light; }
+}
+
 // ─── CARDS ────────────────────────────────────────
 .card {
   background: $white;
@@ -284,6 +338,20 @@ table {
   &--error   { background: #fee2e2; color: #991b1b; }
   &--success { background: #d1fae5; color: #065f46; }
   &--warning { background: #fef3c7; color: #92400e; }
+
+  // Un alert que trae causas concretas deja de ser una línea: la lista baja a
+  // un renglón propio y el icono se alinea arriba, no al centro de un bloque
+  // de varias líneas.
+  &:has(&__detalle) { align-items: flex-start; flex-wrap: wrap; }
+
+  &__detalle {
+    flex-basis: 100%;
+    margin: 6px 0 0;
+    padding-left: 20px;
+    opacity: 0.9;
+
+    li + li { margin-top: 4px; }
+  }
   // Ya se usaba en la pantalla de Roles sin estar definido: se veía como un
   // bloque sin fondo, indistinguible del texto normal.
   &--info    { background: #dbeafe; color: #1e40af; }
@@ -347,6 +415,9 @@ table {
   box-shadow: 0 20px 60px rgba(0,0,0,.2);
 
   &--sm { max-width: 380px; }
+  // Para formularios con listas en grilla (roles, permisos), donde 520px deja
+  // una sola columna y obliga a scrollear de más.
+  &--lg { max-width: 720px; }
 
   &__header {
     display: flex;
@@ -390,6 +461,10 @@ table {
     justify-content: flex-end;
     gap: 10px;
     flex-shrink: 0;
+    // Con cuatro o más acciones (la ficha de establecimiento en Geo) la fila
+    // no entra en los 520px del modal: sin wrap los botones se salían por los
+    // costados en vez de bajar a una segunda línea.
+    flex-wrap: wrap;
   }
 }
 
@@ -471,4 +546,125 @@ table {
   &--ok:hover   { color: $accent-ok; background: #d1fae5; }
 }
 
+/**
+ * Interruptor deslizable estilo iOS para acciones de encender/apagar.
+ *
+ * Es un `<button role="switch" [attr.aria-checked]>` y no un `<input
+ * type="checkbox">` a propósito: cuando la acción pide confirmación, el
+ * checkbox ya se dibujó cambiado antes de que el usuario responda el modal, y
+ * hay que revertirlo a mano si cancela. Con un botón, el estado lo manda
+ * siempre el dato (`.switch--on`), nunca el navegador.
+ */
+.switch {
+  --switch-on: #{$accent-ok};
 
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 23px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #d1d5db;
+  cursor: pointer;
+  transition: background .2s;
+  vertical-align: middle;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+    transition: transform .2s;
+  }
+
+  &--on {
+    background: var(--switch-on);
+    &::after { transform: translateX(17px); }
+  }
+
+  // Para interruptores donde encendido = algo malo (bloqueos, alertas), y el
+  // verde diría lo contrario de lo que pasa.
+  &--peligro { --switch-on: #{$danger}; }
+
+  &:focus-visible { outline: 2px solid $primary; outline-offset: 2px; }
+  &:disabled      { opacity: .5; cursor: not-allowed; }
+
+  &--sm {
+    width: 34px;
+    height: 20px;
+    &::after { width: 16px; height: 16px; }
+    &.switch--on::after { transform: translateX(14px); }
+  }
+}
+
+
+
+
+// ─── GRILLA DE PERMISOS ───────────────────────────
+// Catálogo de permisos agrupado por recurso, en tarjetas. Es global porque lo
+// comparten dos pantallas: los permisos de un rol (features/roles) y las
+// excepciones por persona (features/usuarios). Vivía en roles.scss hasta que
+// apareció el segundo uso.
+.permisos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+  align-items: start;
+}
+
+.permiso-card {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border, #eaecf0);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+
+  // Un borde marcado alcanza para ubicar de un vistazo qué módulos tienen algo
+  // habilitado sin tener que leer cada checkbox.
+  &--activa {
+    border-color: var(--primary, #2f6fed);
+    background: rgba(47, 111, 237, 0.04);
+  }
+
+  &__titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    cursor: pointer;
+
+    span { flex: 1; min-width: 0; }
+  }
+
+  &__contador {
+    flex: none;
+    font-weight: 500;
+    color: var(--muted, #667085);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.6rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border, #eaecf0);
+  }
+}
+
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}

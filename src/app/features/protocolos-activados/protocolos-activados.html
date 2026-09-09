@@ -52,7 +52,7 @@
                         <span class="badge badge--{{ a.estado === 'cerrado' ? 'validado' : a.estado === 'anulado' ?
                             'confidencial' : 'pendiente' }}">{{ a.estado | etiqueta:'estado_caso' }}</span>
                     </td>
-                    <td>{{ a.fecha_activacion | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td>{{ a.fecha_activacion | fecha:true }}</td>
                     <td class="acciones" (click)="$event.stopPropagation()">
                         <button class="btn-icon" title="Abrir el caso" (click)="abrirCaso(a)">
                             <i class="ti ti-arrow-right"></i>
@@ -108,7 +108,7 @@
                     <option [ngValue]="null" disabled>Seleccione un registro...</option>
                     @for (r of registros(); track r.id_registro) {
                     <option [ngValue]="r.id_registro">
-                        #{{ r.id_registro }} — {{ r.asunto }} ({{ r.fecha_incidente | date:'dd/MM/yyyy' }})
+                        #{{ r.id_registro }} — {{ r.asunto }} ({{ r.fecha_incidente | fecha }})
                     </option>
                     }
                 </select>

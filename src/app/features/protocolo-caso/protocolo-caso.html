@@ -36,10 +36,9 @@
 <div class="card mb-4">
     <div class="resumen">
         <div><span class="text-sm text-muted">Registro</span><strong>#{{ caso().id_registro }}</strong></div>
-        <div><span class="text-sm text-muted">Activado</span><strong>{{ caso().fecha_activacion |
-                date:'dd/MM/yyyy HH:mm' }}</strong></div>
+        <div><span class="text-sm text-muted">Activado</span><strong>{{ caso().fecha_activacion | fecha:true }}</strong></div>
         @if (caso().fecha_cierre) {
-        <div><span class="text-sm text-muted">Cerrado</span><strong>{{ caso().fecha_cierre | date:'dd/MM/yyyy HH:mm'
+        <div><span class="text-sm text-muted">Cerrado</span><strong>{{ caso().fecha_cierre | fecha:true
                 }}</strong></div>
         }
         <div><span class="text-sm text-muted">Avance</span><strong>{{ avance }}</strong></div>
@@ -51,7 +50,7 @@
         @if (caso().fecha_limite_investigacion) {
         <div>
             <span class="text-sm text-muted">Plazo de investigación</span>
-            <strong>{{ caso().fecha_limite_investigacion | date:'dd/MM/yyyy' }}</strong>
+            <strong>{{ caso().fecha_limite_investigacion | fecha }}</strong>
         </div>
         }
         <div class="acciones">
@@ -60,11 +59,14 @@
                 <i class="ti ti-file-export"></i> Expediente
             </button>
             <!-- Solo se llega al informe desde el caso: una expulsión sin
-                 procedimiento previo es justamente lo que la ley impide. -->
+                 procedimiento previo es justamente lo que la ley impide.
+                 Oculto por ahora — ver `mostrarInformeExpulsion` en el .ts. -->
+            @if (mostrarInformeExpulsion) {
             <a class="btn btn--outline btn--sm" style="width:auto" [appPuede]="Permiso.InformeExpulsionVer"
                 [routerLink]="['/protocolos-activados', id, 'informe-expulsion']">
                 <i class="ti ti-file-description"></i> Informe de expulsión
             </a>
+            }
         </div>
     </div>
 </div>
@@ -83,14 +85,14 @@
                      de tipos de falta; el texto la nombra para quien no lo
                      deduce del color. -->
                 <span class="badge badge--{{ r.gravedad ?? 'leve' }}">
-                    {{ r.tipo_falta_nombre }} · {{ r.gravedad | titlecase }}
+                    {{ r.tipo_falta_nombre }} · {{ r.gravedad | etiqueta:'opcion_campo' }}
                 </span>
                 }
                 @if (r.es_confidencial) {
                 <span class="badge badge--confidencial"><i class="ti ti-lock"></i> Confidencial</span>
                 }
                 <span class="text-sm text-muted">
-                    <i class="ti ti-calendar"></i> {{ r.fecha_incidente | date:'dd/MM/yyyy' }} · #{{ r.id_registro }}
+                    <i class="ti ti-calendar"></i> {{ r.fecha_incidente | fecha }} · #{{ r.id_registro }}
                 </span>
             </span>
         </div>
@@ -123,9 +125,9 @@
     <div class="card__header">
         <h3><i class="ti ti-users-group"></i> Involucrados</h3>
         <div class="flex gap-2 items-center">
-            @if (acusesPendientes() > 0) {
+            @if (notificacionesPendientes() > 0) {
             <span class="badge badge--gravísima">
-                <i class="ti ti-writing-off"></i> {{ acusesPendientes() }} sin firma
+                <i class="ti ti-bell-exclamation"></i> {{ notificacionesPendientes() }} sin notificar
             </span>
             }
             <button class="btn btn--outline btn--sm" style="width:auto" [appPuede]="Permiso.ProtocoloActivadoEditar"
@@ -152,7 +154,7 @@
                 'leve' }}">{{ i.rol | etiqueta:'rol_involucrado' }}</span>
             <strong>{{ i.nombre }}</strong>
             <span class="text-sm text-muted">
-                @if (i.curso) { {{ i.curso }} · } @if (i.rut) { {{ i.rut }} }
+                @if (i.curso) { {{ i.curso | cursoNombre }} · } @if (i.rut) { {{ i.rut }} }
                 @if (i.tipo_persona !== 'estudiante') { · {{ i.tipo_persona }} }
             </span>
             @if (puedeVerFicha(i)) {
@@ -172,7 +174,7 @@
 
 <!-- Paso en curso: lo primero que se ve, porque es lo único accionable -->
 @if (activo() && pasoActual(); as paso) {
-<div class="card paso-actual mb-4" [class.paso-actual--vencido]="paso.estado === 'vencido'">
+<div id="paso-actual" class="card paso-actual mb-4" [class.paso-actual--vencido]="paso.estado === 'vencido'">
     <div class="card__header">
         <h3><i class="ti" [ngClass]="icono(paso)"></i> {{ paso.nombre }}</h3>
         <div class="flex gap-2 items-center">
@@ -181,7 +183,7 @@
             <span class="badge" [class.badge--gravísima]="paso.estado === 'vencido'"
                 [class.badge--pendiente]="paso.estado !== 'vencido'">
                 <i class="ti ti-clock"></i>
-                {{ paso.estado === 'vencido' ? 'Venció' : 'Vence' }} {{ paso.fecha_limite | date:'dd/MM HH:mm' }}
+                {{ paso.estado === 'vencido' ? 'Venció' : 'Vence' }} {{ paso.fecha_limite | fecha:true }}
             </span>
             }
         </div>
@@ -192,8 +194,35 @@
     <p class="text-sm text-muted">
         <i class="ti ti-users"></i> Ejecuta: {{ rolesDe(paso, 'ejecutor') || '—' }}
         @if (rolesDe(paso, 'aprobador')) { · Aprueba: {{ rolesDe(paso, 'aprobador') }} }
-        @if (paso.responsable_correo) { · Responsable: {{ paso.responsable_correo }} }
+        @if (paso.responsable_nombre || paso.responsable_correo) { · Responsable: {{ paso.responsable_nombre ?? paso.responsable_correo }} }
     </p>
+
+    <!-- El paso ordena una medida y todavía no consta ninguna. No traba el
+         avance (misma decisión que la constancia de notificación): se dice acá
+         y el cierre lo vuelve a pedir. -->
+    @if (paso.medida_pendiente) {
+    <div class="alert alert--warning">
+        <i class="ti ti-shield-exclamation"></i>
+        <span>
+            @if (paso.tipo_medida_requerida === 'disciplinaria') {
+            Este paso resuelve el caso y todavía no hay ninguna medida disciplinaria registrada.
+            } @else if (paso.tipo_medida_requerida === 'proteccion') {
+            Este paso ordena proteger a la persona afectada y todavía no hay ninguna medida de
+            protección registrada. Una suspensión cautelar no lo cumple: recae sobre el señalado.
+            } @else if (paso.tipo_medida_requerida === 'cautelar') {
+            Este paso ordena suspender cautelarmente al señalado y todavía no hay ninguna
+            suspensión cautelar registrada.
+            } @else {
+            Este paso ordena una medida y todavía no hay ninguna registrada.
+            }
+        </span>
+        @if (activo()) {
+        <button type="button" class="btn btn-sm btn-primary" (click)="registrarMedidaDe(paso)">
+            <i class="ti ti-plus"></i> Registrar medida
+        </button>
+        }
+    </div>
+    }
 
     <ng-container *ngTemplateOutlet="gestiones; context: { $implicit: paso, editable: true }" />
 
@@ -206,12 +235,6 @@
             <!-- El value va crudo: es lo que evalúan las condiciones del flujo. -->
             @for (o of opciones(campo); track o) { <option [value]="o">{{ o | etiqueta:'opcion_campo' }}</option> }
         </select>
-        } @else if (campo.tipo_campo === 'booleano') {
-        <select [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo">
-            <option value="" disabled>Seleccione...</option>
-            <option value="si">Sí</option>
-            <option value="no">No</option>
-        </select>
         } @else if (campo.tipo_campo === 'fecha') {
         <input type="date" [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo" />
         } @else if (campo.tipo_campo === 'numero') {
@@ -222,11 +245,11 @@
     </div>
     }
 
-    <div class="form-group">
-        <label>Comentario <span class="text-muted text-sm">(obligatorio para omitir, cerrar anticipado o
-                anular)</span></label>
-        <textarea rows="2" [(ngModel)]="comentario" name="comentario"></textarea>
-    </div>
+    <!-- El motivo de omitir, aprobar, rechazar, cerrar o anular ya no vive acá:
+         lo pide el propio modal de confirmación de cada acción. Como campo fijo
+         se llenaba creyendo que se guardaba con el paso, y 'Completar paso'
+         nunca lo envió: lo escrito se perdía sin aviso. -->
+
 
     <!-- Pegado a los botones: el aviso explica por qué la acción de abajo no va
          a salir, así que tiene que leerse sin sacar la vista del botón. -->
@@ -238,7 +261,7 @@
          deshabilitado con el motivo a la vista, y sigue habilitado —con aviso
          al apretarlo— para quien puede tomar pasos ajenos. -->
     <div class="acciones-paso">
-        @if (paso.tipo_paso === 'aprobacion') {
+        @if (esPasoDeAprobacion(paso.tipo_paso)) {
         <button class="btn btn--primary" style="width:auto" [disabled]="guardando()"
             [appPuede]="Permiso.ProtocoloActivadoAprobarPaso" [appPuedeSi]="!!paso.puede_aprobar"
             [appPuedeMotivo]="motivoPasoAjeno(paso, 'aprobador')" (click)="aprobar(true)">
@@ -300,9 +323,11 @@
     </div>
 
     @if (mostrarGrafo()) {
+    <!-- Encabeza el diagrama, junto a la leyenda del componente: se lee qué se
+         puede hacer antes de mirarlo, no después de bajar hasta el último paso. -->
+    <p class="text-sm text-muted grafo-ayuda">Haz click en un paso para ver su detalle.</p>
     <app-grafo-protocolo [nodos]="nodosGrafo()" [aristas]="aristasGrafo()"
         [seleccionado]="pasoSeleccionadoId()" (seleccionar)="seleccionarDelGrafo($event)" />
-    <p class="text-sm text-muted">Haz click en un paso para ver su detalle.</p>
     } @else {
     <ol class="timeline">
         @for (p of pasosVisibles(); track p.id_activado_paso) {
@@ -318,9 +343,14 @@
                 </div>
                 <p class="text-sm text-muted">
                     {{ rolesDe(p, 'ejecutor') || '—' }}
-                    @if (p.fecha_completado) { · completado {{ p.fecha_completado | date:'dd/MM/yyyy HH:mm' }} }
-                    @else if (p.fecha_limite) { · vence {{ p.fecha_limite | date:'dd/MM/yyyy HH:mm' }} }
+                    @if (p.fecha_completado) { · completado {{ p.fecha_completado | fecha:true }} }
+                    @else if (p.fecha_limite) { · vence {{ p.fecha_limite | fecha:true }} }
                 </p>
+                @if (p.medida_pendiente) {
+                <p class="text-sm" style="color:var(--color-alerta,#b91c1c)">
+                    <i class="ti ti-shield-exclamation"></i> Sin medida registrada
+                </p>
+                }
                 @if (respuestas(p).length) {
                 <ul class="respuestas">
                     @for (r of respuestas(p); track r.etiqueta) {
@@ -383,10 +413,8 @@
             </p>
 
             <p class="text-sm text-muted">
-                @if (p.fecha_completado) { <i class="ti ti-circle-check"></i> Completado el {{ p.fecha_completado |
-                date:'dd/MM/yyyy HH:mm' }} }
-                @else if (p.fecha_limite) { <i class="ti ti-clock"></i> Vence el {{ p.fecha_limite | date:'dd/MM/yyyy
-                HH:mm' }} }
+                @if (p.fecha_completado) { <i class="ti ti-circle-check"></i> Completado el {{ p.fecha_completado | fecha:true }} }
+                @else if (p.fecha_limite) { <i class="ti ti-clock"></i> Vence el {{ p.fecha_limite | fecha:true }} }
                 @else { <i class="ti ti-clock"></i> Sin plazo }
             </p>
 
@@ -429,12 +457,12 @@
             <ol class="bitacora">
                 @for (e of bitacora(); track e.id_evento) {
                 <li>
-                    <div class="bitacora__fecha">{{ e.fecha | date:'dd/MM/yyyy HH:mm' }}</div>
+                    <div class="bitacora__fecha">{{ e.fecha | fecha:true }}</div>
                     <div>
                         <span class="badge badge--leve">{{ e.tipo_evento | etiqueta:'tipo_evento' }}</span>
-                        {{ e.descripcion }}
+                        {{ e.descripcion | fechasEnTexto }}
                         <div class="text-sm text-muted">
-                            {{ e.usuario_correo ?? 'Sistema' }}@if (e.paso_nombre) { · {{ e.paso_nombre }} }
+                            {{ e.usuario_nombre ?? e.usuario_correo ?? 'Sistema' }}@if (e.paso_nombre) { · {{ e.paso_nombre }} }
                         </div>
                     </div>
                 </li>
@@ -509,6 +537,13 @@
             @if (exportando()) {
             <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Generando...</p></div>
             }
+
+            <!-- Un solo formato: el expediente se entrega en PDF, que no se
+                 puede editar después de emitido. Imprimir usa ese mismo PDF. -->
+            <p class="text-muted formato-unico">
+                <i class="ti ti-file-type-pdf"></i>
+                Se emite en PDF: es el antecedente que se archiva o se entrega firmado.
+            </p>
         </div>
 
         <div class="modal__footer">
@@ -519,6 +554,59 @@
             <button class="btn btn--primary" style="width:auto" [disabled]="exportando()"
                 (click)="descargarExpediente()">
                 <i class="ti ti-download"></i> Descargar PDF
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Acta de notificación: se emite en PDF y no se descarga de una, porque lo
+     que casi siempre se necesita es el papel para firmar, no el archivo. -->
+@if (actaAbierta(); as a) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarActa() : null">
+    <div class="modal modal-box-sm" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-printer"></i> Acta de notificación</h3>
+            <button class="modal__close" (click)="cerrarActa()"><i class="ti ti-x"></i></button>
+        </div>
+
+        <div class="modal__body">
+            @if (error()) {
+            <div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+            }
+            @if (avisoActa()) {
+            <div class="alert alert--warning"><i class="ti ti-info-circle"></i> {{ avisoActa() }}</div>
+            }
+            <p class="text-muted">
+                Se emite a nombre de <strong>{{ a.gestion.involucrado_nombre }}</strong> e incluye la
+                medida que se le notifica, el plazo para pedir reconsideración y las dos firmas.
+            </p>
+            <!-- El plazo se pregunta y no se deduce: en expulsión son los 15
+                 días hábiles de la ley (se precarga), pero en el resto de las
+                 medidas lo fija el reglamento interno de cada establecimiento y
+                 el sistema todavía no lo guarda. -->
+            <div class="form-group">
+                <label>Plazo para pedir reconsideración (días hábiles)</label>
+                <input type="number" min="1" max="60" [(ngModel)]="actaPlazoDias" name="acta_plazo" />
+                <p class="text-sm text-muted">
+                    Se imprime en el acta. Revisa qué plazo fija tu Reglamento Interno; en expulsión
+                    y cancelación de matrícula son 15 días hábiles por ley.
+                </p>
+            </div>
+
+            <p class="text-muted formato-unico">
+                <i class="ti ti-file-type-pdf"></i>
+                Imprímela, hazla firmar y vuelve a subirla con "Subir firmada": esa copia es la
+                prueba de que la persona recibió la notificación.
+            </p>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" style="width:auto" (click)="descargarActa()">
+                <i class="ti ti-download"></i> Descargar PDF
+            </button>
+            <button class="btn btn--primary" style="width:auto" (click)="imprimirActa()">
+                <i class="ti ti-printer"></i> Imprimir
             </button>
         </div>
     </div>
@@ -543,14 +631,16 @@
 <ng-template #medidas>
     <!-- Medidas de protección: corren en paralelo al procedimiento y tienen sus
          propios plazos. -->
-    <app-medidas-proteccion [idCaso]="id" [estudiantes]="caso().estudiantes ?? []" [casoActivo]="activo()" />
+    <app-medidas-proteccion [idCaso]="id" [estudiantes]="estudiantesDelCaso()" [casoActivo]="activo()"
+        [pasosConMedida]="pasosConMedida()" />
 
     <!-- Medidas disciplinarias: cuelgan del registro, no del caso, porque es el
          hecho el que las motiva. Son el insumo del informe de expulsión. -->
     <!-- Las medidas disciplinarias cuelgan del registro y las suspensiones
          cautelares del caso, por eso van los dos ids. -->
     <app-medidas-disciplinarias [idRegistro]="caso().id_registro" [idCaso]="id"
-        [estudiantes]="caso().estudiantes ?? []" [casoActivo]="activo()" />
+        [estudiantes]="estudiantesDelCaso()" [casoActivo]="activo()"
+        [pasosConMedida]="pasosConMedida()" />
 </ng-template>
 
 <!-- Un paso que alcanza a varias personas se cumple una vez por cada una: el
@@ -564,9 +654,35 @@
             Se cumple una vez por cada {{ p.por_involucrado_rol === 'todos' ? 'parte' : (p.por_involucrado_rol |
             etiqueta:'rol_involucrado') | lowercase }}
         </span>
+
+        <!-- Qué exige la ley según la medida que se notifica. Va acá y no en la
+             descripción del paso porque el paso es el mismo para todas las
+             medidas y lo exigible cambia con cada una: en expulsión y
+             cancelación de matrícula el acta escrita la manda la ley; en el
+             resto, el reglamento interno. -->
+        @if (p.requiere_notificacion) {
+        <div class="aviso-legal">
+            <i class="ti ti-scale"></i>
+            <div>
+                <strong>Expulsión y cancelación de matrícula:</strong> la notificación por escrito
+                al estudiante y al apoderado es obligatoria por ley, y desde ella corren 15 días
+                hábiles para pedir reconsideración ante el Director (art. 6 letra d), DFL 2 de 2009).
+                <br />
+                <strong>Suspensión, condicionalidad y demás medidas disciplinarias:</strong> se
+                notifican por escrito y el plazo para reclamar es el que fija el Reglamento Interno.
+                <br />
+                <strong>Medidas formativas:</strong> basta dejar constancia de la fecha y la vía.
+                @if (tipoMedidaResuelto() !== 'formativa') {
+                <br />
+                Imprime el acta, hazla firmar y súbela escaneada: la firma es la prueba de que la
+                persona recibió la notificación.
+                }
+            </div>
+        </div>
+        }
         <ul>
             @for (g of p.involucrados; track g.id_paso_involucrado) {
-            <li class="gestion" [class.gestion--falta]="faltaFirma(p, g)">
+            <li class="gestion" [class.gestion--falta]="faltaNotificacion(p, g)">
                 <div class="gestion__cabecera">
                     <i class="ti gestion__marca" [class.ti-circle-check]="g.estado === 'cumplido'"
                         [class.ti-circle-dashed]="g.estado === 'pendiente'"
@@ -575,13 +691,13 @@
                     @if (g.involucrado_rol) {
                     <span class="badge badge--leve">{{ g.involucrado_rol | etiqueta:'rol_involucrado' }}</span>
                     }
-                    @if (faltaFirma(p, g)) {
+                    @if (faltaNotificacion(p, g)) {
                     <span class="badge badge--gravísima gestion__estado">
-                        <i class="ti ti-writing-off"></i> falta firma
+                        <i class="ti ti-bell-exclamation"></i> falta notificar
                     </span>
-                    } @else if (g.fecha_acuse) {
+                    } @else if (g.fecha_notificacion) {
                     <span class="badge badge--validado gestion__estado">
-                        <i class="ti ti-writing-sign"></i> firmada {{ g.fecha_acuse | date:'dd/MM/yyyy' }}
+                        <i class="ti ti-bell-check"></i> notificada {{ g.fecha_notificacion | fecha }}
                     </span>
                     }
                 </div>
@@ -590,22 +706,25 @@
                      ni de un desplegable: registrar la gestión con cada persona
                      es lo que se viene a hacer al paso, y esconderlo obligaba a
                      abrirlos de a uno para ver en qué estaba cada quien.
-                     Estado y firma van en un solo <select>: preguntar "¿se
-                     cumplió?" y aparte "¿firmó?" era la misma pregunta dos
-                     veces, porque no hay firma sin gestión cumplida. -->
+                     Estado y notificación van en un solo <select>: preguntar
+                     "¿se cumplió?" y aparte "¿se le notificó?" era la misma
+                     pregunta dos veces, porque no hay notificación sin gestión
+                     cumplida. A la persona NO se le pide firma: lo que se
+                     acredita es que se le notificó, cuándo y por qué vía. -->
                 @if (editable && formsGestion[g.id_paso_involucrado]; as f) {
                 <div class="gestion__form" [appPuede]="Permiso.ProtocoloActivadoCompletarPaso" [appPuedeSi]="activo()"
                     appPuedeMotivo="El protocolo ya no está activo">
                     <label class="gestion__campo gestion__campo--estado">
                         <span>Estado</span>
                         <select [(ngModel)]="f.estado_ui" [name]="'estado_' + g.id_paso_involucrado">
-                            @if (p.requiere_acuse) {
-                            <option value="cumplido_firmado">Cumplida y firmada</option>
-                            <!-- Una firma ya sellada no se puede deshacer desde
-                                 acá (el backend nunca borra un fecha_acuse), así
-                                 que tampoco se ofrece la opción de sacarla. -->
-                            @if (!g.fecha_acuse) {
-                            <option value="cumplido">Cumplida, sin firma</option>
+                            @if (p.requiere_notificacion) {
+                            <option value="cumplido_notificado">Cumplida y notificada</option>
+                            <!-- Una notificación ya sellada no se puede deshacer
+                                 desde acá (el backend nunca borra una
+                                 fecha_notificacion), así que tampoco se ofrece
+                                 la opción de sacarla. -->
+                            @if (!g.fecha_notificacion) {
+                            <option value="cumplido">Cumplida, sin notificar</option>
                             }
                             } @else {
                             <option value="cumplido">Cumplida</option>
@@ -615,16 +734,17 @@
                         </select>
                     </label>
 
-                    <!-- Cómo se le notificó: es el dato que se pide cuando el
-                         apoderado reclama que nunca se enteró, así que se
-                         muestra siempre que haya firma — también con la firma
-                         ya registrada, para poder corregir el medio. -->
-                    @if (p.requiere_acuse && f.estado_ui === 'cumplido_firmado') {
+                    <!-- Por qué vía se le notificó: es el dato que se pide
+                         cuando el apoderado reclama que nunca se enteró, así
+                         que se muestra siempre que haya notificación — también
+                         con la notificación ya registrada, para poder corregir
+                         la vía. -->
+                    @if (p.requiere_notificacion && f.estado_ui === 'cumplido_notificado') {
                     <label class="gestion__campo gestion__campo--medio">
                         <span>Notificada por</span>
-                        <select [(ngModel)]="f.medio_acuse" [name]="'medio_' + g.id_paso_involucrado">
-                            @for (m of MEDIOS_ACUSE; track m) {
-                            <option [value]="m">{{ m | etiqueta:'medio_acuse' }}</option>
+                        <select [(ngModel)]="f.medio_notificacion" [name]="'medio_' + g.id_paso_involucrado">
+                            @for (m of MEDIOS_NOTIFICACION; track m) {
+                            <option [value]="m">{{ m | etiqueta:'medio_notificacion' }}</option>
                             }
                         </select>
                     </label>
@@ -643,11 +763,111 @@
                             placeholder="Opcional" />
                     </label>
                 </div>
-                } @else if (!editable && (g.fecha_gestion || g.observacion)) {
+                } @else if (!editable) {
+                @if (g.fecha_gestion || g.observacion || g.notificador_nombre) {
                 <p class="text-sm text-muted">
-                    @if (g.fecha_gestion) { {{ g.fecha_gestion | date:'dd/MM/yyyy' }} }
-                    @if (g.medio_acuse) { · notificada por {{ g.medio_acuse | etiqueta:'medio_acuse' }} }
+                    @if (g.fecha_gestion) { {{ g.fecha_gestion | fecha }} }
+                    @if (g.medio_notificacion) { · notificada por {{ g.medio_notificacion | etiqueta:'medio_notificacion' }} }
+                    <!-- Quién dejó la constancia. Una notificación sin autor se
+                         lee como hecha por "el colegio": si después se discute
+                         qué se dijo, hay que poder preguntarle a alguien. -->
+                    @if (g.notificador_nombre) { · registrada por {{ g.notificador_nombre
+                        }}@if (g.notificador_cargo) { ({{ g.notificador_cargo }})} }
                     @if (g.observacion) { · {{ g.observacion }} }
+                </p>
+                }
+
+                <!-- Notificación rezagada: el paso ya se completó pero de esta
+                     persona nunca quedó constancia. Sin esto la notificación era
+                     irrecuperable (el formulario de gestión sólo existe en el
+                     paso en curso) y el caso arrastraba un "falta notificar" que
+                     ya no había forma de responder. Guarda de inmediato — acá no
+                     hay "Completar paso" que dispare el guardado.
+
+                     Sigue disponible con el caso ya cerrado: el cierre admite
+                     notificaciones pendientes (pide el motivo, no las bloquea) y
+                     la constancia suele conseguirse después. Sólo agrega el dato
+                     que faltaba — nunca borra ni reabre nada — y queda en la
+                     bitácora con quién y cuándo lo registró. -->
+                @if (faltaNotificacion(p, g) && formsGestion[g.id_paso_involucrado]; as f) {
+                <div class="gestion__form gestion__form--rezagada"
+                    [appPuede]="Permiso.ProtocoloActivadoCompletarPaso">
+                    <label class="gestion__campo gestion__campo--medio">
+                        <span>Notificada por</span>
+                        <select [(ngModel)]="f.medio_notificacion" [name]="'medio_tardio_' + g.id_paso_involucrado">
+                            @for (m of MEDIOS_NOTIFICACION; track m) {
+                            <option [value]="m">{{ m | etiqueta:'medio_notificacion' }}</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="gestion__campo gestion__campo--fecha">
+                        <!-- La fecha en que realmente se notificó, que es la que
+                             se exhibe si después reclaman que nunca se enteraron. -->
+                        <span>Fecha</span>
+                        <input type="date" [(ngModel)]="f.fecha_gestion"
+                            [name]="'fecha_tardio_' + g.id_paso_involucrado" />
+                    </label>
+                    <button type="button" class="btn btn--sm" (click)="registrarNotificacionTardia(p, g)"
+                        [disabled]="notificando() === g.id_paso_involucrado">
+                        @if (notificando() === g.id_paso_involucrado) {
+                        <i class="ti ti-loader-2 spin"></i>
+                        } @else {
+                        <i class="ti ti-bell-check"></i>
+                        }
+                        Registrar notificación
+                    </button>
+                </div>
+                }
+                }
+
+                <!-- El papel: se imprime, se firma y vuelve escaneado. Se ofrece
+                     siempre que el paso exija notificar, también con el paso ya
+                     cerrado: la copia firmada suele llegar días después. -->
+                @if (requiereActaGestion(p, g) && g.estado !== 'no_aplica') {
+                <div class="gestion__acta">
+                    <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                        (click)="abrirActa(p, g)">
+                        <i class="ti ti-printer"></i> Acta de notificación
+                    </button>
+
+                    <label class="btn btn--outline btn--sm" style="width:auto"
+                        [appPuede]="Permiso.ProtocoloActivadoCompletarPaso">
+                        @if (subiendoActa() === g.id_paso_involucrado) {
+                        <i class="ti ti-loader-2 spin"></i>
+                        } @else {
+                        <i class="ti ti-upload"></i>
+                        }
+                        {{ g.tiene_acta_firmada ? 'Reemplazar firmada' : 'Subir firmada' }}
+                        <!-- Sin filtro de tipo ni de peso: entra el escaneo, la
+                             foto o el documento tal como lo tenga el usuario, y
+                             el backend lo comprime al guardarlo. -->
+                        <input type="file" hidden (change)="subirActaFirmada(g, $event)" />
+                    </label>
+
+                    @if (g.tiene_acta_firmada) {
+                    <button type="button" class="btn btn--sm" style="width:auto" (click)="verActaFirmada(g)">
+                        <i class="ti ti-file-check"></i> Ver acta firmada
+                    </button>
+                    } @else {
+                    <span class="text-sm text-muted">Sin acta firmada</span>
+                    }
+                </div>
+                } @else if (p.requiere_notificacion && tipoMedidaResuelto() === 'formativa') {
+                <!-- Medida formativa: no abre plazo de reconsideración ni se
+                     firma. Se dice por qué no está el acta, en vez de dejar el
+                     hueco y que alguien la busque. -->
+                <p class="text-sm text-muted">
+                    <i class="ti ti-info-circle"></i>
+                    Medida formativa: basta con dejar la constancia de la notificación. No se exige
+                    acta firmada.
+                </p>
+                } @else if (requiereActa(p) && g.estado !== 'no_aplica' && medioDe(g) && medioDe(g) !== 'carta') {
+                <!-- Notificada por una vía que no es carta: la constancia de fecha
+                     y vía basta. No se pide carta firmada ni se traba el paso. -->
+                <p class="text-sm text-muted">
+                    <i class="ti ti-info-circle"></i>
+                    Notificada por {{ medioDe(g) | etiqueta:'medio_notificacion' }}: basta la constancia
+                    de fecha y vía. La carta firmada se exige sólo cuando la notificación se hace por carta.
                 </p>
                 }
             </li>
@@ -715,24 +935,70 @@
                 @if (formInvolucrado.tipo_persona === 'estudiante') {
                 <div class="form-group">
                     <label>Estudiante</label>
-                    <select [(ngModel)]="formInvolucrado.id_estudiante" name="id_estudiante">
-                        <option [ngValue]="null" disabled>Seleccione...</option>
-                        @for (e of estudiantes(); track e.id_estudiante) {
-                        <option [ngValue]="e.id_estudiante">{{ e.nombre }} {{ e.apellido }} @if (e.curso_nombre) { — {{
-                            e.curso_nombre }} }</option>
-                        }
-                    </select>
+                    <!-- Buscador y no <select>: con la matrícula completa,
+                         encontrar a un alumno en una lista ordenada por id
+                         obliga a scrollear. Mismo componente y mismo criterio
+                         de búsqueda que Estudiantes y el modal de registros. -->
+                    @if (estudianteElegido(); as e) {
+                    <div class="elegido">
+                        <span>
+                            <strong>{{ e.nombre }} {{ e.apellido }}</strong>
+                            <span class="text-sm text-muted">
+                                {{ e.run }}-{{ e.dv }} @if (e.curso_nombre) { · {{ e.curso_nombre | cursoNombre }} }
+                            </span>
+                        </span>
+                        <button class="btn-icon" title="Elegir otro" (click)="limpiarEstudianteElegido()">
+                            <i class="ti ti-x"></i>
+                        </button>
+                    </div>
+                    } @else {
+                    <app-buscador [items]="sugerenciasEstudiante()" [texto]="busquedaEstudiante()"
+                        (textoChange)="busquedaEstudiante.set($event)" placeholder="Buscar por nombre o RUT..."
+                        (elegir)="elegirEstudiante($event)">
+                        <ng-template #item let-e>
+                            <span class="sugerencia__nombre">{{ e.nombre }} {{ e.apellido }}</span>
+                            <span class="sugerencia__meta">
+                                {{ e.run }}-{{ e.dv }} @if (e.curso_nombre) { · {{ e.curso_nombre | cursoNombre }} }
+                                <!-- Ya está en el caso: se avisa, pero se deja
+                                     elegir. El mismo estudiante puede figurar
+                                     con dos roles (agresión mutua). -->
+                                @if (e.roles_en_el_caso.length) {
+                                <span class="badge badge--pendiente">
+                                    ya en el caso como {{ e.roles_en_el_caso | etiqueta:'rol_involucrado' }}
+                                </span>
+                                }
+                            </span>
+                        </ng-template>
+                        <ng-template #vacio>Ningún estudiante coincide</ng-template>
+                    </app-buscador>
+                    }
                 </div>
                 } @else if (formInvolucrado.tipo_persona === 'funcionario') {
                 <div class="form-group">
                     <label>Funcionario</label>
+                    <!-- No todo funcionario tiene cuenta en el sistema (un
+                         reemplazante, un asistente). Si no está en la lista se
+                         escribe a mano y queda igual como funcionario del caso. -->
                     <select [(ngModel)]="formInvolucrado.id_usuario" name="id_usuario">
                         <option [ngValue]="null" disabled>Seleccione...</option>
                         @for (u of usuarios(); track u.id_usuario) {
                         <option [ngValue]="u.id_usuario">{{ u.nombre || u.correo }}</option>
                         }
+                        <option [ngValue]="SIN_CUENTA">No está en la lista (escribir a mano)</option>
                     </select>
                 </div>
+                @if (formInvolucrado.id_usuario === SIN_CUENTA) {
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre *</label>
+                        <input type="text" [(ngModel)]="formInvolucrado.nombre" name="nombre_funcionario" />
+                    </div>
+                    <div class="form-group">
+                        <label>RUT</label>
+                        <input type="text" [(ngModel)]="formInvolucrado.rut" name="rut_funcionario" />
+                    </div>
+                </div>
+                }
                 } @else {
                 <div class="form-row">
                     <div class="form-group">

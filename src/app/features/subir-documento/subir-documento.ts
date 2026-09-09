@@ -171,10 +171,7 @@ export class SubirDocumento {
   confirmar() {
     this.loading.set(true);
     this.api
-      .confirmarRegistro(this.respuestaIA().id_registro, {
-        ...this.form,
-        estado_validacion: 'validado',
-      })
+      .confirmarRegistro(this.respuestaIA().id_registro, { ...this.form })
       .subscribe({
         next: () => this.router.navigate(['/registros']),
         error: () => {

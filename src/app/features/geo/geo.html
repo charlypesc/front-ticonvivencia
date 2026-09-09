@@ -244,6 +244,11 @@
                             <i class="ti ti-users"></i> {{ e.cantidad_usuarios }}
                         </span>
                         }
+                        @if (accesoBloqueado(e)) {
+                        <span class="badge-bloqueado" title="Sus usuarios no pueden iniciar sesión">
+                            <i class="ti ti-lock"></i> Acceso suspendido
+                        </span>
+                        }
                     </td>
                     <td class="text-muted">{{ e.rbd }}</td>
                     <td class="text-muted">{{ e.tipo_dependencia ?? '—' }}</td>
@@ -321,7 +326,38 @@
 <div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarDetalleEstablecimiento() : null">
     <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal__header">
-            <h3><i class="ti ti-building"></i> {{ det.nombre }}</h3>
+            <h3>
+                <i class="ti ti-building"></i> {{ det.nombre }}
+                <!-- Editar va acá y no en el footer: es una acción sobre los
+                     datos que se están mirando, y libera espacio abajo para las
+                     acciones que sí abren otro flujo. -->
+                <button class="btn-icon" title="Editar establecimiento"
+                    [appPuede]="Permiso.EstablecimientoEditar"
+                    (click)="cerrarDetalleEstablecimiento(); abrirFormEstablecimiento(det)">
+                    <i class="ti ti-pencil"></i>
+                </button>
+                <!-- Interruptor de acceso: encendido = sus usuarios pueden
+                     entrar. Apagarlo no borra nada, solo impide que inicien
+                     sesión. Va solo acá, en la ficha, y no en las acciones de
+                     la tabla: es una decisión sobre el colegio que se está
+                     mirando, no algo para tocar al pasar por una lista de
+                     miles de filas. -->
+                <button class="switch switch--sm" role="switch"
+                    [class.switch--on]="accesoActivo(det)"
+                    [attr.aria-checked]="accesoActivo(det)"
+                    [disabled]="!tieneUsuarios(det)"
+                    [title]="!tieneUsuarios(det)
+                        ? 'Sin usuarios: no hay a quién darle acceso'
+                        : (accesoBloqueado(det) ? 'Restablecer el acceso de sus usuarios' : 'Suspender el acceso de sus usuarios')"
+                    [appPuede]="Permiso.EstablecimientoEditar"
+                    (click)="alternarAcceso(det)">
+                </button>
+                @if (accesoBloqueado(det)) {
+                <span class="badge-bloqueado" title="Sus usuarios no pueden iniciar sesión">
+                    <i class="ti ti-lock"></i> Acceso suspendido
+                </span>
+                }
+            </h3>
             <button class="modal__close" (click)="cerrarDetalleEstablecimiento()">
                 <i class="ti ti-x"></i>
             </button>
@@ -357,11 +393,35 @@
                     <a [href]="'mailto:' + det.correo">{{ det.correo }}</a>
                 </div>
                 }
+                <!-- El directorio de RBD llega sin sostenedores: la fila se
+                     muestra siempre, también cuando falta, porque es justo el
+                     dato que hay que completar desde acá. -->
+                <div class="detalle-item">
+                    <i class="ti ti-briefcase"></i>
+                    @if (det.id_sostenedor) {
+                    <span>
+                        Sostenedor: {{ det.sostenedor_nombre }}
+                        @if (det.sostenedor_rut) { <span class="text-muted">— {{ det.sostenedor_rut }}</span> }
+                    </span>
+                    <button class="btn-icon btn-icon--danger" title="Quitar sostenedor"
+                        [appPuede]="Permiso.SostenedorAsignarEstablecimiento" (click)="quitarSostenedor(det)">
+                        <i class="ti ti-unlink"></i>
+                    </button>
+                    } @else {
+                    <span class="text-muted">Sin sostenedor</span>
+                    }
+                </div>
             </div>
         </div>
 
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarDetalleEstablecimiento()">Cerrar</button>
+            <button class="btn btn--outline" style="width:auto"
+                [appPuede]="Permiso.SostenedorAsignarEstablecimiento"
+                (click)="cerrarDetalleEstablecimiento(); abrirFormSostenedor(det)">
+                <i class="ti ti-briefcase"></i>
+                {{ det.id_sostenedor ? 'Cambiar sostenedor' : 'Agregar sostenedor' }}
+            </button>
             <button class="btn btn--outline" style="width:auto" [appPuede]="Permiso.UsuarioCrear"
                 (click)="cerrarDetalleEstablecimiento(); abrirFormUsuario(det)">
                 <i class="ti ti-user-plus"></i>
@@ -373,11 +433,6 @@
                 Ingresar
             </button>
             }
-            <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.EstablecimientoEditar"
-                (click)="cerrarDetalleEstablecimiento(); abrirFormEstablecimiento(det)">
-                <i class="ti ti-pencil"></i>
-                Editar
-            </button>
         </div>
     </div>
 </div>
@@ -593,8 +648,42 @@
 
             <div class="form-group">
                 <label>Correo *</label>
-                <input type="email" placeholder="Ej: encargado@colegio.cl" autocomplete="off"
-                    [(ngModel)]="formUsuario.correo" name="correo_usuario" />
+                <input type="email" autocomplete="off"
+                    [placeholder]="'Ej: encargado@' + (dominioUsuarioPorDefecto() || 'colegio.cl')"
+                    [(ngModel)]="formUsuario.correo" name="correo_usuario"
+                    (blur)="completarCorreoUsuario()" />
+                <!-- El dominio sale del colegio elegido en el mapa: el ADMIN da
+                     de alta cuentas de establecimientos distintos seguidas, y
+                     así no terminan todas con el mismo dominio. -->
+                @if (dominioDistintoAlDelColegio()) {
+                <!-- Aviso, no bloqueo: hay altas legítimas fuera del dominio. -->
+                <p class="hint-dominio hint-dominio--aviso">
+                    <i class="ti ti-alert-triangle"></i>
+                    <span>
+                        Las otras {{ cuentasConDominioEnUso() }} cuentas de este colegio usan
+                        <strong>{{ '@' + dominioEnUsoUsuario() }}</strong>.
+                    </span>
+                    <button type="button" class="chip-dominio"
+                        (click)="usarDominioUsuario(dominioEnUsoUsuario())">
+                        usar {{ '@' + dominioEnUsoUsuario() }}
+                    </button>
+                </p>
+                } @else if (dominiosUsuario().length > 0) {
+                <p class="hint-dominio">
+                    <i class="ti ti-at"></i>
+                    Escribe solo el nombre de usuario y se completa con
+                    <strong>{{ '@' + dominioUsuarioPorDefecto() }}</strong>
+                    @if (dominiosUsuario().length > 1) {
+                    <span class="hint-dominio__otros">
+                        · o usa
+                        @for (d of dominiosUsuario().slice(1); track d) {
+                        <button type="button" class="chip-dominio"
+                            (click)="usarDominioUsuario(d)">{{ '@' + d }}</button>
+                        }
+                    </span>
+                    }
+                </p>
+                }
             </div>
             <!-- Sin campo de contraseña: la genera el servidor y se muestra una
                  sola vez, en el documento a entregar. -->
@@ -623,6 +712,96 @@
                 [disabled]="guardandoUsuario()" (click)="guardarUsuario()">
                 <i class="ti ti-device-floppy"></i>
                 {{ guardandoUsuario() ? 'Creando...' : 'Crear usuario' }}
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Modal Sostenedor del establecimiento -->
+@if (mostrarFormSostenedor() && establecimientoSostenedor(); as est) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarFormSostenedor() : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-briefcase"></i> Sostenedor</h3>
+            <button class="modal__close" (click)="cerrarFormSostenedor()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            <div class="usuario-est">
+                <i class="ti ti-building"></i>
+                <span><strong>{{ est.nombre }}</strong> — RBD {{ est.rbd }}</span>
+            </div>
+
+            <div class="form-group">
+                <label class="check-inline">
+                    <input type="radio" name="modo_sostenedor" value="existente"
+                        [checked]="modoSostenedor() === 'existente'" (change)="modoSostenedor.set('existente')" />
+                    Elegir uno existente
+                </label>
+                <label class="check-inline" [appPuede]="Permiso.SostenedorCrear">
+                    <input type="radio" name="modo_sostenedor" value="nuevo"
+                        [checked]="modoSostenedor() === 'nuevo'" (change)="modoSostenedor.set('nuevo')" />
+                    Crear uno nuevo
+                </label>
+            </div>
+
+            @if (modoSostenedor() === 'existente') {
+            <div class="form-group">
+                <label>Sostenedor *</label>
+                @if (cargandoSostenedores()) {
+                <p class="muted"><i class="ti ti-loader-2 spin"></i> Cargando...</p>
+                } @else {
+                <select [(ngModel)]="sostenedorSelId" name="id_sostenedor">
+                    <option [ngValue]="null" disabled>Seleccione...</option>
+                    @for (s of sostenedores(); track s.id_sostenedor) {
+                    <option [ngValue]="s.id_sostenedor">{{ s.representante_legal }} — {{ s.rut }}</option>
+                    }
+                </select>
+                @if (sostenedores().length === 0) {
+                <p class="muted">No hay sostenedores registrados todavía.</p>
+                }
+                }
+            </div>
+            } @else {
+            <div class="form-row">
+                <div class="form-group">
+                    <label>RUT *</label>
+                    <input type="text" placeholder="Ej: 76.123.456-7" autocomplete="off"
+                        [(ngModel)]="formSostenedor.rut" name="rut_sostenedor" />
+                </div>
+                <div class="form-group">
+                    <label>Representante legal *</label>
+                    <input type="text" placeholder="Ej: Corporación Municipal de Arica" autocomplete="off"
+                        [(ngModel)]="formSostenedor.representante_legal" name="representante_legal" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Dirección</label>
+                <input type="text" [(ngModel)]="formSostenedor.direccion" name="direccion_sostenedor" />
+            </div>
+            <div class="form-group">
+                <label>Correo</label>
+                <input type="text" [(ngModel)]="formSostenedor.mail" name="mail_sostenedor" />
+            </div>
+            }
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarFormSostenedor()">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto"
+                [appPuede]="Permiso.SostenedorAsignarEstablecimiento" [disabled]="guardandoSostenedor()"
+                (click)="guardarSostenedor()">
+                <i class="ti ti-device-floppy"></i>
+                {{ guardandoSostenedor() ? 'Guardando...' : 'Vincular sostenedor' }}
             </button>
         </div>
     </div>

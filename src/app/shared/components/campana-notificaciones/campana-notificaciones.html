@@ -1,6 +1,13 @@
 <div class="campana">
-    <button class="navbar__icon-btn" (click)="alternar()" title="Notificaciones">
-        <i class="ti ti-bell"></i>
+    <!-- Botón propio y no el genérico del navbar: con notificaciones sin leer
+         cambia de ícono (campana sonando), se tiñe y el contador lleva un anillo
+         blanco para despegarse del ícono. Un badge plano sobre la campana gris
+         pasaba desapercibido, que es justo lo contrario de lo que tiene que
+         hacer un aviso. -->
+    <button class="campana__btn" [class.campana__btn--activa]="sinLeer() > 0"
+        [class.campana__btn--abierta]="abierto()" (click)="alternar()"
+        [attr.aria-label]="sinLeer() > 0 ? sinLeer() + ' notificaciones sin leer' : 'Notificaciones'">
+        <i class="ti" [class.ti-bell]="sinLeer() === 0" [class.ti-bell-ringing-2]="sinLeer() > 0"></i>
         @if (sinLeer() > 0) { <span class="campana__badge">{{ badge() }}</span> }
     </button>
 
@@ -32,7 +39,7 @@
                 <div class="campana__texto">
                     <strong>{{ n.titulo }}</strong>
                     @if (n.mensaje) { <span class="text-sm text-muted">{{ n.mensaje }}</span> }
-                    <span class="text-sm text-muted">{{ n.fecha | date:'dd/MM/yyyy HH:mm' }}</span>
+                    <span class="text-sm text-muted">{{ n.fecha | fecha:true }}</span>
                 </div>
             </li>
             }

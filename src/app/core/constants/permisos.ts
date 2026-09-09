@@ -75,7 +75,6 @@ export const Permiso = {
   RegistroEditar                : 42,
   RegistroEliminar              : 43,
   RegistroVerTodos              : 44,
-  RegistroValidar               : 45,
   RegistroConfirmar             : 46,
   RegistroVerConfidencial       : 75,
   RegistroEditarConfidencialidad: 76,
@@ -169,6 +168,7 @@ export const Permiso = {
   UsuarioActivar            : 68,
   UsuarioAsignarRol         : 69,
   UsuarioRestablecerPassword: 78,
+  UsuarioAsignarPermiso     : 114,
 
   // rol
   RolVer           : 70,
@@ -291,4 +291,9 @@ export const CODIGO_POR_ID: Record<number, string> = {
  107: 'documento_institucional.gestionar',
  108: 'constancia.ver',
  109: 'constancia.registrar',
+ 110: 'suspension_cautelar.ver',
+ 111: 'suspension_cautelar.crear',
+ 112: 'suspension_cautelar.registrar_reconsideracion',
+ 113: 'suspension_cautelar.resolver',
+ 114: 'usuario.asignar_permiso',
 };

@@ -74,12 +74,43 @@
     justify-content: center;
   }
 
-  &__correo {
+  // Saludo y colegio, uno debajo del otro: son dos datos distintos (quién soy /
+  // dónde estoy) y en una sola línea se leían como una frase corrida.
+  &__quien {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    min-width: 0;
+  }
+
+  &__saludo {
     font-size: 13px;
-    color: #4b5563;
-    max-width: 180px;
+    color: $gray-600;
+    max-width: 240px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    strong { color: $gray-900; font-weight: 600; }
+  }
+
+  &__establecimiento {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    color: $gray-400;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    i { font-size: 13px; }
+  }
+
+  // En pantallas chicas el saludo se va antes que los botones: el nombre es
+  // contexto, cerrar sesión es una acción.
+  @media (max-width: 900px) {
+    &__quien { display: none; }
   }
 }

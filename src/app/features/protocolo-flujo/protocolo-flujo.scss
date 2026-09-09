@@ -215,6 +215,95 @@ code {
     font-size: 13px;
     color: $gray-400;
   }
+
+  // "Continúa en" es el único lado con un editor de varias filas por salida
+  // (destino, etiqueta, condición, por defecto): a la mitad del modal esos
+  // controles quedaban tan angostos que el texto de las opciones ni se leía.
+  // Al ancho completo cae a su propia fila porque el lado de al lado ("Viene
+  // de") ya ocupó la suya.
+  &--salidas { flex-basis: 100%; }
+}
+
+// Cada salida propia del paso, como tarjeta numerada — antes eran filas
+// sueltas (select + input + borrar) apretadas dentro de la mitad del modal;
+// ahora tienen su propio espacio y cada campo lleva una etiqueta chica en vez
+// de depender solo del placeholder.
+.salidas { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+
+.salida {
+  border: 1px solid $gray-200;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: $white;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+
+    select { flex: 1; min-width: 0; }
+  }
+
+  // El número no identifica nada del modelo (no es un id ni un orden que se
+  // guarde): es sólo para poder decir "la salida 2" al hablar de una tarjeta
+  // en vez de "la de más abajo".
+  &__num {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: $primary-bg;
+    color: $primary;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  &__campo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+
+    span {
+      font-size: 11px;
+      font-weight: 600;
+      color: $gray-400;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+  }
+
+  // La condición se resalta como un bloque propio ("si <campo> es <valor>")
+  // porque es la única parte de la tarjeta donde una salida deja de ser
+  // incondicional, y eso conviene que se note de un vistazo.
+  &__condicion {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    background: $gray-50;
+    border-radius: 8px;
+
+    select { flex: 1; min-width: 0; }
+  }
+
+  &__condicion-si,
+  &__condicion-es {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: $gray-600;
+  }
+
+  &__default {
+    color: $gray-600;
+    margin-bottom: 0;
+  }
 }
 
 // Fila de controles que se editan juntos (rol + participación + borrar).
@@ -243,6 +332,23 @@ code {
 // Los dos caminos de una pregunta Sí/No. Van dentro de la pregunta y no en la
 // lista de salidas porque es una sola decisión: separarlos obligaba a recordar
 // el código del campo para escribir la condición a mano.
+// Lo que la tarjeta elegida trae y no se ve en ningún campo del formulario.
+.nota-tipo {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+// Falta algo sin lo cual el guardado va a fallar: se ve antes de apretar.
+.nota-falta {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  color: $accent-danger;
+}
+
 .rama {
   margin-top: 10px;
   padding-top: 10px;
@@ -268,16 +374,18 @@ code {
     > input { flex: 1; min-width: 0; }
   }
 
+  // Ancho mínimo, no fijo: una pregunta puede tener opciones más largas que
+  // "Sí" ("Parcialmente"), y en 34px quedaban cortadas.
   &__valor {
     flex-shrink: 0;
-    width: 34px;
+    min-width: 34px;
     text-align: center;
     font-size: 12px;
     font-weight: 700;
     color: $accent-ok;
     background: rgba(22, 163, 74, .1);
     border-radius: 999px;
-    padding: 3px 0;
+    padding: 3px 8px;
 
     &--no {
       color: $accent-danger;
@@ -312,4 +420,10 @@ code {
   font-size: inherit;
   text-decoration: underline;
   cursor: pointer;
+}
+
+// Va encima del diagrama, así que el margen empuja hacia abajo: separa la
+// ayuda de la leyenda del grafo en vez de dejar un hueco sobre ella.
+.grafo-ayuda {
+  margin: 0 0 8px;
 }

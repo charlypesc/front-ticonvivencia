@@ -26,6 +26,18 @@
     </div>
     }
 
+    @if (vencidasSinResolver > 0) {
+    <!-- Llegar al término de una sanción es que se cumplió, no una infracción
+         — a diferencia de una medida de protección. Igual se avisa: significa
+         que el job de vencimientos todavía no la marcó 'cumplida', o que el
+         caso sigue activo con la medida ya corrida. -->
+    <div class="alert alert--error">
+        <i class="ti ti-alert-octagon"></i>
+        <span>{{ vencidasSinResolver }} medida(s) que llegaron a su plazo y siguen figurando
+            vigentes. Revisá si corresponde cerrarlas.</span>
+    </div>
+    }
+
     @if (loading()) {
     <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
     } @else if (medidas().length === 0) {
@@ -40,6 +52,7 @@
                 <tr>
                     <th>Fecha</th>
                     <th>Medida</th>
+                    <th>Plazo</th>
                     <th>Estudiante</th>
                     <th>Resultado</th>
                     <th></th>
@@ -47,11 +60,26 @@
             </thead>
             <tbody>
                 @for (m of medidas(); track m.id_medida) {
-                <tr>
-                    <td>{{ m.fecha_aplicacion }}</td>
+                <tr [class.medida--vencida]="m.vencida">
+                    <td>{{ m.fecha_aplicacion | fecha }}</td>
                     <td>
                         {{ m.descripcion }}
-                        @if (m.tipo_medida) { <span class="badge">{{ m.tipo_medida }}</span> }
+                        @if (m.tipo_medida) {
+                        <span class="badge">{{ m.tipo_medida | etiqueta:'tipo_medida_disciplinaria' }}</span>
+                        }
+                        @if (m.es_prorroga) { <span class="badge badge--pendiente">Prórroga</span> }
+                        @if (m.estado && m.estado !== 'vigente') {
+                        <span class="badge">{{ m.estado | etiqueta:'estado_medida' }}</span>
+                        }
+                    </td>
+                    <td class="text-muted">
+                        @if (m.fecha_termino) {
+                        <span [class.plazos__vencido]="m.vencida">
+                            Hasta {{ m.fecha_termino | fecha }}
+                        </span>
+                        } @else if (m.fecha_revision) {
+                        Revisión: {{ m.fecha_revision | fecha }}
+                        } @else { — }
                     </td>
                     <td class="text-muted">
                         {{ m.estudiante_nombre ? m.estudiante_nombre + ' ' + m.estudiante_apellido : '—' }}
@@ -123,6 +151,16 @@
             </div>
             <div class="medida__acciones">
                 @if (c.estado !== 'resuelta') {
+                <!-- Corregir la carga. Desaparece apenas se interpone la
+                     reconsideración: se pidió reconsiderar estos fundamentos y
+                     esta fecha, y ya no se pueden mover. Misma regla que el
+                     backend. -->
+                @if (puedeEditarCautelar(c) && casoActivo) {
+                <button class="btn-icon" title="Corregir la suspensión cautelar"
+                    [appPuede]="Permiso.SuspensionCautelarCrear" (click)="abrirFormCautelar(c)">
+                    <i class="ti ti-pencil"></i>
+                </button>
+                }
                 @if (!c.fecha_reconsideracion) {
                 <button class="btn-icon" title="Registrar reconsideración"
                     [appPuede]="Permiso.SuspensionCautelarRegistrarReconsideracion"
@@ -139,7 +177,7 @@
         </div>
 
         <div class="text-muted">
-            Notificada el {{ c.fecha_notificacion | date:'dd-MM-yyyy HH:mm' }}
+            Notificada el {{ c.fecha_notificacion | fecha:true }}
             por {{ c.medio_notificacion }}
         </div>
 
@@ -149,12 +187,12 @@
         <div class="plazos">
             <span [class.plazos__vencido]="c.en_infraccion">
                 <i class="ti ti-clock-exclamation"></i>
-                Plazo para resolver: {{ c.fecha_limite_resolucion | date:'dd-MM-yyyy' }}
-                @if (c.fecha_resolucion) { — resuelto el {{ c.fecha_resolucion | date:'dd-MM-yyyy' }} }
+                Plazo para resolver: {{ c.fecha_limite_resolucion | fecha }}
+                @if (c.fecha_resolucion) { — resuelto el {{ c.fecha_resolucion | fecha }} }
             </span>
             <span>
                 <i class="ti ti-file-report"></i>
-                Reconsideración hasta: {{ c.fecha_limite_reconsideracion | date:'dd-MM-yyyy' }}
+                Reconsideración hasta: {{ c.fecha_limite_reconsideracion | fecha }}
             </span>
         </div>
 
@@ -172,7 +210,7 @@
         <div class="seguimientos">
             <p>
                 <strong>Reconsideración</strong> presentada el
-                {{ c.fecha_reconsideracion | date:'dd-MM-yyyy' }}.
+                {{ c.fecha_reconsideracion | fecha }}.
                 @if (c.reconsideracion_fuera_de_plazo) {
                 <span class="badge badge--pendiente">Fuera de plazo</span>
                 }
@@ -185,7 +223,7 @@
                  que el director se choque con el error. -->
             @if (c.consejo_profesores_acta) {
             <p><strong>Consejo de Profesores</strong>
-                @if (c.fecha_consejo) { ({{ c.fecha_consejo | date:'dd-MM-yyyy' }}) }:
+                @if (c.fecha_consejo) { ({{ c.fecha_consejo | fecha }}) }:
                 {{ c.consejo_profesores_acta }}
             </p>
             } @else if (c.estado !== 'resuelta') {
@@ -215,6 +253,22 @@
         </div>
         }
         <div class="modal__body">
+            <!-- De qué paso del protocolo salió. Es lo que permite que el paso
+                 que ordena la medida se dé por cumplido. -->
+            @if (pasosDisciplinarios.length) {
+            <div class="form-group">
+                <label>Paso que la ordena</label>
+                <select [(ngModel)]="form.id_activado_paso" name="id_activado_paso_md">
+                    <option [ngValue]="null">Sin paso asociado</option>
+                    @for (p of pasosDisciplinarios; track p.id_activado_paso) {
+                    <option [ngValue]="p.id_activado_paso">
+                        {{ p.nombre }}{{ p.pendiente ? ' — sin medida' : '' }}
+                    </option>
+                    }
+                </select>
+            </div>
+            }
+
             <div class="form-row">
                 <div class="form-group">
                     <label>Fecha de aplicación *</label>
@@ -232,13 +286,70 @@
             </div>
             <div class="form-group">
                 <label>Tipo de medida</label>
-                <input type="text" placeholder="Ej: Amonestación, derivación, servicio comunitario"
-                    [(ngModel)]="form.tipo_medida" name="tipo_medida" />
+                <select [(ngModel)]="form.tipo_medida" name="tipo_medida">
+                    <option value="">Seleccioná...</option>
+                    @for (t of TIPOS_MEDIDA; track t) {
+                    <option [value]="t">{{ t | etiqueta:'tipo_medida_disciplinaria' }}</option>
+                    }
+                </select>
             </div>
             <div class="form-group">
                 <label>Descripción *</label>
                 <textarea [(ngModel)]="form.descripcion" name="descripcion_md"></textarea>
             </div>
+
+            @if (llevaPlazo) {
+            <!-- Medida excepcional (Circular 482 p. 47): solo procede si hay
+                 peligro real para la integridad de alguien de la comunidad
+                 educativa, y por eso exige fundamento y plazo antes de aplicarse. -->
+            <div class="alert alert--warning">
+                <i class="ti ti-info-circle"></i>
+                <span>Medida excepcional: solo procede si existe un peligro real para la integridad
+                    física o psicológica de algún miembro de la comunidad educativa. Debe quedar
+                    justificada y acreditada <strong>antes</strong> de su adopción.</span>
+            </div>
+            <div class="form-group">
+                <label>Fundamento *</label>
+                <textarea [(ngModel)]="form.fundamento" name="fundamento_md"
+                    placeholder="Por qué correspondía esta medida y no otra..."></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Días hábiles *</label>
+                    <input type="number" min="1" [(ngModel)]="form.dias_habiles" name="dias_habiles" />
+                    <small class="text-muted">El término se calcula con los feriados de la región.</small>
+                </div>
+            </div>
+            @if (medidasProrrogables.length > 0) {
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" [(ngModel)]="form.es_prorroga" name="es_prorroga" />
+                    Es prórroga de una medida vigente
+                </label>
+                @if (form.es_prorroga) {
+                <select [(ngModel)]="form.id_medida_prorrogada" name="id_medida_prorrogada">
+                    <option [ngValue]="null">Seleccioná la medida original...</option>
+                    @for (m of medidasProrrogables; track m.id_medida) {
+                    <option [ngValue]="m.id_medida">
+                        {{ m.tipo_medida | etiqueta:'tipo_medida_disciplinaria' }} — {{ m.fecha_aplicacion | fecha }}
+                    </option>
+                    }
+                </select>
+                <small class="text-muted">La Circular 482 admite prorrogar "por una sola vez y por el
+                    mismo plazo". El sistema advierte si se excede, pero no lo bloquea.</small>
+                }
+            </div>
+            }
+            }
+
+            @if (esCondicionalidad) {
+            <div class="form-group">
+                <label>Fecha de revisión semestral</label>
+                <input type="date" [(ngModel)]="form.fecha_revision" name="fecha_revision" />
+                <small class="text-muted">La Circular 482 exige revisar la condicionalidad al final de
+                    cada semestre, independiente de cuándo se haya aplicado.</small>
+            </div>
+            }
         </div>
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
@@ -283,7 +394,10 @@
 <div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarFormCautelar() : null">
     <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal__header">
-            <h3><i class="ti ti-hourglass-high"></i> Decretar suspensión cautelar</h3>
+            <h3>
+                <i class="ti ti-hourglass-high"></i>
+                {{ editandoCautelar() ? 'Corregir suspensión cautelar' : 'Decretar suspensión cautelar' }}
+            </h3>
             <button class="modal__close" (click)="cerrarFormCautelar()"><i class="ti ti-x"></i></button>
         </div>
         @if (error()) {
@@ -298,6 +412,22 @@
                     resolver el procedimiento y <strong>cinco</strong> para que se pida
                     reconsideración. El sistema los calcula con los feriados de la región.</span>
             </div>
+            <!-- De qué paso del protocolo salió. Es lo que permite que el paso
+                 que ordena la medida se dé por cumplido. -->
+            @if (pasosCautelares.length) {
+            <div class="form-group">
+                <label>Paso que la ordena</label>
+                <select [(ngModel)]="formCautelar.id_activado_paso" name="id_activado_paso_sc">
+                    <option [ngValue]="null">Sin paso asociado</option>
+                    @for (p of pasosCautelares; track p.id_activado_paso) {
+                    <option [ngValue]="p.id_activado_paso">
+                        {{ p.nombre }}{{ p.pendiente ? ' — sin medida' : '' }}
+                    </option>
+                    }
+                </select>
+            </div>
+            }
+
             <div class="form-row">
                 <div class="form-group">
                     <label>Fecha y hora de notificación *</label>
@@ -332,11 +462,22 @@
                 <small class="text-muted">Se notifican junto con la decisión. Sin fundamentos por
                     escrito la medida no se sostiene.</small>
             </div>
+            <!-- El permiso para registrar la cautelar lo tiene también el
+                 Coordinador de convivencia, pero la facultad legal es
+                 nominativa del director (art. 6 letra d): el documento que se
+                 notifica tiene que salir firmado por él. -->
+            <div class="alert alert--warning">
+                <i class="ti ti-writing-sign"></i>
+                <span>La facultad de suspender cautelarmente es del <strong>director</strong>
+                    (art. 6 letra d). Este registro deja constancia en el sistema, pero el
+                    documento que se notifica debe ir firmado por el director o por quien lo
+                    subrogue formalmente.</span>
+            </div>
         </div>
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarFormCautelar()">Cancelar</button>
             <button class="btn btn--primary" style="width:auto" (click)="guardarCautelar()">
-                <i class="ti ti-device-floppy"></i> Decretar
+                <i class="ti ti-device-floppy"></i> {{ editandoCautelar() ? 'Guardar cambios' : 'Decretar' }}
             </button>
         </div>
     </div>
@@ -368,7 +509,7 @@
                     <input type="date" [(ngModel)]="formReconsideracion.fecha_reconsideracion"
                         name="fecha_reconsideracion" />
                     <small class="text-muted">El plazo vencía el
-                        {{ reconsiderarDe().fecha_limite_reconsideracion | date:'dd-MM-yyyy' }}. Si llegó
+                        {{ reconsiderarDe().fecha_limite_reconsideracion | fecha }}. Si llegó
                         después queda registrada igual: admitirla es decisión del director.</small>
                 </div>
                 <div class="form-group">
@@ -409,7 +550,7 @@
         }
         <div class="modal__body">
             <p class="text-muted">
-                Plazo para resolver: {{ resolverDe().fecha_limite_resolucion | date:'dd-MM-yyyy' }}
+                Plazo para resolver: {{ resolverDe().fecha_limite_resolucion | fecha }}
             </p>
             <div class="form-group">
                 <label>Fecha de resolución *</label>

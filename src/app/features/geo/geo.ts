@@ -11,6 +11,13 @@ import { CredencialesModal } from '../../shared/components/credenciales-modal/cr
 import { Buscador } from '../../shared/components/buscador/buscador';
 import { Credenciales } from '../../core/models/usuario.model';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
+import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
+import {
+  completarDominio,
+  dominioDe,
+  dominioDeCuentas,
+  dominiosSugeridos,
+} from '../../shared/utils/correo';
 
 /**
  * Rol con el que se precarga el alta de usuario desde la ficha de un
@@ -23,7 +30,7 @@ const ROL_POR_DEFECTO = 'ENCARGADO';
 @Component({
   selector: 'app-geo',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, CredencialesModal, Buscador, CerrarConEsc],
+  imports: [CommonModule, FormsModule, Puede, CredencialesModal, Buscador, CerrarConEsc, GuardarConCmdEnter],
   templateUrl: './geo.html',
   styleUrl: './geo.scss',
 })
@@ -159,6 +166,19 @@ export class Geo implements OnInit {
   formUsuario = { correo: '', nombre: '', roles: [] as string[] };
 
   /**
+   * Dominios propuestos para el correo, derivados del establecimiento elegido
+   * en el mapa (ver `shared/utils/correo.ts`). Acá importa más que en Usuarios:
+   * el ADMIN da de alta cuentas de colegios distintos una tras otra, y sin esto
+   * todas salen con el mismo dominio del placeholder.
+   */
+  dominiosUsuario = signal<string[]>([]);
+
+  /** El dominio que ya usan las cuentas de ese colegio; '' si es la primera. */
+  dominioEnUsoUsuario = signal('');
+  /** Cuántas cuentas lo usan, para poder decirlo en el aviso. */
+  cuentasConDominioEnUso = signal(0);
+
+  /**
    * Credenciales del usuario recién creado. La clave la genera el backend y
    * vuelve una sola vez en la respuesta del alta: si este modal no la muestra,
    * se pierde y hay que restablecerla desde Usuarios.
@@ -169,6 +189,18 @@ export class Geo implements OnInit {
   /** Roles del usuario de esas credenciales, ya legibles, para el documento. */
   rolCredenciales = signal('');
   guardandoUsuario = signal(false);
+
+  // Sostenedor del establecimiento: se vincula desde la ficha, eligiendo uno
+  // del catálogo o creándolo ahí mismo (el caso habitual la primera vez, porque
+  // el directorio de RBD llega sin sostenedores).
+  mostrarFormSostenedor = signal(false);
+  establecimientoSostenedor = signal<any | null>(null);
+  sostenedores = signal<any[]>([]);
+  cargandoSostenedores = signal(false);
+  modoSostenedor = signal<'existente' | 'nuevo'>('existente');
+  sostenedorSelId: number | null = null;
+  formSostenedor = { rut: '', representante_legal: '', direccion: '', mail: '' };
+  guardandoSostenedor = signal(false);
 
   mostrarFormEstablecimiento = signal(false);
   editandoEstablecimiento = signal<any | null>(null);
@@ -572,7 +604,26 @@ export class Geo implements OnInit {
     this.error.set('');
     this.establecimientoUsuario.set(est);
     this.formUsuario = { correo: '', nombre: '', roles: [ROL_POR_DEFECTO] };
+    // `est` viene del listado geo, que trae nombre y correo del colegio: alcanza
+    // para deducir el dominio sin pedir nada más al backend.
+    this.dominiosUsuario.set(dominiosSugeridos(est));
+    this.dominioEnUsoUsuario.set('');
+    this.cuentasConDominioEnUso.set(0);
     this.mostrarFormUsuario.set(true);
+
+    // A diferencia de la pantalla de Usuarios, acá las cuentas de ese colegio no
+    // están cargadas: hay que pedirlas para saber qué dominio ya usan. Manda por
+    // sobre lo deducido del nombre en cuanto exista al menos una.
+    this.api.getUsuariosDe(est.id_establecimiento).subscribe({
+      next: (us) => {
+        const enUso = dominioDeCuentas(us.map((u) => u.correo));
+        this.dominioEnUsoUsuario.set(enUso);
+        this.cuentasConDominioEnUso.set(us.filter((u) => dominioDe(u.correo) === enUso).length);
+        this.dominiosUsuario.set(dominiosSugeridos(est, us.map((u) => u.correo)));
+      },
+      // Sin la lista se sigue con lo deducido: una sugerencia no vale un error.
+      error: () => {},
+    });
 
     // El catálogo se pide cada vez que se abre: un rol creado hace un minuto
     // desde la administración tiene que aparecer sin recargar la página.
@@ -612,11 +663,41 @@ export class Geo implements OnInit {
     else this.formUsuario.roles.push(codigo);
   }
 
+  /** El dominio que se completa solo; '' si el colegio no da para deducir uno. */
+  dominioUsuarioPorDefecto = () => this.dominiosUsuario()[0] ?? '';
+
+  /** Al salir del campo: completa el dominio si solo se escribió el usuario. */
+  completarCorreoUsuario() {
+    this.formUsuario.correo = completarDominio(
+      this.formUsuario.correo,
+      this.dominioUsuarioPorDefecto(),
+    );
+  }
+
+  /** Aplica una de las sugerencias, conservando lo tipeado antes del `@`. */
+  usarDominioUsuario(dominio: string) {
+    const usuario = this.formUsuario.correo.split('@')[0].trim();
+    this.formUsuario.correo = usuario ? `${usuario}@${dominio}` : `@${dominio}`;
+  }
+
+  /**
+   * Avisa si el correo sale del dominio del resto de las cuentas de ese colegio.
+   * Aviso y no bloqueo, por lo mismo que en la pantalla de Usuarios. Es método
+   * y no computed porque depende de `formUsuario`, que es un objeto plano.
+   */
+  dominioDistintoAlDelColegio(): boolean {
+    const enUso = this.dominioEnUsoUsuario();
+    const escrito = dominioDe(this.formUsuario.correo);
+    return !!enUso && !!escrito && escrito !== enUso;
+  }
+
   guardarUsuario() {
     this.error.set('');
     const est = this.establecimientoUsuario();
     if (!est) return;
 
+    // Guardar con Enter no dispara el blur del campo.
+    this.completarCorreoUsuario();
     const { correo, nombre, roles } = this.formUsuario;
     if (!correo || !nombre.trim() || roles.length === 0) {
       this.error.set('Nombre, correo y al menos un rol son requeridos');
@@ -655,6 +736,135 @@ export class Geo implements OnInit {
     const comuna = this.comunaSel();
     if (!comuna) return;
     this.api.getEstablecimientosGeo(comuna.id_comuna).subscribe((data) => this.establecimientos.set(data));
+  }
+
+  // Sostenedor del establecimiento
+
+  abrirFormSostenedor(est: any) {
+    this.error.set('');
+    this.success.set('');
+    this.establecimientoSostenedor.set(est);
+    this.sostenedorSelId = est.id_sostenedor ?? null;
+    this.formSostenedor = { rut: '', representante_legal: '', direccion: '', mail: '' };
+    this.modoSostenedor.set('existente');
+    this.mostrarFormSostenedor.set(true);
+
+    this.cargandoSostenedores.set(true);
+    this.api.getSostenedores().subscribe({
+      next: (data) => {
+        this.sostenedores.set(data);
+        this.cargandoSostenedores.set(false);
+        // Sin catálogo no hay nada que elegir: se abre directo en "nuevo" para
+        // no dejar al usuario frente a un selector vacío.
+        if (data.length === 0) this.modoSostenedor.set('nuevo');
+      },
+      error: () => {
+        this.cargandoSostenedores.set(false);
+        this.error.set('No se pudo cargar el catálogo de sostenedores');
+      },
+    });
+  }
+
+  cerrarFormSostenedor() {
+    this.mostrarFormSostenedor.set(false);
+    this.establecimientoSostenedor.set(null);
+  }
+
+  guardarSostenedor() {
+    this.error.set('');
+    const est = this.establecimientoSostenedor();
+    if (!est) return;
+
+    if (this.modoSostenedor() === 'nuevo') {
+      const { rut, representante_legal, direccion, mail } = this.formSostenedor;
+      if (!rut.trim() || !representante_legal.trim()) {
+        this.error.set('RUT y representante legal son requeridos');
+        return;
+      }
+
+      this.guardandoSostenedor.set(true);
+      this.api
+        .createSostenedor({
+          rut: rut.trim(),
+          representante_legal: representante_legal.trim(),
+          direccion: direccion.trim() || undefined,
+          mail: mail.trim() || undefined,
+        })
+        .subscribe({
+          next: (res) => {
+            // Se vincula con los datos que se acaban de tipear: el catálogo en
+            // memoria todavía no tiene la fila nueva.
+            this.vincularSostenedor(est, res.id_sostenedor, {
+              representante_legal: representante_legal.trim(),
+              rut: rut.trim(),
+            });
+          },
+          error: (err) => {
+            this.guardandoSostenedor.set(false);
+            this.error.set(err.error?.message ?? 'Error al crear el sostenedor');
+          },
+        });
+      return;
+    }
+
+    if (!this.sostenedorSelId) {
+      this.error.set('Elija un sostenedor');
+      return;
+    }
+
+    const elegido = this.sostenedores().find((s) => s.id_sostenedor === this.sostenedorSelId);
+    this.guardandoSostenedor.set(true);
+    this.vincularSostenedor(est, this.sostenedorSelId, {
+      representante_legal: elegido?.representante_legal ?? '',
+      rut: elegido?.rut ?? '',
+    });
+  }
+
+  /**
+   * El PUT solo devuelve un mensaje, así que la ficha abierta se actualiza acá
+   * con los datos ya conocidos: sin esto, el modal de detalle seguiría diciendo
+   * "sin sostenedor" hasta volver a entrar a la comuna.
+   */
+  private vincularSostenedor(est: any, idSostenedor: number, datos: { representante_legal: string; rut: string }) {
+    this.api.asignarEstablecimientoASostenedor(idSostenedor, est.id_establecimiento).subscribe({
+      next: () => {
+        this.success.set(`Sostenedor vinculado a ${est.nombre}`);
+        this.actualizarSostenedorEnFicha(est, idSostenedor, datos.representante_legal, datos.rut);
+        this.cerrarFormSostenedor();
+        this.recargarEstablecimientos();
+      },
+      error: (err) => this.error.set(err.error?.message ?? 'Error al vincular el sostenedor'),
+    }).add(() => this.guardandoSostenedor.set(false));
+  }
+
+  async quitarSostenedor(est: any) {
+    if (!est?.id_sostenedor) return;
+    if (!(await this.confirmService.confirmarAccion(`¿Quitar el sostenedor de "${est.nombre}"?`))) return;
+
+    this.api.desasignarEstablecimientoDeSostenedor(est.id_sostenedor, est.id_establecimiento).subscribe({
+      next: () => {
+        this.success.set('Sostenedor desvinculado');
+        this.actualizarSostenedorEnFicha(est, null, null, null);
+        this.recargarEstablecimientos();
+      },
+      error: (err) => this.error.set(err.error?.message ?? 'Error al desvincular el sostenedor'),
+    });
+  }
+
+  private actualizarSostenedorEnFicha(
+    est: any,
+    idSostenedor: number | null,
+    nombre: string | null,
+    rut: string | null,
+  ) {
+    const actualizado = {
+      ...est,
+      id_sostenedor: idSostenedor,
+      sostenedor_nombre: nombre,
+      sostenedor_rut: rut,
+    };
+    if (this.detalleEstablecimiento()?.id_establecimiento === est.id_establecimiento)
+      this.detalleEstablecimiento.set(actualizado);
   }
 
   abrirFormEstablecimiento(item?: any) {
@@ -708,6 +918,63 @@ export class Geo implements OnInit {
         this.recargarEstablecimientos();
       },
       error: (err) => this.error.set(err.error?.message ?? 'Error al guardar'),
+    });
+  }
+
+  /** Acceso suspendido: sus usuarios no pueden iniciar sesión (ver login). */
+  accesoBloqueado(est: any) {
+    return !!est?.acceso_bloqueado;
+  }
+
+  /**
+   * Estado que muestra el interruptor de la ficha. Un establecimiento sin
+   * usuarios sale apagado aunque en la BD no esté suspendido: ahí no hay nadie
+   * que pueda entrar, así que mostrarlo encendido prometería un acceso que no
+   * existe. En cuanto se le crea el primer usuario, el interruptor se enciende
+   * solo (no hace falta tocar nada).
+   */
+  accesoActivo(est: any) {
+    return this.tieneUsuarios(est) && !this.accesoBloqueado(est);
+  }
+
+  /**
+   * Suspende o restablece el acceso del establecimiento. No borra ni desactiva
+   * nada: los usuarios, cursos y casos quedan intactos y al restablecerlo todos
+   * vuelven a entrar como estaban.
+   *
+   * Solo se confirma al suspender —es lo que deja gente afuera—; restablecer es
+   * volver a la normalidad y no necesita un modal en el medio.
+   */
+  async alternarAcceso(est: any) {
+    // Sin usuarios no hay acceso que suspender: el interruptor ya sale apagado
+    // y deshabilitado, esto solo evita que un click programático lo mueva.
+    if (!this.tieneUsuarios(est)) return;
+
+    const bloquear = !this.accesoBloqueado(est);
+
+    if (bloquear) {
+      const confirmado = await this.confirmService.confirmarAccion(
+        `¿Suspender el acceso de "${est.nombre}"? Sus usuarios no podrán iniciar sesión hasta ` +
+          `que se restablezca. No se elimina ninguna información del establecimiento.`,
+      );
+      if (!confirmado) return;
+    }
+
+    this.error.set('');
+    this.success.set('');
+    this.api.cambiarAccesoEstablecimientoGeo(est.id_establecimiento, bloquear).subscribe({
+      next: () => {
+        this.success.set(
+          bloquear ? `Acceso suspendido para ${est.nombre}` : `Acceso restablecido para ${est.nombre}`,
+        );
+        // La fila y la ficha abierta se actualizan acá: el PATCH solo devuelve
+        // un mensaje, y recargar la comuna entera por un toggle es caro.
+        est.acceso_bloqueado = bloquear ? 1 : 0;
+        if (this.detalleEstablecimiento()?.id_establecimiento === est.id_establecimiento)
+          this.detalleEstablecimiento.set({ ...est });
+        this.establecimientos.update((lista) => [...lista]);
+      },
+      error: (err) => this.error.set(err.error?.message ?? 'Error al cambiar el acceso'),
     });
   }
 

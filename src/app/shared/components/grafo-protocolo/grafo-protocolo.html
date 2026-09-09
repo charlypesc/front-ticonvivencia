@@ -4,6 +4,24 @@
     <p>Sin pasos que diagramar</p>
 </div>
 } @else {
+<!-- Cada punto va envuelto con su etiqueta: sueltos, el salto de línea de la
+     leyenda se metía entre medio y dejaba el símbolo colgando al final de una
+     línea con su texto en la siguiente. -->
+<p class="text-sm text-muted leyenda">
+    <span class="leyenda__item"><span class="punto punto--inicial"></span> Inicial</span>
+    <span class="leyenda__item"><span class="punto punto--final"></span> Final</span>
+    <span class="leyenda__item"><span class="punto punto--duro"></span> Plazo legal: al vencer, escala</span>
+    <span class="leyenda__item"><span class="punto punto--ciclo"></span> Se repite hasta cumplirse</span>
+    <span class="leyenda__item"><span class="punto punto--rama"></span> Con forma de hexágono, el paso decide
+        entre dos caminos</span>
+</p>
+<!-- Cómo se lee el diagrama no es una entrada de la leyenda: no le corresponde
+     ningún símbolo y va aparte, como frase corrida. -->
+<p class="text-sm text-muted leyenda-nota">
+    El flujo se lee de arriba hacia abajo; las flechas grises punteadas que suben por el costado son
+    retrocesos (por ejemplo, volver a la investigación).
+</p>
+
 <div class="lienzo">
     <!-- La capa existe para poder poner botones HTML encima del SVG: en SVG los
          iconos de Tabler (una tipografía) no se pueden usar como <i>. -->
@@ -14,19 +32,50 @@
                 orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" class="punta" />
             </marker>
-            <marker id="punta-atras" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"
+            <!-- La de los retrocesos va más grande: la línea es discontinua y
+                 va atenuada, así que con la punta del mismo tamaño que las del
+                 camino principal no se leía hacia dónde apunta. -->
+            <marker id="punta-atras" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8"
                 orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" class="punta punta--atras" />
+                <path d="M 0 0 L 10 5 L 0 10 z" class="punta" />
+            </marker>
+            <!-- La de la guía del rótulo es la más chica de las tres: no señala
+                 un paso del flujo, solo de qué carril habla el texto, y con el
+                 tamaño de las otras competía con ellas. -->
+            <marker id="punta-guia" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4.5" markerHeight="4.5"
+                orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" class="punta" />
             </marker>
         </defs>
 
-        <!-- Primero las aristas: las cajas van encima -->
+        <!-- Primero las aristas: las cajas van encima.
+
+             Cada línea se dibuja dos veces: un trazo blanco ancho por debajo y
+             encima la línea de verdad. Donde dos flechas se cruzan, la de
+             arriba se abre paso por el blanco y el cruce se lee como un puente
+             en vez de como un nudo — que era justo lo que volvía ilegible el
+             bloque de apelación, con tres retrocesos cruzándose en la misma
+             zona. -->
         @for (a of dibujadas(); track $index) {
+        <path [attr.d]="a.d" class="arista-halo" />
         <path [attr.d]="a.d" class="arista" [class.arista--atras]="a.atras"
             [attr.marker-end]="a.atras ? 'url(#punta-atras)' : 'url(#punta)'" />
+        }
+
+        <!-- Los rótulos van en una capa aparte, después de TODAS las líneas: en
+             la misma pasada, el halo de la arista siguiente borraba el texto de
+             la anterior. -->
+        @for (a of dibujadas(); track $index) {
+        <!-- Los rótulos de los carriles se escriben todos contra el mismo
+             borde, así que un hilo fino los ata a la línea de la que hablan. -->
+        @if (a.guiaX !== undefined) {
+        <circle [attr.cx]="a.guiaX" [attr.cy]="yGuia(a)" r="2.5" class="guia-punto" />
+        <path [attr.d]="guia(a)" class="guia" marker-end="url(#punta-guia)" />
+        }
         @for (linea of a.lineas; track $index) {
         <text [attr.x]="a.lx" [attr.y]="yEtiqueta(a, $index)" class="etiqueta"
-            [class.etiqueta--atras]="a.atras">{{ linea }}
+            [class.etiqueta--atras]="a.atras" [class.etiqueta--inicio]="a.anclaje === 'start'"
+            [class.etiqueta--fin]="a.anclaje === 'end'">{{ linea }}
             <title>{{ a.titulo }}</title>
         </text>
         }
@@ -35,12 +84,21 @@
         @for (n of ubicados(); track n.id) {
         <g class="nodo" [ngClass]="clase(n)" [class.nodo--seleccionado]="n.id === seleccionado()"
             (click)="seleccionar.emit(n)">
+            <!-- Los pasos que abren dos caminos van en hexágono: se lee de un
+                 vistazo dónde decide el flujo. El resto, caja normal. -->
+            @if (ramifican().has(n.id)) {
+            <polygon [attr.points]="n.puntos" />
+            } @else {
             <rect [attr.x]="n.x" [attr.y]="n.y" [attr.width]="ANCHO" [attr.height]="ALTO()" rx="8" />
+            }
             <title>{{ n.nombre }}</title>
             @for (linea of n.lineas; track $index) {
-            <text [attr.x]="n.x + 12" [attr.y]="yNombre(n, $index)" class="nodo__nombre">{{ linea }}</text>
+            <text [attr.x]="xTexto(n)" [attr.y]="yNombre(n, $index)" class="nodo__nombre">{{ linea }}</text>
             }
-            <text [attr.x]="n.x + 12" [attr.y]="yMeta(n)" class="nodo__meta">{{ n.meta }}</text>
+            <text [attr.x]="xTexto(n)" [attr.y]="yMeta(n)" class="nodo__meta">{{ n.meta }}</text>
+            @if (n.meta2) {
+            <text [attr.x]="xTexto(n)" [attr.y]="yMeta2(n)" class="nodo__meta nodo__meta--alcance">{{ n.meta2 }}</text>
+            }
             @if (n.es_paso_inicial) {
             <circle [attr.cx]="n.x + ANCHO - 14" [attr.cy]="n.y + 16" r="5" class="marca marca--inicial" />
             }
@@ -65,10 +123,4 @@
         }
     </div>
 </div>
-
-<p class="text-sm text-muted leyenda">
-    <span class="punto punto--inicial"></span> inicial
-    <span class="punto punto--final"></span> final
-    · las flechas grises que bajan son retrocesos (por ejemplo, volver a la investigación)
-</p>
 }

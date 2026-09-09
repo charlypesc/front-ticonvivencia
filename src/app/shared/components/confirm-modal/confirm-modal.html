@@ -13,6 +13,24 @@
 
         <div class="modal__body">
             <p class="confirm-mensaje">{{ state.mensaje }}</p>
+
+            <!-- El motivo se escribe acá, no en la pantalla de atrás: es parte
+                 de la decisión que se está confirmando y sólo existe mientras
+                 dura. -->
+            @if (state.campo; as campo) {
+            <div class="form-group">
+                <label>
+                    {{ campo.etiqueta }}
+                    @if (campo.obligatorio) { <span class="req">*</span> }
+                    @else { <span class="text-muted text-sm">(opcional)</span> }
+                </label>
+                <textarea rows="3" [ngModel]="state.texto" (ngModelChange)="confirmService.escribir($event)"
+                    name="confirm_texto" [placeholder]="campo.placeholder ?? ''" autofocus></textarea>
+                @if (state.error) {
+                <p class="text-sm confirm-error">{{ state.error }}</p>
+                }
+            </div>
+            }
         </div>
 
         <div class="modal__footer">

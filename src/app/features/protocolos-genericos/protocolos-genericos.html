@@ -67,7 +67,7 @@
             </thead>
             <tbody>
                 @for (p of protocolos(); track p.id_protocolo) {
-                <tr [class.fila-clickeable]="puedeEditar()" (click)="abrirForm(p)">
+                <tr class="fila-clickeable" (click)="abrirForm(p)">
                     <td>{{ p.nombre }}</td>
                     <td class="text-muted">{{ p.descripcion ?? '—' }}</td>
                     <td class="acciones" (click)="$event.stopPropagation()">
@@ -146,6 +146,17 @@
         </div>
 
         <div class="modal__footer">
+            <!-- El diagrama es otra pantalla, no un campo del formulario: va a
+                 la izquierda del footer, separado de Cancelar/Guardar. Solo al
+                 editar, porque un protocolo que todavía no existe no tiene
+                 flujo que mostrar. -->
+            @if (editando(); as p) {
+            <button class="btn btn--outline btn--sm" style="width:auto; margin-right:auto"
+                title="Ver el flujo de pasos de este protocolo" [appPuede]="Permiso.ProtocoloFlujoVer"
+                [routerLink]="['/protocolos-genericos', p.id_protocolo, 'flujo']" (click)="cerrarForm()">
+                <i class="ti ti-git-branch"></i> Ver diagrama
+            </button>
+            }
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
             <button class="btn btn--primary" style="width:auto"
                 [appPuede]="editando() ? Permiso.ProtocoloGenericoEditar : Permiso.ProtocoloGenericoCrear"

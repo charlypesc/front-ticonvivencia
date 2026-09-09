@@ -8,6 +8,13 @@ export interface Usuario {
    * varios: para decidir qué mostrar usar `permisos`, no este campo.
    */
   rol: string;
+  /**
+   * Nombre legible del rol principal ("Encargado de convivencia escolar"). Va
+   * aparte del código porque hay textos que se imprimen y se leen fuera del
+   * sistema —el cargo bajo la firma del acta de notificación—, donde
+   * "ENCARGADO" no es una respuesta.
+   */
+  rol_nombre?: string | null;
   roles: string[];
   /** Ids de permiso (ver core/constants/permisos.ts), no códigos de texto. */
   permisos: number[];
@@ -16,6 +23,8 @@ export interface Usuario {
   /** null en el ADMIN, que es global y no pertenece a ningún establecimiento. */
   id_establecimiento: number | null;
   nombre_establecimiento?: string;
+  /** RBD del establecimiento, para mostrarlo junto al nombre en el navbar. */
+  rbd_establecimiento?: string | number | null;
 }
 
 /**

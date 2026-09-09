@@ -1,5 +1,6 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FechaPipe } from '../../shared/pipes/fecha.pipe';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.services';
@@ -8,12 +9,11 @@ import { ConfidencialService } from '../../core/services/confidencial.service';
 import { RegistroForm } from './registros-form/registro-form';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
-import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
 
 @Component({
   selector: 'app-registros',
   standalone: true,
-  imports: [CommonModule, FormsModule, RegistroForm, Puede, EtiquetaPipe],
+  imports: [FechaPipe, CommonModule, FormsModule, RegistroForm, Puede],
   templateUrl: './registros.html',
   styleUrl: './registros.scss',
 })

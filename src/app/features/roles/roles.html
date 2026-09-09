@@ -88,25 +88,34 @@
             </div>
             }
 
-            @for (g of porRecurso(); track g.recurso) {
-            <div class="permiso-grupo">
-                <label class="permiso-grupo__titulo">
-                    <input type="checkbox" [appPuede]="Permiso.RolAsignarPermiso" [appPuedeSi]="editable"
-                        [appPuedeMotivo]="motivoBloqueo()" (change)="alternarRecurso(g.permisos)" />
-                    {{ g.recurso | etiqueta:'recurso' }}
-                </label>
-                <div class="permiso-grupo__items">
-                    @for (p of g.permisos; track p.permiso_id) {
-                    <label class="check-inline" [title]="p.descripcion ?? p.codigo">
-                        <input type="checkbox" [checked]="tiene(p.permiso_id)"
+            <!--
+              Una tarjeta por recurso, en grilla de ancho automático: antes era
+              una lista de una sola columna que dejaba media pantalla vacía y
+              obligaba a scrollear todo el catálogo para encontrar un módulo.
+            -->
+            <div class="permisos-grid">
+                @for (g of porRecurso(); track g.recurso) {
+                <div class="permiso-card" [class.permiso-card--activa]="marcados(g.permisos) > 0">
+                    <label class="permiso-card__titulo">
+                        <input type="checkbox" [checked]="todosMarcados(g.permisos)"
                             [appPuede]="Permiso.RolAsignarPermiso" [appPuedeSi]="editable"
-                            [appPuedeMotivo]="motivoBloqueo()" (change)="alternar(p.permiso_id)" />
-                        {{ p.accion | etiqueta:'accion' }}
+                            [appPuedeMotivo]="motivoBloqueo()" (change)="alternarRecurso(g.permisos)" />
+                        <span>{{ g.recurso | etiqueta:'recurso' }}</span>
+                        <small class="permiso-card__contador">{{ marcados(g.permisos) }}/{{ g.permisos.length }}</small>
                     </label>
-                    }
+                    <div class="permiso-card__items">
+                        @for (p of g.permisos; track p.permiso_id) {
+                        <label class="check-inline" [title]="p.descripcion ?? p.codigo">
+                            <input type="checkbox" [checked]="tiene(p.permiso_id)"
+                                [appPuede]="Permiso.RolAsignarPermiso" [appPuedeSi]="editable"
+                                [appPuedeMotivo]="motivoBloqueo()" (change)="alternar(p.permiso_id)" />
+                            {{ p.accion | etiqueta:'accion' }}
+                        </label>
+                        }
+                    </div>
                 </div>
+                }
             </div>
-            }
             }
         </section>
     </div>

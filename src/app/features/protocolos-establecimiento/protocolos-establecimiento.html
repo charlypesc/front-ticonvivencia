@@ -157,6 +157,18 @@
         </div>
 
         <div class="modal__footer">
+            <!-- El diagrama es otra pantalla, no un campo del formulario: va a
+                 la izquierda del footer, separado de Cancelar/Guardar. Solo al
+                 editar, porque un protocolo que todavía no se adopta o no
+                 existe no tiene flujo que mostrar. -->
+            @if (editando(); as p) {
+            <button class="btn btn--outline btn--sm" style="width:auto; margin-right:auto"
+                title="Ver el flujo de pasos de este protocolo" [appPuede]="Permiso.ProtocoloFlujoEstablecimientoVer"
+                [routerLink]="['/protocolos-establecimiento', p.id_protocolo_establecimiento, 'flujo']"
+                (click)="cerrarForm()">
+                <i class="ti ti-git-branch"></i> Ver diagrama
+            </button>
+            }
             <button class="btn btn--outline" (click)="cerrarForm()">Cancelar</button>
             <button class="btn btn--primary" style="width:auto" [appPuede]="permisoDelForm()"
                 (click)="guardar()">

@@ -6,3 +6,15 @@
   white-space: pre-line;
   line-height: 1.5;
 }
+
+// El campo del modal va separado del mensaje, no pegado a él: se lee primero
+// qué se está confirmando y después qué hay que escribir.
+.modal__body .form-group {
+  margin-top: 14px;
+  margin-bottom: 0;
+}
+
+.confirm-error {
+  margin-top: 4px;
+  color: #ef4444;
+}

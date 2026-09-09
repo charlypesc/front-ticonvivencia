@@ -1,6 +1,7 @@
 import { Component, OnInit, AfterViewInit, ViewChild, DestroyRef, signal, computed } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { FechaPipe } from '../../shared/pipes/fecha.pipe';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
@@ -16,11 +17,12 @@ import { RegistroForm } from '../registros/registros-form/registro-form';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
+import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
 
 @Component({
   selector: 'app-estudiantes',
   standalone: true,
-  imports: [CommonModule, FormsModule, CursoNombrePipe, EtiquetaPipe, RegistroForm, Puede, Buscador, CerrarConEsc],
+  imports: [FechaPipe, CommonModule, FormsModule, CursoNombrePipe, EtiquetaPipe, RegistroForm, Puede, Buscador, CerrarConEsc, GuardarConCmdEnter],
   templateUrl: './estudiantes.html',
   styleUrl: './estudiantes.scss',
 })

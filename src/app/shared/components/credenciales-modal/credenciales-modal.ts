@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Credenciales } from '../../../core/models/usuario.model';
 import type { VarianteCredenciales } from '../../utils/credenciales-pdf';
 import { CerrarConEsc } from '../../directives/cerrar-con-esc.directive';
+import { GuardarConCmdEnter } from '../../directives/guardar-con-cmd-enter.directive';
 
 /**
  * Muestra las credenciales recién emitidas y permite llevárselas en papel.
@@ -15,7 +16,7 @@ import { CerrarConEsc } from '../../directives/cerrar-con-esc.directive';
 @Component({
   selector: 'app-credenciales-modal',
   standalone: true,
-  imports: [CommonModule, CerrarConEsc],
+  imports: [CommonModule, CerrarConEsc, GuardarConCmdEnter],
   templateUrl: './credenciales-modal.html',
   styleUrl: './credenciales-modal.scss',
 })

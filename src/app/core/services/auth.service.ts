@@ -76,6 +76,28 @@ export class AuthService {
       );
   }
 
+  /**
+   * Recarga los datos de la sesión desde el servidor.
+   *
+   * El nombre de la persona y el de su establecimiento no viajan en el token, y
+   * la copia de localStorage se escribió el día del login: una sesión abierta
+   * desde antes se queda con el saludo a medias o con un nombre viejo hasta que
+   * alguien cierre sesión. Esto lo resuelve en el arranque, sin obligar a
+   * volver a entrar. Si falla, se sigue con lo que había guardado.
+   */
+  refrescarUsuario() {
+    if (!this.isLoggedIn()) return;
+    this.http.get<{ usuario: Usuario }>(`${environment.apiUrl}/auth/me`).subscribe({
+      next: ({ usuario }) => {
+        if (!usuario) return;
+        const fusionado = { ...(this.usuario() ?? {}), ...usuario } as Usuario;
+        localStorage.setItem(this.USER_KEY, JSON.stringify(fusionado));
+        this.usuario.set(fusionado);
+      },
+      error: () => {},
+    });
+  }
+
   logout() {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);

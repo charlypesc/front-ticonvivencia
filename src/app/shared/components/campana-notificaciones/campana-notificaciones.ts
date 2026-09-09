@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FechaPipe } from '../../pipes/fecha.pipe';
 import { Router } from '@angular/router';
 import { ApiService } from '../../../core/services/api.services';
 
@@ -18,7 +19,7 @@ import { ApiService } from '../../../core/services/api.services';
 @Component({
   selector: 'app-campana-notificaciones',
   standalone: true,
-  imports: [CommonModule],
+  imports: [FechaPipe, CommonModule],
   templateUrl: './campana-notificaciones.html',
   styleUrl: './campana-notificaciones.scss',
 })

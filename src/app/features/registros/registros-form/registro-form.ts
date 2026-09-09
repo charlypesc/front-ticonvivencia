@@ -1,5 +1,7 @@
 import { Component, OnInit, Output, EventEmitter, signal, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { EtiquetaPipe } from '../../../shared/pipes/etiqueta.pipe';
+import { hoyIso } from '../../../shared/utils/fecha';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.services';
 import { AuthService } from '../../../core/services/auth.service';
@@ -9,11 +11,13 @@ import { CursoNombrePipe } from '../../../shared/pipes/curso-nombre.pipe';
 import { Buscador } from '../../../shared/components/buscador/buscador';
 import { ordenarPorCoincidencia } from '../../../shared/utils/coincidencia';
 import { CerrarConEsc } from '../../../shared/directives/cerrar-con-esc.directive';
+import { GuardarConCmdEnter } from '../../../shared/directives/guardar-con-cmd-enter.directive';
+import { FechaPipe } from '../../../shared/pipes/fecha.pipe';
 
 @Component({
   selector: 'app-registro-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, CursoNombrePipe, Buscador, CerrarConEsc],
+  imports: [EtiquetaPipe, CommonModule, FormsModule, Puede, CursoNombrePipe, Buscador, CerrarConEsc, GuardarConCmdEnter, FechaPipe],
   templateUrl: './registro-form.html',
   styleUrl: './registro-form.scss',
 })
@@ -34,11 +38,17 @@ export class RegistroForm implements OnInit {
   estudiantes = signal<any[]>([]);
   loading = signal(false);
   error = signal('');
+  /** Causas concretas que acompañan a un error, cuando el backend las manda
+   *  (hoy: los problemas de coherencia de un flujo que no se pudo activar). */
+  errorDetalle = signal<string[]>([]);
 
-  // Lo decide el backend (autor del registro o permiso
-  // registro.editar_confidencialidad). Al crear siempre se puede: la
-  // restricción es para levantar la confidencialidad de un registro ajeno.
-  puedeEditarConfidencialidad = signal(true);
+  // En edición lo decide el backend (autor del registro o permiso
+  // registro.editar_confidencialidad — ver getRegistro() en ngOnInit). Al
+  // crear todavía no hay autor guardado, así que la única puerta es el
+  // permiso: se precarga en ngOnInit y no queda en `true` fijo, porque el
+  // backend ya no respeta un es_confidencial que mande alguien sin el
+  // permiso — dejar el checkbox habilitado igual solo confundía.
+  puedeEditarConfidencialidad = signal(false);
 
   // Activación de protocolo junto con el registro.
   //
@@ -135,11 +145,16 @@ export class RegistroForm implements OnInit {
   }
 
   get mensajeSugerencia(): string {
+    // El texto decía que sin activarlo "el registro no se va a poder validar",
+    // y eso nunca fue cierto: nada en el backend lo impide, el vínculo
+    // obligatorio solo cambia el tono del aviso. Se dice lo que realmente pasa
+    // —queda pendiente y a la vista— porque un aviso que amenaza con un bloqueo
+    // que no ocurre enseña a no creerle al resto de los avisos.
     if (this.protocoloEsObligatorio)
       return (
-        'Este tipo de falta obliga a activar ' +
+        'El reglamento del establecimiento asocia esta falta a ' +
         this.obligatoriosPendientes.map((p) => `"${p.protocolo_nombre}"`).join(' y ') +
-        '. Sin activarlo, el registro no se va a poder validar.'
+        '. Si no corresponde al caso, podés dejarlo sin activar: queda como pendiente en el registro.'
       );
     if (this.protocolosDeLaFalta.length > 0)
       return (
@@ -231,18 +246,9 @@ export class RegistroForm implements OnInit {
     this.toggleEstudiante(e.id_estudiante);
   }
 
-  // Hoy en horario local. `toISOString()` daría UTC y en Chile (UTC-3/-4) un
-  // registro creado de noche saldría con la fecha de mañana.
-  private static hoy() {
-    const d = new Date();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${d.getFullYear()}-${mm}-${dd}`;
-  }
-
   form = {
     // Un registro nuevo abre con la fecha de hoy; en edición la pisa cargarForm().
-    fecha_incidente: RegistroForm.hoy(),
+    fecha_incidente: hoyIso(),
     asunto: '',
     antecedentes: '',
     acuerdos: '',
@@ -257,6 +263,17 @@ export class RegistroForm implements OnInit {
     // Carga tipos de falta y estudiantes en paralelo
     this.api.getTiposFalta().subscribe((data) => this.tiposFalta.set(data));
     this.api.getEstudiantes().subscribe((data) => this.estudiantes.set(data));
+    // Para elegir un funcionario de la lista en vez de escribirlo a mano. Es
+    // una lista larga que no hace falta para mostrar el formulario, y si la
+    // persona no tiene permiso para verla (usuario.ver) el <select> queda
+    // vacío y se sigue pudiendo escribir el nombre a mano — mismo criterio
+    // que usa protocolo-caso para lo mismo.
+    this.api.getUsuarios().subscribe({ next: (data) => this.usuarios.set(data), error: () => {} });
+
+    // Punto de partida para un registro NUEVO: todavía no hay autor guardado
+    // contra quien comparar, así que la única puerta es el permiso. En edición
+    // esto se pisa abajo con lo que responde el backend (autor O el permiso).
+    this.puedeEditarConfidencialidad.set(this.auth.can(Permiso.RegistroEditarConfidencialidad));
 
     // El catálogo del colegio solo se pide si la persona puede activar: sin el
     // permiso la sección ni se muestra, y sería una llamada que devuelve 403.
@@ -275,6 +292,7 @@ export class RegistroForm implements OnInit {
         next: (data) => {
           this.registro = data;
           this.estudiantesSeleccionados = data.estudiantes;
+          this.involucradosPersonal = data.involucrados_personal ?? [];
           this.puedeEditarConfidencialidad.set(data.puede_editar_confidencialidad !== false);
           // El detalle manda: quien abre desde el dashboard solo pasa el id, así
           // que sin este segundo llenado el formulario quedaría en blanco.
@@ -312,7 +330,11 @@ export class RegistroForm implements OnInit {
     if (idx >= 0) {
       this.estudiantesSeleccionados.splice(idx, 1);
     } else {
-      this.estudiantesSeleccionados.push({ id_estudiante: id, rol_en_incidente: 'afectado' });
+      // Sin rol por defecto: dejarlo en 'afectado' hacía que el usuario
+      // guardara roles que nunca eligió y eso cambia el orden con que los
+      // involucrados aparecen en protocolos activados. Queda vacío y se valida
+      // como obligatorio en guardar().
+      this.estudiantesSeleccionados.push({ id_estudiante: id, rol_en_incidente: '' });
     }
   }
 
@@ -342,12 +364,125 @@ export class RegistroForm implements OnInit {
     return this.rolesConocidos.includes(rol);
   }
 
+  // ── Involucrados que no son estudiantes ──────────────────────────────────
+  //
+  // El denunciante muchas veces no es un estudiante: es un inspector o un
+  // profesor que reporta lo que vio. La lista de arriba solo busca entre
+  // estudiantes (REGISTRO_ESTUDIANTE), así que sin esto ese dato no tenía
+  // dónde quedar — el registro "no lo registraba".
+
+  usuarios = signal<any[]>([]);
+  /** Centinela del <select>: un funcionario sin cuenta en el sistema se
+   *  escribe a mano. Mismo patrón que protocolo-caso al incorporar a alguien
+   *  al caso. */
+  readonly SIN_CUENTA = '__sin_cuenta__';
+
+  involucradosPersonal: {
+    tipo_persona: 'funcionario' | 'externo';
+    id_usuario: number | null;
+    nombre: string;
+    rut: string;
+    rol_en_incidente: string;
+  }[] = [];
+
+  // id_usuario es number | string | null y no solo number|null: el <select>
+  // también puede llevar el centinela SIN_CUENTA mientras se elige.
+  formPersonal: {
+    tipo_persona: 'funcionario' | 'externo';
+    id_usuario: number | string | null;
+    nombre: string;
+    rut: string;
+    rol_en_incidente: string;
+  } = {
+    tipo_persona: 'funcionario',
+    id_usuario: null,
+    nombre: '',
+    rut: '',
+    rol_en_incidente: 'denunciante',
+  };
+
+  /**
+   * Si el formulario para sumar a un funcionario/externo está desplegado.
+   *
+   * Arranca cerrado: la mayoría de los registros son solo entre estudiantes, y
+   * dejar dos selects, dos inputs y un botón siempre abiertos empujaba el
+   * asunto y el relato —que sí se llenan siempre— más abajo de lo que entra en
+   * pantalla. La lista de los ya agregados no se esconde nunca: eso es dato del
+   * registro, no un formulario.
+   */
+  mostrarFormPersonal = signal(false);
+
+  abrirFormPersonal() {
+    this.limpiarFormPersonal();
+    this.error.set('');
+    this.mostrarFormPersonal.set(true);
+  }
+
+  /** Cierra y descarta lo tipeado: si no, al reabrir aparece a medio llenar. */
+  cerrarFormPersonal() {
+    this.limpiarFormPersonal();
+    this.mostrarFormPersonal.set(false);
+  }
+
+  private limpiarFormPersonal() {
+    this.formPersonal = {
+      tipo_persona: this.formPersonal.tipo_persona,
+      id_usuario: null,
+      nombre: '',
+      rut: '',
+      rol_en_incidente: 'denunciante',
+    };
+  }
+
+  agregarInvolucradoPersonal() {
+    const f = this.formPersonal;
+    const funcionarioSinCuenta = f.tipo_persona === 'funcionario' && f.id_usuario === this.SIN_CUENTA;
+
+    if (f.tipo_persona === 'funcionario' && !f.id_usuario) {
+      this.error.set('Elige al funcionario');
+      return;
+    }
+    if ((funcionarioSinCuenta || f.tipo_persona === 'externo') && !f.nombre.trim()) {
+      this.error.set('Escribe el nombre de la persona');
+      return;
+    }
+    this.error.set('');
+
+    // Con cuenta elegida de la lista, el nombre lo pone el sistema (es el
+    // mismo criterio que protocolo-caso): lo que la persona haya escrito a
+    // mano en ese momento no se usa, para no terminar con un nombre distinto
+    // al de la cuenta que en realidad quedó vinculada.
+    const usuarioElegido = !funcionarioSinCuenta && f.tipo_persona === 'funcionario'
+      ? this.usuarios().find((u) => u.id_usuario === f.id_usuario)
+      : null;
+    const idUsuario = usuarioElegido ? (f.id_usuario as number) : null;
+
+    this.involucradosPersonal.push({
+      tipo_persona: f.tipo_persona,
+      id_usuario: idUsuario,
+      nombre: usuarioElegido ? (usuarioElegido.nombre || usuarioElegido.correo) : f.nombre.trim(),
+      rut: f.rut.trim(),
+      rol_en_incidente: f.rol_en_incidente,
+    });
+    this.limpiarFormPersonal();
+  }
+
+  quitarInvolucradoPersonal(i: number) {
+    this.involucradosPersonal.splice(i, 1);
+  }
+
   guardar() {
     this.error.set('');
+    this.errorDetalle.set([]);
     const { fecha_incidente, asunto, antecedentes, id_tipo_falta } = this.form;
 
     if (!fecha_incidente || !asunto || !antecedentes || !id_tipo_falta) {
       this.error.set('Complete todos los campos requeridos');
+      return;
+    }
+
+    if (this.estudiantesSeleccionados.some((e) => !e.rol_en_incidente)) {
+      this.error.set('Indique el rol de cada estudiante involucrado');
       return;
     }
 
@@ -367,6 +502,7 @@ export class RegistroForm implements OnInit {
         .createRegistro({
           ...this.form,
           estudiantes: this.estudiantesSeleccionados,
+          involucrados_personal: this.involucradosPersonal,
         })
         .subscribe({
           next: (res: any) => this.activarYCerrar(res?.id_registro, 'Registro creado'),
@@ -384,6 +520,7 @@ export class RegistroForm implements OnInit {
         .updateRegistro({
           ...this.form,
           estudiantes: this.estudiantesSeleccionados,
+          involucrados_personal: this.involucradosPersonal,
         })
         .subscribe({
           next: () => this.activarYCerrar(this.registro.id_registro, 'Registro actualizado'),
@@ -419,6 +556,12 @@ export class RegistroForm implements OnInit {
             `Registro guardado, pero no se pudo activar el protocolo: ${
               err.error?.message ?? 'error del servidor'
             }`
+          );
+          // Un flujo mal armado se rechaza con la causa exacta en `problemas`
+          // (qué paso y qué campo). Sin mostrarla, el mensaje genérico obliga a
+          // ir a mirar la plantilla a ciegas para saber qué hay que corregir.
+          this.errorDetalle.set(
+            Array.isArray(err.error?.problemas) ? err.error.problemas : [],
           );
         },
       });

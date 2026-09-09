@@ -228,7 +228,7 @@
                                 <div class="text-muted text-sm">{{ c.apoderado_run }}</div>
                                 }
                             </td>
-                            <td>{{ c.fecha_entrega }}</td>
+                            <td>{{ c.fecha_entrega | fecha }}</td>
                             <td class="text-muted">{{ c.canal | titlecase }}</td>
                             <td class="acciones">
                                 @if (c.tiene_archivo) {

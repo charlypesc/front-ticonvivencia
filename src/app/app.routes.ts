@@ -48,12 +48,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/cursos/cursos').then((m) => m.Cursos),
       },
       {
-        path: 'validaciones',
-        canActivate: [permissionGuard(Permiso.RegistroValidar)],
-        loadComponent: () =>
-          import('./features/validaciones/validaciones').then((m) => m.Validaciones),
-      },
-      {
         path: 'usuarios',
         canActivate: [permissionGuard(Permiso.UsuarioVer)],
         loadComponent: () => import('./features/usuarios/usuarios').then((m) => m.Usuarios),

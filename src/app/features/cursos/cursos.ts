@@ -10,11 +10,12 @@ import { CursoNombrePipe } from '../../shared/pipes/curso-nombre.pipe';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
+import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
 
 @Component({
   selector: 'app-cursos',
   standalone: true,
-  imports: [CommonModule, FormsModule, CursoNombrePipe, Puede, CerrarConEsc],
+  imports: [CommonModule, FormsModule, CursoNombrePipe, Puede, CerrarConEsc, GuardarConCmdEnter],
   templateUrl: './cursos.html',
   styleUrl: './cursos.scss',
 })

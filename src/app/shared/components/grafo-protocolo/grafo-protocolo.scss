@@ -31,44 +31,88 @@
   }
 }
 
+// El trazo blanco que va debajo de cada arista. No se ve por sí solo: su
+// trabajo es cortar la línea que quedó por debajo justo en el cruce, para que
+// dos flechas que se cruzan no se lean como una sola línea que se bifurca.
+.arista-halo {
+  fill: none;
+  stroke: $white;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
 .arista {
   fill: none;
-  stroke: $gray-400;
-  stroke-width: 1.5;
+  stroke: $gray-600;
+  stroke-width: 1.6;
 
+  // Los retrocesos se distinguen por el trazo discontinuo, no por ser más
+  // tenues: atenuados encima de discontinuos, con tres cruzándose en la misma
+  // zona, no se podía seguir ninguno hasta su caja. Van al mismo tono que el
+  // resto y con el guion más largo, que se lee mejor en los tramos cortos.
   &--atras {
-    stroke: $gray-200;
-    stroke-dasharray: 4 3;
+    stroke-dasharray: 7 4;
   }
 }
 
 .punta {
-  fill: $gray-400;
-
-  &--atras { fill: $gray-200; }
+  fill: $gray-600;
 }
 
 .etiqueta {
   font-size: 11px;
   fill: $primary;
   text-anchor: middle;
+  // El halo blanco alrededor del texto lo despega de la línea sobre la que
+  // está escrito. 4px y no 3: con 3 las tildes y los signos de pregunta seguían
+  // tocando el trazo de la arista.
   paint-order: stroke;
   stroke: $white;
-  stroke-width: 3px;
+  stroke-width: 4px;
 
-  &--atras { fill: $gray-400; }
+  &--atras { fill: $gray-600; }
+
+  // Alineados contra el borde exterior de los carriles, no centrados: van
+  // después de `.etiqueta` a propósito, para ganarle al `text-anchor: middle`
+  // sin subir la especificidad.
+  &--inicio { text-anchor: start; }
+  &--fin    { text-anchor: end; }
+}
+
+// El hilo que une el rótulo con su carril. Más fino y más tenue que la arista:
+// no es parte del recorrido, solo dice de qué línea habla el texto.
+// Fina pero no desvaída: bajada de tono se perdía contra el fondo justo en la
+// zona donde hay tres carriles paralelos, que es donde más falta hace seguirla.
+// Va al mismo gris que las aristas y sin opacidad, y se distingue de ellas por
+// el grosor.
+// Punteada y fina: así no se confunde con una arista de retroceso, que ahora
+// va al mismo gris.
+.guia {
+  fill: none;
+  stroke: $gray-400;
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+// El punto de arranque, sobre el carril: marca de dónde sale la guía, que si no
+// nacía de la nada en medio de tres líneas paralelas. En negro y a tono pleno a
+// propósito: es el único ancla del rótulo, y tiene que verse de un vistazo.
+.guia-punto {
+  fill: $gray-900;
 }
 
 .nodo {
   cursor: pointer;
 
-  rect {
+  rect,
+  polygon {
     fill: $white;
     stroke: $gray-200;
     stroke-width: 1.5;
   }
 
-  &:hover rect { stroke: $primary; }
+  &:hover rect,
+  &:hover polygon { stroke: $primary; }
 
   &__nombre {
     font-size: 13px;
@@ -79,23 +123,46 @@
   &__meta {
     font-size: 11px;
     fill: $gray-400;
+
+    // A quién alcanza el paso: más apagada que el tipo/plazo, que es el dato
+    // principal de la caja.
+    // No hay un $gray-300 en la escala; se apaga con opacidad para que quede
+    // por debajo del tipo/plazo sin inventar un tono nuevo.
+    &--alcance { opacity: 0.75; }
   }
+
+  // ── Familia del paso ─────────────────────────────────────────────────────
+  //
+  // Mismo criterio de color que el diagrama en Excalidraw del protocolo: el
+  // relleno dice de qué naturaleza es el paso antes de leer una sola palabra.
+  // Van ANTES de los estados de ejecución a propósito: en un caso en curso
+  // importa por dónde va, no de qué tipo es cada paso, y con la misma
+  // especificidad gana la regla de más abajo.
+  &--fam-inicio rect,
+  &--fam-inicio polygon  { fill: #f0fdf4; stroke: $accent-ok; }
+  &--fam-duro rect,
+  &--fam-duro polygon    { fill: #fef2f2; stroke: $accent-danger; }
+  &--fam-ciclo rect,
+  &--fam-ciclo polygon   { fill: #f5f3ff; stroke: #7c3aed; }
+  &--fam-interno rect,
+  &--fam-interno polygon { fill: $primary-bg; stroke: $primary; }
 
   // Plantilla: se marca de dónde arranca y dónde cierra.
   &--inicial rect { stroke: $accent-ok; }
   &--final rect   { stroke: $primary; }
 
   // Ejecución: el color dice por dónde va el caso.
-  &--completado rect { fill: #ecfdf5; stroke: $accent-ok; }
-  &--en_curso rect   { fill: $primary-bg; stroke: $primary; stroke-width: 2.5; }
-  &--vencido rect    { fill: #fef2f2; stroke: $accent-danger; stroke-width: 2.5; }
-  &--omitido rect    { fill: $gray-50; stroke: $gray-200; }
+  &--completado rect, &--completado polygon { fill: #ecfdf5; stroke: $accent-ok; }
+  &--en_curso rect, &--en_curso polygon     { fill: $primary-bg; stroke: $primary; stroke-width: 2.5; }
+  &--vencido rect, &--vencido polygon       { fill: #fef2f2; stroke: $accent-danger; stroke-width: 2.5; }
+  &--omitido rect, &--omitido polygon       { fill: $gray-50; stroke: $gray-200; }
   &--omitido .nodo__nombre { fill: $gray-400; }
 
   // El que se está mirando en el panel de detalle. Va último a propósito: con
   // la misma especificidad gana la regla de más abajo, así que la marca de
   // selección se impone sobre el color de estado sin subirle el peso.
-  &--seleccionado rect {
+  &--seleccionado rect,
+  &--seleccionado polygon {
     stroke: $primary;
     stroke-width: 3;
   }
@@ -109,9 +176,26 @@
 .leyenda {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 8px;
+  // El segundo valor separa las entradas entre sí; el primero, las filas cuando
+  // la leyenda se parte en varias. La separación la da el contenedor y no un
+  // margen en cada punto: así el hueco no se arrastra al principio de una fila.
+  gap: 4px 14px;
+  // Va encima del diagrama: se lee la referencia de los símbolos antes de
+  // mirarlo, no después de haber bajado hasta el final del grafo.
+  margin: 0 0 4px;
   flex-wrap: wrap;
+
+  // El par símbolo + etiqueta es una sola unidad: se envuelve entero o no se
+  // envuelve, pero nunca se parte por la mitad.
+  &__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.leyenda-nota {
+  margin: 0 0 12px;
 }
 
 .punto {
@@ -119,7 +203,19 @@
   height: 8px;
   border-radius: 50%;
   display: inline-block;
+  // Los símbolos no se achican cuando la etiqueta que va al lado es larga.
+  flex: none;
 
   &--inicial { background: $accent-ok; }
-  &--final   { background: $primary; margin-left: 8px; }
+  &--final   { background: $primary; }
+  &--duro    { background: $accent-danger; }
+  &--ciclo   { background: #7c3aed; }
+
+  // La forma no es un color: el punto se dibuja como el hexágono del diagrama
+  // para que la leyenda muestre lo mismo que el lienzo.
+  &--rama {
+    background: $gray-400;
+    border-radius: 0;
+    clip-path: polygon(0 50%, 30% 0, 70% 0, 100% 50%, 70% 100%, 30% 100%);
+  }
 }

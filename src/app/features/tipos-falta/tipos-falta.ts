@@ -1,16 +1,18 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.services';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
+import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
 
 @Component({
   selector: 'app-tipos-falta',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, CerrarConEsc],
+  imports: [EtiquetaPipe, CommonModule, FormsModule, Puede, CerrarConEsc, GuardarConCmdEnter],
   templateUrl: './tipos-falta.html',
   styleUrl: './tipos-falta.scss',
 })

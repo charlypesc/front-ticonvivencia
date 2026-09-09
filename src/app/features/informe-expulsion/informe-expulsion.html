@@ -106,7 +106,7 @@
             <tbody>
                 @for (m of informe().medidas_previas; track m.fecha_aplicacion + m.descripcion) {
                 <tr>
-                    <td>{{ m.fecha_aplicacion }}</td>
+                    <td>{{ m.fecha_aplicacion | fecha }}</td>
                     <td>{{ m.descripcion }}</td>
                     <td>
                         @if (m.resultado) { {{ m.resultado }} }
@@ -238,10 +238,22 @@
     <div class="modal__body">
         <p>
             <strong>{{ informe().decision_director === 'aplica' ? 'Se aplica la medida' : 'No se aplica la medida' }}</strong>
-            @if (informe().fecha_decision) { — {{ informe().fecha_decision | date:'dd/MM/yyyy' }} }
+            @if (informe().fecha_decision) { — {{ informe().fecha_decision | fecha }} }
         </p>
         @if (informe().fundamento_director) {
         <p class="text-muted"><strong>Fundamento:</strong> {{ informe().fundamento_director }}</p>
+        }
+
+        <!-- Cuándo y cómo se le notificó: la fecha sola no acredita nada frente
+             a una familia que dice que nunca se enteró. -->
+        @if (informe().fecha_notificacion_apoderado) {
+        <p class="text-muted">
+            <strong>Notificado al apoderado:</strong>
+            {{ informe().fecha_notificacion_apoderado | fecha }}
+            por {{ informe().medio_notificacion_apoderado
+                     ? (informe().medio_notificacion_apoderado | etiqueta:'medio_notificacion')
+                     : 'vía no registrada' }}
+        </p>
         }
 
         @if (informe().fecha_limite_informes) {
@@ -251,14 +263,14 @@
             [class.alert--success]="informe().fecha_informe_superintendencia && informe().fecha_informe_seremi">
             <i class="ti ti-clock"></i>
             <span>Plazo para informar a la Superintendencia y a la SEREMI:
-                hasta el {{ informe().fecha_limite_informes }}.</span>
+                hasta el {{ informe().fecha_limite_informes | fecha }}.</span>
         </div>
 
         <div class="form-row" [appPuede]="Permiso.InformeExpulsionDecidir">
             <div class="form-group">
                 <label>Informe a la Superintendencia</label>
                 @if (informe().fecha_informe_superintendencia) {
-                <p>Enviado el {{ informe().fecha_informe_superintendencia }}</p>
+                <p>Enviado el {{ informe().fecha_informe_superintendencia | fecha }}</p>
                 } @else {
                 <input type="date" [(ngModel)]="formEnvios.fecha_informe_superintendencia" name="fsuper" />
                 }
@@ -266,7 +278,7 @@
             <div class="form-group">
                 <label>Informe a la SEREMI</label>
                 @if (informe().fecha_informe_seremi) {
-                <p>Enviado el {{ informe().fecha_informe_seremi }}</p>
+                <p>Enviado el {{ informe().fecha_informe_seremi | fecha }}</p>
                 } @else {
                 <input type="date" [(ngModel)]="formEnvios.fecha_informe_seremi" name="fseremi" />
                 }
@@ -298,6 +310,17 @@
                 <label>Fecha de notificación al apoderado</label>
                 <input type="date" [(ngModel)]="formDecision.fecha_notificacion_apoderado"
                     name="fecha_notif" />
+            </div>
+            <!-- La vía, no sólo la fecha: es lo que se exhibe cuando la familia
+                 dice que nunca se enteró, y de esta notificación cuelgan el
+                 plazo de reconsideración y los 5 días para informar. -->
+            <div class="form-group">
+                <label>Notificado por</label>
+                <select [(ngModel)]="formDecision.medio_notificacion_apoderado" name="medio_notif">
+                    @for (m of MEDIOS_NOTIFICACION; track m) {
+                    <option [value]="m">{{ m | etiqueta:'medio_notificacion' }}</option>
+                    }
+                </select>
             </div>
         </div>
 

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.services';
 import { CerrarConEsc } from '../../directives/cerrar-con-esc.directive';
+import { GuardarConCmdEnter } from '../../directives/guardar-con-cmd-enter.directive';
 
 /** Mismo mínimo que valida el backend. Si cambia allá, cambia acá. */
 const LARGO_MINIMO = 8;
@@ -17,7 +18,7 @@ const LARGO_MINIMO = 8;
 @Component({
   selector: 'app-cambiar-password-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, CerrarConEsc],
+  imports: [CommonModule, FormsModule, CerrarConEsc, GuardarConCmdEnter],
   templateUrl: './cambiar-password-modal.html',
   styleUrl: './cambiar-password-modal.scss',
 })

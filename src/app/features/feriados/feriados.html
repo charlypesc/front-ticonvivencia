@@ -63,7 +63,7 @@
             <tbody>
                 @for (f of feriados(); track f.id_feriado) {
                 <tr>
-                    <td>{{ f.fecha }}</td>
+                    <td>{{ f.fecha | fecha }}</td>
                     <td>
                         {{ f.nombre }}
                         @if (f.irrenunciable) {

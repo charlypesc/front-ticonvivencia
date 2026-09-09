@@ -31,12 +31,6 @@ export class Sidebar {
     { label: 'Cursos',        icon: 'ti-school', route: '/cursos',        permiso: Permiso.CursoVer },
     { label: 'Registros',     icon: 'ti-folder', route: '/registros',     permiso: Permiso.RegistroVer },
     { label: 'Subir documento', icon: 'ti-file', route: '/subir-documento', permiso: Permiso.DocumentoSubir },
-    // {
-    //   label: 'Validaciones',
-    //   icon: 'ti-circle-check',
-    //   route: '/validaciones',
-    //   permiso: Permiso.RegistroValidar,
-    // },
     { label: 'Tipos de falta', icon: 'ti-settings', route: '/tipos-falta', permiso: Permiso.TipoFaltaVer },
     {
       label: 'Protocolos genéricos',

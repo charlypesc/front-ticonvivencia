@@ -19,17 +19,20 @@
         </div>
     </div>
 
-    <div class="stat-card stat-card--warn">
-        <div class="stat-card__num">{{ resumen().pendientes }}</div>
+    <!-- Estudiantes con registro y no "activos": con el padrón completo
+         cargado, la matrícula no dice nada del trabajo de convivencia. Este
+         cuenta a cuántos estudiantes distintos alcanza al menos un registro. -->
+    <div class="stat-card">
+        <div class="stat-card__num">{{ resumen().estudiantes_con_registro }}</div>
         <div class="stat-card__label">
-            <i class="ti ti-clock"></i> Registros por validar
+            <i class="ti ti-users"></i> Estudiantes con registro
         </div>
     </div>
 
     <div class="stat-card">
-        <div class="stat-card__num">{{ resumen().estudiantes_activos }}</div>
+        <div class="stat-card__num">{{ resumen().protocolos_activados }}</div>
         <div class="stat-card__label">
-            <i class="ti ti-users"></i> Estudiantes activos
+            <i class="ti ti-file-search"></i> Protocolos activados
         </div>
     </div>
 </div>
@@ -45,13 +48,9 @@
 </div>
 
 <div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-card__num">{{ c.casos_activos }}</div>
-        <div class="stat-card__label">
-            <i class="ti ti-file-search"></i> Casos activos
-        </div>
-    </div>
-
+    <!-- "Casos activos" salió de acá: era el mismo número que "Protocolos
+         activados" de arriba, y repetirlo hacía dudar de si medían cosas
+         distintas. Este bloque mide cumplimiento, no volumen. -->
     @if (c.porcentaje_en_plazo !== null) {
     <div class="stat-card" [class.stat-card--warn]="c.porcentaje_en_plazo < 80">
         <div class="stat-card__num">{{ c.porcentaje_en_plazo }}%</div>
@@ -89,8 +88,8 @@
     }
 
     <!-- Suspensiones cautelares con el plazo de diez días hábiles vencido y el
-         procedimiento sin resolver. Va con la misma prominencia que las firmas
-         pendientes porque acá hay alguien suspendido: es la infracción más cara
+         procedimiento sin resolver. Va con la misma prominencia que las
+         notificaciones pendientes porque acá hay alguien suspendido: es la infracción más cara
          que el sistema puede detectar solo. -->
     @if (c.cautelares_sin_resolver > 0) {
     <div class="stat-card stat-card--warn">
@@ -101,13 +100,13 @@
     </div>
     }
 
-    <!-- La firma no detiene el protocolo, así que sin esta tarjeta una
-         notificación sin acuse solo se ve abriendo el caso. -->
-    @if (c.notificaciones_sin_acuse > 0) {
+    <!-- La falta de constancia no detiene el protocolo, así que sin esta
+         tarjeta una notificación sin registrar solo se ve abriendo el caso. -->
+    @if (c.notificaciones_pendientes > 0) {
     <div class="stat-card stat-card--warn">
-        <div class="stat-card__num">{{ c.notificaciones_sin_acuse }}</div>
+        <div class="stat-card__num">{{ c.notificaciones_pendientes }}</div>
         <div class="stat-card__label">
-            <i class="ti ti-writing-off"></i> Notificaciones sin firma
+            <i class="ti ti-bell-exclamation"></i> Personas sin notificar
         </div>
     </div>
     }
@@ -169,9 +168,6 @@
                     {{ r.alumno_nombre ?? 'Sin estudiante' }} — {{ r.asunto }}
                 </span>
             </div>
-            <span class="badge badge--{{ r.estado_validacion }}">
-                {{ r.estado_validacion | etiqueta:'estado_validacion' }}
-            </span>
             }
         </a>
         }
