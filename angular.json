@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "miconvivencia-frontend": {
+    "ticonvivencia-frontend": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -63,10 +63,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "miconvivencia-frontend:build:production"
+              "buildTarget": "ticonvivencia-frontend:build:production"
             },
             "development": {
-              "buildTarget": "miconvivencia-frontend:build:development"
+              "buildTarget": "ticonvivencia-frontend:build:development"
             }
           },
           "defaultConfiguration": "development"
