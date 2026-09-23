@@ -593,6 +593,14 @@
                     y cancelación de matrícula son 15 días hábiles por ley.
                 </p>
             </div>
+            <div class="form-group">
+                <label>Nota para el acta (opcional)</label>
+                <!-- Queda impresa como "Observaciones" en el papel que se firma:
+                     una citación, una condición, lo que se conversó. No se
+                     guarda aparte: vive en el acta, que vuelve firmada. -->
+                <textarea appAutoAjustar rows="2" [(ngModel)]="actaNota" name="acta_nota" maxlength="2000"
+                    placeholder="Ej: se cita al apoderado a entrevista el lunes a las 10:00..."></textarea>
+            </div>
 
             <p class="text-muted formato-unico">
                 <i class="ti ti-file-type-pdf"></i>
