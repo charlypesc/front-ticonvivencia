@@ -609,13 +609,16 @@ export class ApiService {
   }
   /**
    * El acta de notificación en blanco, para imprimir y hacer firmar. La arma
-   * el backend; solo se le pasa el plazo, que es lo único que decide quien la
-   * emite. Respuesta completa para leer el nombre del archivo.
+   * el backend; solo se le pasan las decisiones de quien la emite: el plazo y
+   * una nota opcional que sale impresa como observación. Respuesta completa
+   * para leer el nombre del archivo.
    */
-  getActaNotificacionPdf(id: number, idPasoInvolucrado: number, plazoDias: number) {
+  getActaNotificacionPdf(id: number, idPasoInvolucrado: number, plazoDias: number, nota = '') {
+    const params: Record<string, string | number> = { plazo_dias: plazoDias };
+    if (nota.trim()) params['nota'] = nota.trim();
     return this.http.get(
       `${this.base}/protocolos-activados/${id}/gestiones/${idPasoInvolucrado}/acta-notificacion`,
-      { params: { plazo_dias: plazoDias }, responseType: 'blob', observe: 'response' },
+      { params, responseType: 'blob', observe: 'response' },
     );
   }
 

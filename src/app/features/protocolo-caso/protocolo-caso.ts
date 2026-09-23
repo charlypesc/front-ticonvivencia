@@ -21,6 +21,7 @@ import { MedidasProteccion } from '../../shared/components/medidas-proteccion/me
 import { MedidasDisciplinarias } from '../../shared/components/medidas-disciplinarias/medidas-disciplinarias';
 import { descargarPdf, imprimirPdf, mensajeDeErrorPdf, nombreDelPdf } from '../../shared/utils/pdf-salida';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
+import { AutoAjustarTextarea } from '../../shared/directives/auto-ajustar-textarea.directive';
 import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
 import { Buscador } from '../../shared/components/buscador/buscador';
 import { CursoNombrePipe } from '../../shared/pipes/curso-nombre.pipe';
@@ -45,6 +46,7 @@ import { ordenarPorCoincidencia } from '../../shared/utils/coincidencia';
   imports: [
     FechaPipe, FechasEnTextoPipe, CommonModule, FormsModule, RouterLink, Puede, GrafoProtocolo, EtiquetaPipe,
     MedidasProteccion, MedidasDisciplinarias, CerrarConEsc, GuardarConCmdEnter, Buscador, CursoNombrePipe,
+    AutoAjustarTextarea,
   ],
   templateUrl: './protocolo-caso.html',
   styleUrl: './protocolo-caso.scss',
@@ -956,10 +958,14 @@ export class ProtocoloCaso implements OnInit {
    * establecimiento, y el sistema todavía no lo guarda.
    */
   actaPlazoDias = 5;
+  /** Observación opcional que se imprime en el acta (citación, condiciones, lo conversado). */
+  actaNota = '';
 
   abrirActa(paso: any, g: any) {
     this.error.set('');
     this.avisoActa.set('');
+    // La nota es de esta persona: no se arrastra al acta de la siguiente.
+    this.actaNota = '';
     this.actaAbierta.set({ paso, gestion: g });
     // Se recargan cada vez: entre una impresión y otra pudo agregarse la medida
     // que justamente hay que notificar, o haberse emitido el informe de
@@ -1035,7 +1041,7 @@ export class ProtocoloCaso implements OnInit {
     this.revisarMedidasActa();
     this.generandoActa.set(true);
     this.api
-      .getActaNotificacionPdf(this.id, abierta.gestion.id_paso_involucrado, this.actaPlazoDias)
+      .getActaNotificacionPdf(this.id, abierta.gestion.id_paso_involucrado, this.actaPlazoDias, this.actaNota)
       .subscribe({
         next: (resp) => {
           const pdf = resp.body!;
