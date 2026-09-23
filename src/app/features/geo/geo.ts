@@ -184,9 +184,7 @@ export class Geo implements OnInit {
    * se pierde y hay que restablecerla desde Usuarios.
    */
   credenciales = signal<Credenciales | null>(null);
-  /** Colegio al que pertenece la clave emitida, para encabezar el documento. */
-  establecimientoCredenciales = signal('');
-  /** Roles del usuario de esas credenciales, ya legibles, para el documento. */
+  /** Roles del usuario de esas credenciales, ya legibles, para mostrarlos en el modal. */
   rolCredenciales = signal('');
   guardandoUsuario = signal(false);
 
@@ -713,7 +711,6 @@ export class Geo implements OnInit {
           this.cerrarFormUsuario();
           // El documento con la clave se abre en el acto: es la única vez que la
           // contraseña se puede ver.
-          this.establecimientoCredenciales.set(est.nombre);
           // Los nombres se resuelven contra el catálogo para que el documento
           // diga "Director" y no "DIRECTOR".
           this.rolCredenciales.set(

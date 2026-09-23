@@ -45,6 +45,13 @@ export interface Credenciales {
    */
   nombre: string | null;
   password: string;
+  /**
+   * El comprobante en PDF, armado por el backend en el mismo request que
+   * generó la clave. null si falló el armado: la clave igual se entrega y se
+   * ve en pantalla.
+   */
+  pdf_base64: string | null;
+  pdf_nombre: string | null;
   message: string;
 }
 

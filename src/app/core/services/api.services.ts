@@ -607,6 +607,17 @@ export class ApiService {
       responseType: 'blob',
     });
   }
+  /**
+   * El acta de notificación en blanco, para imprimir y hacer firmar. La arma
+   * el backend; solo se le pasa el plazo, que es lo único que decide quien la
+   * emite. Respuesta completa para leer el nombre del archivo.
+   */
+  getActaNotificacionPdf(id: number, idPasoInvolucrado: number, plazoDias: number) {
+    return this.http.get(
+      `${this.base}/protocolos-activados/${id}/gestiones/${idPasoInvolucrado}/acta-notificacion`,
+      { params: { plazo_dias: plazoDias }, responseType: 'blob', observe: 'response' },
+    );
+  }
 
   // Notificaciones (la campana de la barra superior)
   /** Las últimas 30 del usuario en sesión, sin leer primero. */
@@ -713,6 +724,14 @@ export class ApiService {
   getExpediente(idCaso: number, redactado = false) {
     return this.http.get<any>(`${this.base}/protocolos-activados/${idCaso}/expediente`, {
       params: redactado ? { redactado: '1' } : {},
+    });
+  }
+  /** El expediente ya como PDF, con las actas firmadas anexadas (lo arma el backend). */
+  getExpedientePdf(idCaso: number, redactado = false) {
+    return this.http.get(`${this.base}/protocolos-activados/${idCaso}/expediente/pdf`, {
+      params: redactado ? { redactado: '1' } : {},
+      responseType: 'blob',
+      observe: 'response',
     });
   }
   /** Exportación redactada de los últimos 24 meses (obligación ante terceros). */

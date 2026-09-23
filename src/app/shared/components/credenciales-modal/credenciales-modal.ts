@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Credenciales } from '../../../core/models/usuario.model';
-import type { VarianteCredenciales } from '../../utils/credenciales-pdf';
+import { descargarPdf, imprimirPdf, pdfDesdeBase64 } from '../../utils/pdf-salida';
 import { CerrarConEsc } from '../../directives/cerrar-con-esc.directive';
 import { GuardarConCmdEnter } from '../../directives/guardar-con-cmd-enter.directive';
 
@@ -22,16 +22,9 @@ import { GuardarConCmdEnter } from '../../directives/guardar-con-cmd-enter.direc
 })
 export class CredencialesModal {
   @Input({ required: true }) credenciales!: Credenciales;
-  /** Nombre del colegio, para encabezar el documento. Opcional. */
-  @Input() establecimiento = '';
   /** Rol o roles ya legibles ("Inspector, Docente"), no códigos. Opcional. */
   @Input() rol = '';
   @Input() titulo = 'Usuario creado';
-  /**
-   * Qué documento se emite. Cambia el saludo y la advertencia del PDF: recibir
-   * una cuenta nueva no es lo mismo que enterarse de que te cambiaron la clave.
-   */
-  @Input() variante: VarianteCredenciales = 'creacion';
   @Output() cerrar = new EventEmitter<void>();
 
   /** Popover de exportación: en vez de descargar directo, se elige qué hacer. */
@@ -52,63 +45,30 @@ export class CredencialesModal {
     }
   }
 
-  async imprimir() {
-    this.mostrarExportar.set(false);
-
-    const url = URL.createObjectURL((await this.pdf()).output('blob'));
-
-    // Un iframe oculto y no window.open(): los bloqueadores de popups matan la
-    // ventana nueva sin avisar, y el usuario se queda mirando un botón que "no
-    // hace nada". El iframe siempre está permitido.
-    const marco = document.createElement('iframe');
-    marco.style.position = 'fixed';
-    marco.style.right = '0';
-    marco.style.bottom = '0';
-    marco.style.width = '0';
-    marco.style.height = '0';
-    marco.style.border = '0';
-    marco.src = url;
-
-    // onload y no una llamada directa: sin esperar a que el visor de PDF
-    // termine de cargar, Safari imprime una hoja en blanco.
-    marco.onload = () => {
-      marco.contentWindow!.focus();
-      marco.contentWindow!.print();
-      // El iframe no se puede quitar en cuanto vuelve print(): el diálogo es
-      // asíncrono y desmontarlo antes cancela la impresión.
-      setTimeout(() => {
-        marco.remove();
-        URL.revokeObjectURL(url);
-      }, 60_000);
-    };
-
-    document.body.appendChild(marco);
-  }
-
-  async descargar() {
-    this.mostrarExportar.set(false);
-    const { nombreArchivoCredenciales } = await import('../../utils/credenciales-pdf');
-    (await this.pdf()).save(nombreArchivoCredenciales(this.credenciales.correo));
-  }
-
   /**
-   * El documento se arma como PDF y no como HTML: es lo que la gente espera al
-   * "descargar un comprobante", se abre igual en cualquier equipo o teléfono y
-   * al imprimirlo no depende de los márgenes ni del zoom que traiga el
-   * navegador de turno.
-   *
-   * jsPDF se carga bajo demanda: pesa bastante y este modal aparece unas pocas
-   * veces al año, no tiene por qué estar en el bundle inicial de la app.
+   * El comprobante lo armó el backend en el mismo request que generó la clave
+   * y vino en esa respuesta: la contraseña no tiene que volver a viajar al
+   * servidor para que alguien la imprima.
    */
-  private async pdf() {
-    const { construirCredencialesPdf } = await import('../../utils/credenciales-pdf');
-    return construirCredencialesPdf({
-      correo: this.credenciales.correo,
-      nombre: this.credenciales.nombre,
-      password: this.credenciales.password,
-      establecimiento: this.establecimiento,
-      rol: this.rol,
-      variante: this.variante,
-    });
+  imprimir() {
+    this.mostrarExportar.set(false);
+    const pdf = this.pdf();
+    if (pdf) imprimirPdf(pdf);
+  }
+
+  descargar() {
+    this.mostrarExportar.set(false);
+    const pdf = this.pdf();
+    if (pdf)
+      descargarPdf(pdf, this.credenciales.pdf_nombre ?? `credenciales-${this.credenciales.id_usuario}.pdf`);
+  }
+
+  /** Sin PDF (falló su armado en el servidor) el botón no se ofrece. */
+  get hayPdf() {
+    return !!this.credenciales.pdf_base64;
+  }
+
+  private pdf(): Blob | null {
+    return this.credenciales.pdf_base64 ? pdfDesdeBase64(this.credenciales.pdf_base64) : null;
   }
 }

@@ -53,6 +53,7 @@
 
             <!-- Popover en vez de descarga directa: quien entrega la clave en
                  mano imprime, quien la manda a otra sede descarga. -->
+            @if (hayPdf) {
             <div class="cred-exportar">
                 <button class="btn btn--primary" style="width:auto"
                     (click)="mostrarExportar.set(!mostrarExportar())">
@@ -71,6 +72,7 @@
                 </div>
                 }
             </div>
+            }
         </div>
 
     </div>

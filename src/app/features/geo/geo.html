@@ -891,6 +891,6 @@
 <!-- Documento con las credenciales del usuario recién creado. -->
 @if (credenciales(); as cred) {
 <app-credenciales-modal [credenciales]="cred" titulo="Usuario creado"
-    [establecimiento]="establecimientoCredenciales()" [rol]="rolCredenciales()"
+    [rol]="rolCredenciales()"
     (cerrar)="cerrarCredenciales()" />
 }

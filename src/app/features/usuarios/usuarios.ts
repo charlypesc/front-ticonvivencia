@@ -8,7 +8,6 @@ import { Credenciales, Rol } from '../../core/models/usuario.model';
 import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { CredencialesModal } from '../../shared/components/credenciales-modal/credenciales-modal';
-import type { VarianteCredenciales } from '../../shared/utils/credenciales-pdf';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
 import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
@@ -48,9 +47,7 @@ export class Usuarios implements OnInit {
    */
   credenciales = signal<Credenciales | null>(null);
   tituloCredenciales = signal('Usuario creado');
-  /** Qué hoja emitir: alta de cuenta o restablecimiento. */
-  varianteCredenciales = signal<VarianteCredenciales>('creacion');
-  /** Roles del usuario de esas credenciales, ya legibles, para el documento. */
+  /** Roles del usuario de esas credenciales, ya legibles, para mostrarlos en el modal. */
   rolCredenciales = signal('');
 
   guardando = signal(false);
@@ -285,7 +282,6 @@ export class Usuarios implements OnInit {
         next: (cred) => {
           this.cerrarForm();
           this.tituloCredenciales.set('Usuario creado');
-          this.varianteCredenciales.set('creacion');
           this.rolCredenciales.set(this.nombresDeRoles(roles));
           this.credenciales.set(cred);
           this.cargar();
@@ -309,7 +305,6 @@ export class Usuarios implements OnInit {
     this.api.resetPasswordUsuario(u.id_usuario).subscribe({
       next: (cred) => {
         this.tituloCredenciales.set('Contraseña restablecida');
-        this.varianteCredenciales.set('restablecimiento');
         this.rolCredenciales.set(this.nombresDeRoles(u.roles));
         this.credenciales.set(cred);
       },
