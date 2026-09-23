@@ -693,6 +693,26 @@ export class ApiService {
   resolverSuspensionCautelar(idSuspension: number, data: any) {
     return this.http.patch<any>(`${this.base}/suspensiones-cautelares/${idSuspension}/resolver`, data);
   }
+  /**
+   * Documento firmado de la reconsideración: 'solicitud_reconsideracion' (el
+   * escrito del apoderado) o 'acta_consejo' (el acta del Consejo). FormData:
+   * NO fijar Content-Type a mano, el navegador pone el boundary.
+   */
+  subirDocumentoCautelar(idSuspension: number, tipo: DocumentoCautelar, data: FormData) {
+    return this.http.put<any>(`${this.base}/suspensiones-cautelares/${idSuspension}/documentos/${tipo}`, data);
+  }
+  getDocumentoCautelar(idSuspension: number, tipo: DocumentoCautelar) {
+    return this.http.get(`${this.base}/suspensiones-cautelares/${idSuspension}/documentos/${tipo}`, {
+      responseType: 'blob',
+    });
+  }
+  /** Formato del acta del Consejo de Profesores, con los datos del caso, para imprimir y firmar. */
+  getActaConsejoPdf(idSuspension: number) {
+    return this.http.get(`${this.base}/suspensiones-cautelares/${idSuspension}/acta-consejo`, {
+      responseType: 'blob',
+      observe: 'response',
+    });
+  }
 
   // Informe previo de expulsión o cancelación de matrícula
   getInformeExpulsion(idCaso: number) {
@@ -787,3 +807,6 @@ export class ApiService {
     });
   }
 }
+
+/** Los dos documentos firmados que acompañan la reconsideración de una suspensión cautelar. */
+export type DocumentoCautelar = 'solicitud_reconsideracion' | 'acta_consejo';

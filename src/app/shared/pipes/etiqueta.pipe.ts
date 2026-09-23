@@ -234,6 +234,11 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     medida_disciplinaria_cumplida: 'Medida disciplinaria cumplida',
     condicionalidad_por_revisar: 'Condicionalidad por revisar',
     expediente_exportado: 'Expediente exportado',
+    suspension_cautelar_aplicada: 'Suspensión cautelar decretada',
+    suspension_cautelar_editada: 'Suspensión cautelar corregida',
+    suspension_cautelar_reconsiderada: 'Reconsideración interpuesta',
+    suspension_cautelar_resuelta: 'Suspensión cautelar resuelta',
+    suspension_cautelar_documento: 'Documento de la reconsideración',
     nota: 'Nota',
   },
 
