@@ -602,11 +602,14 @@
         </div>
 
         <div class="modal__footer">
-            <button class="btn btn--outline" style="width:auto" (click)="descargarActa()">
+            <button class="btn btn--outline" style="width:auto" [disabled]="generandoActa()"
+                (click)="descargarActa()">
                 <i class="ti ti-download"></i> Descargar PDF
             </button>
-            <button class="btn btn--primary" style="width:auto" (click)="imprimirActa()">
-                <i class="ti ti-printer"></i> Imprimir
+            <button class="btn btn--primary" style="width:auto" [disabled]="generandoActa()"
+                (click)="imprimirActa()">
+                <i class="ti" [class.ti-printer]="!generandoActa()" [class.ti-loader-2]="generandoActa()"></i>
+                {{ generandoActa() ? 'Generando…' : 'Imprimir' }}
             </button>
         </div>
     </div>

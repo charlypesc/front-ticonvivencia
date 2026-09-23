@@ -236,7 +236,9 @@ usuario**, ni en pantalla ni en un PDF ni en un mensaje de confirmación.
   `En_curso`) y no repone tildes ni la ñ.
 - **En TypeScript**: `etiquetaDe(codigo, dominio)` del mismo archivo.
 - Al agregar un `tipo_evento`, estado o `opcion_campo` nuevo en el backend,
-  agregar su etiqueta en `ETIQUETAS`. Un código sin traducir cae en
+  agregar su etiqueta en `ETIQUETAS` **en los dos lados**: el pipe del front y
+  su copia en `backticonvivencia/src/utils/etiquetas.js`, que es la que usan
+  los PDF (se arman en el servidor). Un código sin traducir cae en
   `humanizar()` (guiones bajos por espacios), que evita el papelón pero no
   repone tildes.
 
@@ -244,10 +246,25 @@ Las descripciones que arma el backend traen la fecha ISO adentro de la frase
 ("con plazo hasta 2026-09-01T06:34:33.486Z"): pasarlas por
 `{{ texto | fechasEnTexto }}` / `formatearFechasEnTexto(texto)`.
 
-### PDFs con jsPDF: sólo Latin-1
-Las fuentes estándar de jsPDF (helvetica) no soportan caracteres fuera de
-Latin-1. Uno solo (`→`, `—`, `“ ”`, `…`) hace que **toda la línea** salga con
-las letras separadas y se vaya del margen. Antes de dibujar, pasar el texto por
-un saneo que los reemplace por su equivalente ASCII (ver `plano()` en
-`core/services/expediente.service.ts`). Las tildes y la ñ sí están en Latin-1 y
-se conservan.
+### PDFs: los arma el backend
+Todos los PDF (expediente del caso, acta de notificación, credenciales) se
+generan en `backticonvivencia/src/services/pdf/` con jsPDF (+ pdf-lib para
+anexar las actas firmadas al expediente). El front **no** tiene librerías de
+PDF: pide el archivo y le da salida con `shared/utils/pdf-salida.ts`
+(`imprimirPdf`, `descargarPdf`, `nombreDelPdf`, `mensajeDeErrorPdf`), siempre
+detrás del popover Imprimir / Descargar.
+
+- Endpoints que devuelven PDF (`Content-Disposition: inline` con el nombre):
+  `GET /protocolos-activados/:id/expediente/pdf?redactado=1` y
+  `GET /protocolos-activados/:id/gestiones/:id_paso_involucrado/acta-notificacion?plazo_dias=N`.
+  Del cliente solo viajan las decisiones del usuario (redactado, plazo); los
+  datos del documento los junta el servidor.
+- Credenciales: el PDF viaja en base64 (`pdf_base64`, `pdf_nombre`) en la
+  misma respuesta del alta / restablecimiento, para que la contraseña en claro
+  no tenga que volver al servidor a pedir el documento.
+- Fechas en el servidor: `backticonvivencia/src/utils/fecha.js` formatea en
+  `America/Santiago` (el servidor corre en UTC).
+- **Sólo Latin-1**: las fuentes estándar de jsPDF no soportan caracteres fuera
+  de Latin-1. Uno solo (`→`, `—`, `“ ”`) hace que **toda la línea** salga con
+  las letras separadas y se vaya del margen. Pasar el texto por `plano()` de
+  `services/pdf/comun.js` antes de dibujar. Tildes y ñ sí se conservan.

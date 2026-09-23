@@ -19,12 +19,11 @@ import {
 import { EtiquetaPipe, etiquetaDe, humanizar } from '../../shared/pipes/etiqueta.pipe';
 import { MedidasProteccion } from '../../shared/components/medidas-proteccion/medidas-proteccion';
 import { MedidasDisciplinarias } from '../../shared/components/medidas-disciplinarias/medidas-disciplinarias';
-import { ExpedienteService } from '../../core/services/expediente.service';
-import { ActaNotificacionService, DatosActa } from '../../core/services/acta-notificacion.service';
+import { descargarPdf, imprimirPdf, mensajeDeErrorPdf, nombreDelPdf } from '../../shared/utils/pdf-salida';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
 import { Buscador } from '../../shared/components/buscador/buscador';
-import { CursoNombrePipe, formatearNombreCurso } from '../../shared/pipes/curso-nombre.pipe';
+import { CursoNombrePipe } from '../../shared/pipes/curso-nombre.pipe';
 import { ordenarPorCoincidencia } from '../../shared/utils/coincidencia';
 
 /**
@@ -219,8 +218,6 @@ export class ProtocoloCaso implements OnInit {
   }
 
   constructor(
-    private expedienteService: ExpedienteService,
-    private actaService: ActaNotificacionService,
     private api: ApiService,
     private route: ActivatedRoute,
     private router: Router,
@@ -888,20 +885,13 @@ export class ProtocoloCaso implements OnInit {
   actaAbierta = signal<{ paso: any; gestion: any } | null>(null);
   /** Qué gestión está subiendo su acta, para bloquear su botón. */
   subiendoActa = signal<number | null>(null);
-  /** Se pide una sola vez: es el encabezado del acta, no cambia entre personas. */
-  private establecimiento = signal<any | null>(null);
-  /** Medidas disciplinarias del registro, para escribirlas en el acta. */
-  private medidas = signal<any[]>([]);
   /**
-   * Si este caso tiene un informe de expulsión o cancelación de matrícula.
-   *
-   * Antes se adivinaba con una regex sobre `tipo_medida`/`descripcion`
-   * ("expulsi", "cancelaci"), pero el ENUM de MEDIDA_DISCIPLINARIA excluye a
-   * propósito la expulsión: esos casos van por INFORME_EXPULSION, así que la
-   * regex nunca podía coincidir y el acta siempre imprimía 5 días donde a
-   * veces correspondían 15. Se consulta directo a la fuente.
+   * Medidas disciplinarias del registro. Solo para avisar en el modal si esta
+   * persona todavía no tiene ninguna: el acta la arma el backend con las suyas.
    */
-  private informeExpulsionExiste = signal(false);
+  private medidas = signal<any[]>([]);
+  /** Se está generando el acta en el backend: bloquea los botones del modal. */
+  generandoActa = signal(false);
 
   /**
    * Qué resolvió el caso: 'formativa' | 'disciplinaria' | 'ambas', o null si el
@@ -957,20 +947,10 @@ export class ProtocoloCaso implements OnInit {
    */
   actaPlazoDias = 5;
 
-  /** Los 15 días del art. 6 letra d) sólo rigen para expulsión y cancelación. */
-  private esExpulsion() {
-    return this.informeExpulsionExiste();
-  }
-
   abrirActa(paso: any, g: any) {
     this.error.set('');
     this.avisoActa.set('');
     this.actaAbierta.set({ paso, gestion: g });
-    if (!this.establecimiento())
-      this.api.getEstablecimiento().subscribe({
-        next: (e) => this.establecimiento.set(e),
-        error: () => {},
-      });
     // Se recargan cada vez: entre una impresión y otra pudo agregarse la medida
     // que justamente hay que notificar, o haberse emitido el informe de
     // expulsión que cambia el plazo legal.
@@ -980,19 +960,15 @@ export class ProtocoloCaso implements OnInit {
         next: (m) => this.medidas.set(m ?? []),
         error: () => this.medidas.set([]),
       });
+    // Si el caso tiene informe de expulsión o cancelación de matrícula, el
+    // plazo lo fija la ley (15 días hábiles, art. 6 letra d) del DFL 2); si
+    // no, se precarga en 5 y el usuario lo ajusta a su reglamento interno. Se
+    // consulta a la fuente: el ENUM de MEDIDA_DISCIPLINARIA excluye a
+    // propósito la expulsión, así que no se puede deducir de las medidas.
     this.api.getInformeExpulsion(this.id).subscribe({
-      next: () => {
-        this.informeExpulsionExiste.set(true);
-        // Una expulsión trae su plazo de la ley; el resto se precarga en 5 y
-        // el usuario lo ajusta a lo que diga su reglamento interno.
-        this.actaPlazoDias = 15;
-      },
-      // 404 es la respuesta normal cuando el caso no tiene informe: no es un
-      // error de la pantalla, es la mayoría de los casos.
-      error: () => {
-        this.informeExpulsionExiste.set(false);
-        this.actaPlazoDias = 5;
-      },
+      next: () => (this.actaPlazoDias = 15),
+      // 404 es la respuesta normal cuando el caso no tiene informe.
+      error: () => (this.actaPlazoDias = 5),
     });
   }
 
@@ -1001,27 +977,9 @@ export class ProtocoloCaso implements OnInit {
     this.avisoActa.set('');
   }
 
-  /**
-   * Plazo que se imprime en el acta.
-   *
-   * Los 15 días hábiles son los del art. 6 letra d) del DFL 2 y sólo rigen para
-   * expulsión y cancelación de matrícula. En el resto de las medidas el plazo
-   * lo fija el reglamento interno, y el acta no puede inventar uno.
-   */
-  private plazoDelActa(): string {
-    const dias = `${this.actaPlazoDias} día${this.actaPlazoDias === 1 ? '' : 's'} hábil` +
-      (this.actaPlazoDias === 1 ? '' : 'es');
-    return this.esExpulsion()
-      ? `${dias} desde esta notificación para pedir por escrito la reconsideración de la medida ` +
-          'ante el Director, quien resolverá previa consulta al Consejo de Profesores ' +
-          '(art. 6 letra d) del DFL 2 de 2009).'
-      : `${dias} desde esta notificación para pedir por escrito la reconsideración de la medida ` +
-          'ante la Dirección del establecimiento, según el Reglamento Interno de Convivencia Escolar.';
-  }
-
-  /** Las medidas que le corresponden a esta persona, que son las que se le
-   *  notifican: el acta se le entrega a ella y no puede traer lo resuelto sobre
-   *  otro involucrado. Por id cuando la medida lo trae; si no, por nombre. */
+  /** Las medidas que le corresponden a esta persona (mismo criterio que usa el
+   *  backend para escribirlas en el acta). Por id cuando la medida lo trae; si
+   *  no, por nombre. */
   private medidasDe(g: any) {
     const nombre = (g.involucrado_nombre ?? '').trim().toLowerCase();
     return this.medidas().filter((m: any) =>
@@ -1029,42 +987,6 @@ export class ProtocoloCaso implements OnInit {
         ? m.id_involucrado === g.id_involucrado
         : `${m.estudiante_nombre ?? ''} ${m.estudiante_apellido ?? ''}`.trim().toLowerCase() === nombre,
     );
-  }
-
-  private datosDelActa(): DatosActa | null {
-    const abierta = this.actaAbierta();
-    const caso = this.caso();
-    if (!abierta || !caso) return null;
-    const g = abierta.gestion;
-    const suyas = this.medidasDe(g);
-    return {
-      establecimiento: this.establecimiento(),
-      caso: {
-        id: caso.id_protocolo_activado,
-        protocolo: caso.nombre,
-        asunto: this.registro()?.asunto,
-        fecha_incidente: this.registro()?.fecha_incidente,
-      },
-      paso: { nombre: abierta.paso.nombre, descripcion: abierta.paso.descripcion },
-      // Un paso de notificación al apoderado emite el acta a nombre de él: la
-      // recibe y la firma el apoderado, no el estudiante.
-      destinatario: abierta.paso.tipo_paso === 'notificacion_apoderado' ? 'apoderado' : 'estudiante',
-      persona: {
-        nombre: g.involucrado_nombre,
-        rut: g.involucrado_rut,
-        curso: formatearNombreCurso(g.involucrado_curso),
-        rol: g.involucrado_rol ? etiquetaDe(g.involucrado_rol, 'rol_involucrado') : '',
-      },
-      medidas: suyas,
-      plazo: this.plazoDelActa(),
-      notificador: {
-        nombre: this.auth.usuario()?.nombre ?? '',
-        // `rol_nombre` es el nombre del rol ("Encargado de convivencia
-        // escolar"), no el código con que lo guarda la base.
-        cargo: this.auth.usuario()?.rol_nombre ?? '',
-        correo: this.auth.usuario()?.correo ?? '',
-      },
-    };
   }
 
   /**
@@ -1088,15 +1010,34 @@ export class ProtocoloCaso implements OnInit {
   }
 
   imprimirActa() {
-    this.revisarMedidasActa();
-    const d = this.datosDelActa();
-    if (d) this.actaService.imprimir(d);
+    this.emitirActa('imprimir');
   }
 
   descargarActa() {
+    this.emitirActa('descargar');
+  }
+
+  /** El acta la arma el backend; acá solo se le da salida. */
+  private emitirActa(accion: 'imprimir' | 'descargar') {
+    const abierta = this.actaAbierta();
+    if (!abierta || this.generandoActa()) return;
+    this.error.set('');
     this.revisarMedidasActa();
-    const d = this.datosDelActa();
-    if (d) this.actaService.descargar(d);
+    this.generandoActa.set(true);
+    this.api
+      .getActaNotificacionPdf(this.id, abierta.gestion.id_paso_involucrado, this.actaPlazoDias)
+      .subscribe({
+        next: (resp) => {
+          const pdf = resp.body!;
+          if (accion === 'imprimir') imprimirPdf(pdf);
+          else descargarPdf(pdf, nombreDelPdf(resp, 'Notificacion.pdf'));
+          this.generandoActa.set(false);
+        },
+        error: async (err) => {
+          this.error.set(await mensajeDeErrorPdf(err, 'No se pudo generar el acta'));
+          this.generandoActa.set(false);
+        },
+      });
   }
 
   /**
@@ -1322,31 +1263,26 @@ export class ProtocoloCaso implements OnInit {
   }
 
   /**
-   * Trae el expediente y lo manda a imprimir o a descargar. Se pide al momento
-   * de exportar y no al abrir la pantalla: es una consulta pesada y además
-   * queda anotada en la bitácora, así que pedirla sin que nadie la haya
+   * Pide el expediente en PDF y lo manda a imprimir o a descargar. Se pide al
+   * momento de exportar y no al abrir la pantalla: es una consulta pesada y
+   * además queda anotada en la bitácora, así que pedirla sin que nadie la haya
    * exportado ensuciaría el rastro con exportaciones que no ocurrieron.
+   *
+   * El PDF lo arma el backend, con las actas firmadas ya anexadas.
    */
   private exportar(accion: 'imprimir' | 'descargar') {
     this.exportando.set(true);
-    this.api.getExpediente(this.id, this.exportarRedactado).subscribe({
-      next: async (e) => {
+    this.api.getExpedientePdf(this.id, this.exportarRedactado).subscribe({
+      next: (resp) => {
         this.cerrarExportar();
-        try {
-          // Anexar las actas firmadas obliga a ir a buscarlas una por una: el
-          // indicador se apaga cuando el PDF está armado de verdad, o el usuario
-          // vuelve a apretar creyendo que no pasó nada.
-          if (accion === 'imprimir') await this.expedienteService.imprimir(e);
-          else await this.expedienteService.descargar(e);
-        } catch {
-          this.error.set('No se pudo generar el expediente');
-        } finally {
-          this.exportando.set(false);
-        }
-      },
-      error: (err) => {
+        const pdf = resp.body!;
+        if (accion === 'imprimir') imprimirPdf(pdf);
+        else descargarPdf(pdf, nombreDelPdf(resp, `expediente-${this.id}.pdf`));
         this.exportando.set(false);
-        this.error.set(err.error?.message ?? 'No se pudo generar el expediente');
+      },
+      error: async (err) => {
+        this.exportando.set(false);
+        this.error.set(await mensajeDeErrorPdf(err, 'No se pudo generar el expediente'));
       },
     });
   }

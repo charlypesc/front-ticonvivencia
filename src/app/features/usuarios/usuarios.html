@@ -414,6 +414,5 @@
      clave en claro que existe solo en este momento. -->
 @if (credenciales(); as cred) {
 <app-credenciales-modal [credenciales]="cred" [titulo]="tituloCredenciales()"
-    [establecimiento]="auth.usuario()?.nombre_establecimiento ?? ''" [rol]="rolCredenciales()"
-    [variante]="varianteCredenciales()" (cerrar)="cerrarCredenciales()" />
+    [rol]="rolCredenciales()" (cerrar)="cerrarCredenciales()" />
 }
