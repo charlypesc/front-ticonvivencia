@@ -921,13 +921,23 @@ export class ProtocoloCaso implements OnInit {
   }
 
   /**
-   * La vía por la que se notificó a esta persona: la ya registrada, o —si el
-   * paso está en curso— la que se está eligiendo en el formulario de la gestión.
+   * La vía por la que se notificó a esta persona: la ya registrada, o la que se
+   * está eligiendo en un formulario todavía sin guardar.
+   *
+   * Hay dos formularios con vía: el de la gestión, cuando el paso está en
+   * curso, y el de la notificación rezagada, cuando la persona ya figura como
+   * cumplida pero falta la constancia. En ese segundo caso antes no se tomaba
+   * en cuenta la vía elegida: al elegir "Carta", el acta para imprimir y el
+   * botón para subirla firmada no aparecían hasta registrar la notificación, y
+   * la carta hay que imprimirla antes de entregarla.
    */
   medioDe(g: any): string | null {
     if (g?.medio_notificacion) return g.medio_notificacion;
     const f = this.formsGestion[g?.id_paso_involucrado];
-    return f?.estado_ui === 'cumplido_notificado' ? f.medio_notificacion ?? null : null;
+    if (!f) return null;
+    if (f.estado_ui === 'cumplido_notificado') return f.medio_notificacion ?? null;
+    const rezagada = g.estado === 'cumplido' && !g.fecha_notificacion;
+    return rezagada ? f.medio_notificacion ?? null : null;
   }
 
   /**
