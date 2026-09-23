@@ -226,13 +226,77 @@
                 @if (c.fecha_consejo) { ({{ c.fecha_consejo | fecha }}) }:
                 {{ c.consejo_profesores_acta }}
             </p>
-            } @else if (c.estado !== 'resuelta') {
+            } @else if (c.estado !== 'resuelta' && !c.acta_consejo_archivo) {
             <p class="text-muted">
                 <i class="ti ti-alert-triangle"></i>
                 Falta el pronunciamiento por escrito del Consejo de Profesores, requisito para
                 resolver la reconsideración.
             </p>
             }
+
+            <!-- Los papeles firmados. El texto de arriba es lo que el
+                 establecimiento registró; esto es la prueba. Se pueden subir
+                 también con la suspensión ya resuelta: la copia firmada suele
+                 llegar después. -->
+            <div class="documentos">
+                <div class="documento">
+                    <span class="documento__nombre">
+                        <i class="ti" [class.ti-file-check]="c.solicitud_archivo"
+                            [class.ti-file-alert]="!c.solicitud_archivo"></i>
+                        Solicitud del apoderado
+                    </span>
+                    @if (c.solicitud_archivo) {
+                    <button type="button" class="btn btn--sm" style="width:auto"
+                        (click)="verDocumento(c, 'solicitud_reconsideracion')">Ver</button>
+                    } @else {
+                    <span class="text-sm text-muted">Sin adjuntar</span>
+                    }
+                    <label class="btn btn--outline btn--sm" style="width:auto"
+                        [appPuede]="Permiso.SuspensionCautelarRegistrarReconsideracion">
+                        @if (subiendoDocumento() === c.id_suspension_cautelar + '-solicitud_reconsideracion') {
+                        <i class="ti ti-loader-2 spin"></i>
+                        } @else {
+                        <i class="ti ti-upload"></i>
+                        }
+                        {{ c.solicitud_archivo ? 'Reemplazar' : 'Subir firmada' }}
+                        <input type="file" hidden (change)="subirDocumento(c, 'solicitud_reconsideracion', $event)" />
+                    </label>
+                </div>
+
+                <div class="documento">
+                    <span class="documento__nombre">
+                        <i class="ti" [class.ti-file-check]="c.acta_consejo_archivo"
+                            [class.ti-file-alert]="!c.acta_consejo_archivo"></i>
+                        Acta del Consejo de Profesores
+                    </span>
+                    <!-- Formato con los datos del caso ya puestos: se imprime, el
+                         Consejo lo completa y firma, y vuelve escaneado. -->
+                    <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                        [disabled]="generandoActaConsejo() === c.id_suspension_cautelar"
+                        (click)="actaConsejo(c, 'imprimir')" title="Imprimir el formato para el Consejo">
+                        <i class="ti ti-printer"></i> Imprimir formato
+                    </button>
+                    <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                        [disabled]="generandoActaConsejo() === c.id_suspension_cautelar"
+                        (click)="actaConsejo(c, 'descargar')" title="Descargar el formato en PDF">
+                        <i class="ti ti-download"></i>
+                    </button>
+                    @if (c.acta_consejo_archivo) {
+                    <button type="button" class="btn btn--sm" style="width:auto"
+                        (click)="verDocumento(c, 'acta_consejo')">Ver firmada</button>
+                    }
+                    <label class="btn btn--outline btn--sm" style="width:auto"
+                        [appPuede]="Permiso.SuspensionCautelarRegistrarReconsideracion">
+                        @if (subiendoDocumento() === c.id_suspension_cautelar + '-acta_consejo') {
+                        <i class="ti ti-loader-2 spin"></i>
+                        } @else {
+                        <i class="ti ti-upload"></i>
+                        }
+                        {{ c.acta_consejo_archivo ? 'Reemplazar' : 'Subir firmada' }}
+                        <input type="file" hidden (change)="subirDocumento(c, 'acta_consejo', $event)" />
+                    </label>
+                </div>
+            </div>
         </div>
         }
     </div>
@@ -525,6 +589,23 @@
                     name="consejo_profesores_acta"
                     placeholder="Se puede completar después, pero hace falta para poder resolver..."></textarea>
             </div>
+            <div class="form-group">
+                <label>Solicitud firmada del apoderado</label>
+                <!-- Sin filtro de tipo ni de peso: entra el escaneo o la foto tal
+                     como la tenga el usuario, y el backend la comprime. -->
+                <label class="btn btn--outline btn--sm" style="width:auto">
+                    <i class="ti ti-paperclip"></i>
+                    {{ archivoSolicitud ? archivoSolicitud.name : 'Adjuntar escaneo o foto' }}
+                    <input type="file" hidden (change)="elegirArchivo($event, 'solicitud')" />
+                </label>
+                <small class="text-muted">Opcional: puedes subirla después desde la tarjeta. Es la
+                    prueba de que la pidió el apoderado y de cuándo la presentó.</small>
+            </div>
+            <p class="text-sm text-muted">
+                <i class="ti ti-printer"></i>
+                Una vez registrada, en la tarjeta vas a tener el <strong>formato del acta del
+                Consejo de Profesores</strong> para imprimir, firmar y volver a subir.
+            </p>
         </div>
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="cerrarReconsideracion()">Cancelar</button>
@@ -574,13 +655,38 @@
                 </div>
             </div>
             <div class="form-group">
-                <label>Pronunciamiento del Consejo de Profesores *</label>
+                <label>Pronunciamiento del Consejo de Profesores</label>
                 <textarea [(ngModel)]="formResolver.consejo_profesores_acta"
                     name="consejo_profesores_acta_r"
                     placeholder="Lo que el Consejo resolvió por escrito..."></textarea>
-                <small class="text-muted">La ley exige consultarlo antes de resolver la
-                    reconsideración y que se pronuncie por escrito.</small>
             </div>
+            <div class="form-group">
+                <label>Acta firmada del Consejo</label>
+                <div class="documento">
+                    <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                        [disabled]="generandoActaConsejo() === resolverDe().id_suspension_cautelar"
+                        (click)="actaConsejo(resolverDe(), 'imprimir')">
+                        <i class="ti ti-printer"></i> Imprimir formato
+                    </button>
+                    <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                        [disabled]="generandoActaConsejo() === resolverDe().id_suspension_cautelar"
+                        (click)="actaConsejo(resolverDe(), 'descargar')" title="Descargar el formato en PDF">
+                        <i class="ti ti-download"></i>
+                    </button>
+                    <label class="btn btn--outline btn--sm" style="width:auto">
+                        <i class="ti ti-paperclip"></i>
+                        {{ archivoActaConsejo ? archivoActaConsejo.name
+                            : (resolverDe().acta_consejo_archivo ? 'Reemplazar la adjunta' : 'Adjuntar firmada') }}
+                        <input type="file" hidden (change)="elegirArchivo($event, 'acta')" />
+                    </label>
+                </div>
+                @if (resolverDe().acta_consejo_archivo && !archivoActaConsejo) {
+                <small class="text-muted"><i class="ti ti-file-check"></i> Ya hay un acta firmada adjunta.</small>
+                }
+            </div>
+            <small class="text-muted">La ley exige consultar al Consejo antes de resolver la
+                reconsideración y que se pronuncie por escrito: basta con transcribir su
+                pronunciamiento o con adjuntar el acta firmada.</small>
             }
         </div>
         <div class="modal__footer">

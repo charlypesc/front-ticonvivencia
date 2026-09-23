@@ -4,7 +4,8 @@ import { hoyIso, ahoraIso } from '../../utils/fecha';
 import { FechaPipe } from '../../pipes/fecha.pipe';
 import { EtiquetaPipe } from '../../pipes/etiqueta.pipe';
 import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../../core/services/api.services';
+import { ApiService, DocumentoCautelar } from '../../../core/services/api.services';
+import { descargarPdf, imprimirPdf, mensajeDeErrorPdf, nombreDelPdf } from '../../utils/pdf-salida';
 import { Permiso } from '../../../core/constants/permisos';
 import { Puede } from '../../directives/permiso.directive';
 import { CerrarConEsc } from '../../directives/cerrar-con-esc.directive';
@@ -142,6 +143,13 @@ export class MedidasDisciplinarias implements OnInit {
     consejo_profesores_acta: '',
     fecha_consejo: '',
   };
+  /** Escrito firmado del apoderado, elegido en el modal; se sube al registrar. */
+  archivoSolicitud: File | null = null;
+
+  /** Qué documento se está subiendo (`id-tipo`), para bloquear su botón. */
+  subiendoDocumento = signal<string | null>(null);
+  /** Suspensión cuyo formato de acta del Consejo se está generando. */
+  generandoActaConsejo = signal<number | null>(null);
 
   resolverDe = signal<any | null>(null);
   formResolver = {
@@ -150,6 +158,8 @@ export class MedidasDisciplinarias implements OnInit {
     consejo_profesores_acta: '',
     fecha_consejo: '',
   };
+  /** Acta firmada del Consejo elegida en el modal de resolver; se sube antes de resolver. */
+  archivoActaConsejo: File | null = null;
 
   mostrarForm = signal(false);
   form = {
@@ -398,6 +408,7 @@ export class MedidasDisciplinarias implements OnInit {
       consejo_profesores_acta: '',
       fecha_consejo: '',
     };
+    this.archivoSolicitud = null;
     this.reconsiderarDe.set(c);
   }
 
@@ -416,9 +427,19 @@ export class MedidasDisciplinarias implements OnInit {
         next: (r) => {
           // El aviso de fuera de plazo no es un error: la reconsideración queda
           // registrada igual y admitirla es decisión del director.
-          this.success.set(r.aviso ?? 'Reconsideración registrada. La suspensión se amplía hasta resolverla.');
+          const mensaje = r.aviso ?? 'Reconsideración registrada. La suspensión se amplía hasta resolverla.';
+          const c = this.reconsiderarDe();
+          const archivo = this.archivoSolicitud;
           this.cerrarReconsideracion();
-          this.cargarCautelares();
+          if (!archivo) {
+            this.success.set(mensaje);
+            this.cargarCautelares();
+            return;
+          }
+          // La solicitud se sube recién ahora: el backend la acepta solo con la
+          // reconsideración ya registrada. Si falla, la reconsideración queda
+          // igual y se puede volver a subir desde la tarjeta.
+          this.enviarDocumento(c, 'solicitud_reconsideracion', archivo, mensaje);
         },
         error: (err) => this.error.set(err.error?.message ?? 'Error al registrar la reconsideración'),
       });
@@ -426,6 +447,7 @@ export class MedidasDisciplinarias implements OnInit {
 
   abrirResolver(c: any) {
     this.error.set('');
+    this.archivoActaConsejo = null;
     this.formResolver = {
       fecha_resolucion: hoyIso(),
       resultado_reconsideracion: '',
@@ -446,19 +468,124 @@ export class MedidasDisciplinarias implements OnInit {
       this.error.set('Indicá si la reconsideración se acoge o se rechaza');
       return;
     }
-    if (c.fecha_reconsideracion && !this.formResolver.consejo_profesores_acta.trim()) {
+    // El pronunciamiento escrito del Consejo puede constar transcrito o como
+    // el acta firmada (la ya adjunta o la que se elige ahora).
+    const hayActa =
+      !!this.formResolver.consejo_profesores_acta.trim() ||
+      !!c.acta_consejo_archivo ||
+      !!this.archivoActaConsejo;
+    if (c.fecha_reconsideracion && !hayActa) {
       this.error.set(
-        'Falta el pronunciamiento por escrito del Consejo de Profesores: la ley lo exige antes de resolver'
+        'Falta el pronunciamiento por escrito del Consejo de Profesores: transcríbelo o adjunta el ' +
+          'acta firmada. La ley lo exige antes de resolver',
       );
       return;
     }
-    this.api.resolverSuspensionCautelar(c.id_suspension_cautelar, this.formResolver).subscribe({
-      next: (r) => {
-        this.success.set(r.aviso ?? 'Suspensión cautelar resuelta');
-        this.cerrarResolver();
+
+    const resolverAhora = () =>
+      this.api.resolverSuspensionCautelar(c.id_suspension_cautelar, this.formResolver).subscribe({
+        next: (r) => {
+          this.success.set(r.aviso ?? 'Suspensión cautelar resuelta');
+          this.cerrarResolver();
+          this.cargarCautelares();
+        },
+        error: (err) => this.error.set(err.error?.message ?? 'Error al resolver la suspensión cautelar'),
+      });
+
+    if (!this.archivoActaConsejo) {
+      resolverAhora();
+      return;
+    }
+    // Primero el acta: si el backend la exige para resolver, tiene que estar.
+    const fd = new FormData();
+    fd.append('archivo', this.archivoActaConsejo);
+    this.subiendoDocumento.set(`${c.id_suspension_cautelar}-acta_consejo`);
+    this.api.subirDocumentoCautelar(c.id_suspension_cautelar, 'acta_consejo', fd).subscribe({
+      next: () => {
+        this.subiendoDocumento.set(null);
+        this.archivoActaConsejo = null;
+        resolverAhora();
+      },
+      error: (err) => {
+        this.subiendoDocumento.set(null);
+        this.error.set(err.error?.message ?? 'No se pudo adjuntar el acta del Consejo');
+      },
+    });
+  }
+
+  // ── Documentos de la reconsideración ────────────────────────────────────
+
+  /**
+   * Toma el archivo elegido en un modal (se sube al guardar). El value se
+   * limpia apenas se captura, para poder volver a elegir el mismo archivo.
+   */
+  elegirArchivo(evento: Event, destino: 'solicitud' | 'acta') {
+    const input = evento.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    input.value = '';
+    if (!file) return;
+    if (destino === 'solicitud') this.archivoSolicitud = file;
+    else this.archivoActaConsejo = file;
+  }
+
+  /**
+   * Sube un documento desde la tarjeta. Sin filtro de tipo ni de peso: el
+   * backend lo comprime. La traba por documento evita que el doble disparo del
+   * input con cámara en Android lo suba dos veces.
+   */
+  subirDocumento(c: any, tipo: DocumentoCautelar, evento: Event) {
+    const input = evento.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || this.subiendoDocumento() === `${c.id_suspension_cautelar}-${tipo}`) return;
+    this.error.set('');
+    this.enviarDocumento(c, tipo, file);
+  }
+
+  private enviarDocumento(c: any, tipo: DocumentoCautelar, file: File, mensajePrevio = '') {
+    const clave = `${c.id_suspension_cautelar}-${tipo}`;
+    this.subiendoDocumento.set(clave);
+    const fd = new FormData();
+    fd.append('archivo', file);
+    const nombre = tipo === 'acta_consejo' ? 'Acta del Consejo adjuntada' : 'Solicitud de reconsideración adjuntada';
+    this.api.subirDocumentoCautelar(c.id_suspension_cautelar, tipo, fd).subscribe({
+      next: () => {
+        this.subiendoDocumento.set(null);
+        this.success.set(mensajePrevio ? `${mensajePrevio} ${nombre}.` : nombre);
         this.cargarCautelares();
       },
-      error: (err) => this.error.set(err.error?.message ?? 'Error al resolver la suspensión cautelar'),
+      error: (err) => {
+        this.subiendoDocumento.set(null);
+        if (mensajePrevio) this.success.set(mensajePrevio);
+        this.error.set(err.error?.message ?? 'No se pudo adjuntar el documento: vuelve a subirlo desde la tarjeta');
+        this.cargarCautelares();
+      },
+    });
+  }
+
+  /** Abre el documento en una pestaña. Va por blob: el token viaja en la cabecera. */
+  verDocumento(c: any, tipo: DocumentoCautelar) {
+    this.api.getDocumentoCautelar(c.id_suspension_cautelar, tipo).subscribe({
+      next: (blob) => window.open(URL.createObjectURL(blob), '_blank'),
+      error: () => this.error.set('No se pudo abrir el documento'),
+    });
+  }
+
+  /** El formato del acta del Consejo (lo arma el backend con los datos del caso). */
+  actaConsejo(c: any, accion: 'imprimir' | 'descargar') {
+    if (this.generandoActaConsejo()) return;
+    this.error.set('');
+    this.generandoActaConsejo.set(c.id_suspension_cautelar);
+    this.api.getActaConsejoPdf(c.id_suspension_cautelar).subscribe({
+      next: (resp) => {
+        this.generandoActaConsejo.set(null);
+        if (accion === 'imprimir') imprimirPdf(resp.body!);
+        else descargarPdf(resp.body!, nombreDelPdf(resp, 'Acta Consejo de Profesores.pdf'));
+      },
+      error: async (err) => {
+        this.generandoActaConsejo.set(null);
+        this.error.set(await mensajeDeErrorPdf(err, 'No se pudo generar el acta del Consejo'));
+      },
     });
   }
 }

@@ -50,3 +50,27 @@
   font-size: .85rem;
   color: $gray-400;
 }
+
+// Documentos firmados de la reconsideración: una fila por documento, con sus
+// acciones al lado. Envuelve en pantallas angostas.
+.documentos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.documento {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.documento__nombre {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 190px;
+  font-weight: 500;
+}
