@@ -153,7 +153,9 @@ export class ApiService {
 
   /** Cambia la contraseña del usuario de la sesión. Exige la actual. */
   cambiarPassword(actual: string, nueva: string) {
-    return this.http.patch<{ message: string }>(`${this.base}/auth/password`, { actual, nueva });
+    // `token` viene solo si la clave era temporal: el anterior la traía
+    // marcada y el backend lo rechaza para todo lo demás.
+    return this.http.patch<{ message: string; token?: string }>(`${this.base}/auth/password`, { actual, nueva });
   }
   getRolesDeUsuario(id: number) {
     return this.http.get<any[]>(`${this.base}/usuarios/${id}/roles`);

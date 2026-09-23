@@ -98,6 +98,19 @@ export class AuthService {
     });
   }
 
+  /**
+   * La clave temporal ya se reemplazó: se guarda el token nuevo (el anterior
+   * la traía marcada) y se baja la bandera para que el navbar suelte el modal.
+   */
+  passwordCambiada(token?: string) {
+    if (token) localStorage.setItem(this.TOKEN_KEY, token);
+    const u = this.usuario();
+    if (!u?.debe_cambiar_password) return;
+    const actualizado = { ...u, debe_cambiar_password: false };
+    localStorage.setItem(this.USER_KEY, JSON.stringify(actualizado));
+    this.usuario.set(actualizado);
+  }
+
   logout() {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
