@@ -39,6 +39,7 @@
     </div>
 </header>
 
-@if (mostrarCambiarPassword()) {
-<app-cambiar-password-modal (cerrar)="mostrarCambiarPassword.set(false)" />
+@if (mostrarCambiarPassword() || usuario()?.debe_cambiar_password) {
+<app-cambiar-password-modal [obligatorio]="!!usuario()?.debe_cambiar_password"
+    (cerrar)="mostrarCambiarPassword.set(false)" />
 }

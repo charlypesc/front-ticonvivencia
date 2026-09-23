@@ -46,10 +46,14 @@ export class Login {
       next: () => this.router.navigate(['/dashboard']),
       error: (err) => {
         this.loading.set(false);
+        // 429: se pasó del límite de intentos; 403: el colegio tiene el acceso
+        // suspendido. En los dos el servidor explica qué hacer.
         this.error.set(
           err.status === 401
             ? 'Credenciales inválidas. Verifique su correo y contraseña'
-            : 'Error del servidor. Intente nuevamente',
+            : (err.status === 429 || err.status === 403) && err.error?.message
+              ? err.error.message
+              : 'Error del servidor. Intente nuevamente',
         );
       },
     });

@@ -1,7 +1,8 @@
-import { Component, EventEmitter, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.services';
+import { AuthService } from '../../../core/services/auth.service';
 import { CerrarConEsc } from '../../directives/cerrar-con-esc.directive';
 import { GuardarConCmdEnter } from '../../directives/guardar-con-cmd-enter.directive';
 
@@ -25,6 +26,12 @@ const LARGO_MINIMO = 8;
 export class CambiarPasswordModal {
   @Output() cerrar = new EventEmitter<void>();
 
+  /**
+   * Clave temporal: no se puede cerrar sin cambiarla (sin X, sin Cancelar, sin
+   * click afuera, y por eso tampoco con Escape, que usa esos mismos caminos).
+   */
+  @Input() obligatorio = false;
+
   form = { actual: '', nueva: '', confirmar: '' };
 
   /** Un ojo por campo: quien tipea desde un papel necesita verificar lo escrito. */
@@ -34,7 +41,7 @@ export class CambiarPasswordModal {
   error = signal('');
   listo = signal(false);
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private auth: AuthService) {}
 
   guardar() {
     this.error.set('');
@@ -66,7 +73,10 @@ export class CambiarPasswordModal {
         // No se cierra sola ni se fuerza un logout: el token sigue siendo
         // válido y desloguear a alguien que acaba de acertar su clave actual
         // parecería un error del sistema. Se confirma y la persona sigue.
-        next: () => this.listo.set(true),
+        next: (r) => {
+          this.auth.passwordCambiada(r.token);
+          this.listo.set(true);
+        },
         error: (err) => this.error.set(err.error?.message ?? 'No se pudo cambiar la contraseña'),
       })
       .add(() => this.guardando.set(false));

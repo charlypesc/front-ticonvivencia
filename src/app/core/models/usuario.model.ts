@@ -25,6 +25,12 @@ export interface Usuario {
   nombre_establecimiento?: string;
   /** RBD del establecimiento, para mostrarlo junto al nombre en el navbar. */
   rbd_establecimiento?: string | number | null;
+  /**
+   * Entró con una clave temporal (recién creada o restablecida por el
+   * encargado). Mientras sea true el backend le rechaza todo salvo cambiarla,
+   * y el navbar le abre el cambio de contraseña sin opción de cerrarlo.
+   */
+  debe_cambiar_password?: boolean;
 }
 
 /**

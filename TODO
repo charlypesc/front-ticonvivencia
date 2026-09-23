@@ -301,3 +301,10 @@ Formulario de registro:
 - 2026-08-31 20:10 → 21:03 (53m)
 - 2026-08-31 16:14 → 21:03 (4h49m)
 - 2026-08-31 15:56 → 21:03 (5h7m)
+
+Login y contraseña (2026-09-23):
+  ✔ el login dice qué hacer si olvidaste la contraseña @done
+    No hay recuperación por correo a propósito: la gestiona el encargado del colegio (restablecer desde Usuarios). El login lo explica, y muestra el mensaje del servidor en 429 (demasiados intentos) y 403 (colegio suspendido), que antes caían en "Error del servidor".
+  ✔ modal de cambio de contraseña obligatorio con clave temporal @done
+    Si el usuario llega con debe_cambiar_password, el navbar abre CambiarPasswordModal con [obligatorio]: sin X, sin Cancelar ni click afuera (y por eso sin Escape, que CerrarConEsc resuelve apretando esos mismos controles). Al cambiarla, AuthService.passwordCambiada() guarda el token nuevo que devuelve el backend y baja la bandera.
+
