@@ -649,6 +649,23 @@ export class ProtocoloCaso implements OnInit {
       this.tarjetaDisciplinarias?.abrirCautelarParaPaso(paso.id_activado_paso);
     else this.tarjetaProteccion?.abrirParaPaso(paso.id_activado_paso);
   }
+
+  /**
+   * Una tarjeta guardó una medida. Sin esto el aviso amarillo del paso seguía
+   * diciendo que no había ninguna, y la confirmación quedaba al fondo de la
+   * página: parecía que no se había guardado.
+   *
+   * No se usa cargar(): repinta el formulario del paso y borraría lo que la
+   * persona ya escribió (el fundamento, por ejemplo). Solo se reemplazan los
+   * datos del caso, que es de donde sale `medida_pendiente`.
+   */
+  medidaGuardada(mensaje: string) {
+    this.success.set(mensaje);
+    this.api.getProtocoloActivado(this.id).subscribe({
+      next: (data) => this.caso.set(data),
+      error: () => {},
+    });
+  }
   /** El mismo par que valida `cerrar()` en el backend: resultado sin registrar
    *  (lo que el informe de expulsión exige) y suspensiones vencidas sin cerrar
    *  (la infracción real del art. 16 E letra j / Circular 482). */

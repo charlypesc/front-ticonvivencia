@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { hoyIso } from '../../utils/fecha';
 import { FechaPipe } from '../../pipes/fecha.pipe';
@@ -54,6 +54,10 @@ export class MedidasProteccion implements OnInit {
    * medida que ya está cargada, solo que sin decir a qué paso responde.
    */
   @Input() pasosConMedida: PasoQueOrdenaMedida[] = [];
+
+  /** Se guardó una medida: la pantalla del caso repite el aviso junto al paso
+   *  (el de esta tarjeta queda al fondo) y refresca el aviso amarillo. */
+  @Output() medidaGuardada = new EventEmitter<string>();
 
   /**
    * De los pasos que ordenan medida, los que ESTA tarjeta puede cumplir.
@@ -229,6 +233,7 @@ export class MedidasProteccion implements OnInit {
         // muestra porque es el dato que la persona no puede sacar de memoria.
         const que = editada ? 'Medida corregida' : 'Medida registrada';
         this.success.set(res?.fecha_termino ? `${que}. Vence el ${res.fecha_termino}.` : que);
+        this.medidaGuardada.emit(this.success());
         this.cerrarForm();
         this.cargar();
       },
