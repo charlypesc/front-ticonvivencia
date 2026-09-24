@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { hoyIso, ahoraIso } from '../../utils/fecha';
 import { FechaPipe } from '../../pipes/fecha.pipe';
@@ -69,6 +69,13 @@ export class MedidasDisciplinarias implements OnInit {
    * cargada.
    */
   @Input() pasosConMedida: PasoQueOrdenaMedida[] = [];
+
+  /**
+   * Se guardó una medida o una cautelar. El aviso de esta tarjeta queda al
+   * fondo de la página, fuera de la vista de quien la abrió desde el paso: la
+   * pantalla del caso lo repite arriba y refresca el aviso amarillo del paso.
+   */
+  @Output() medidaGuardada = new EventEmitter<string>();
 
   /**
    * De los pasos que ordenan medida, los que cumple cada uno de los dos
@@ -276,6 +283,7 @@ export class MedidasDisciplinarias implements OnInit {
             r?.aviso ?? '',
           ].filter(Boolean).join('. '),
         );
+        this.medidaGuardada.emit(this.success());
         this.cerrarForm();
         this.cargar();
       },
@@ -394,6 +402,7 @@ export class MedidasDisciplinarias implements OnInit {
           `${editada ? 'Suspensión cautelar corregida' : 'Suspensión cautelar registrada'}. ` +
             `Hay plazo para resolver hasta el ${r.fecha_limite_resolucion}.`
         );
+        this.medidaGuardada.emit(this.success());
         this.cerrarFormCautelar();
         this.cargarCautelares();
       },
