@@ -8,6 +8,34 @@
   h2 { font-size: 1.25rem; font-weight: 700; }
 }
 
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  &__buscador {
+    flex: 1 1 280px;
+    max-width: 460px;
+  }
+}
+
+.sugerencia__nombre { font-weight: 600; margin-right: 8px; }
+.sugerencia__meta { color: $gray-400; font-size: .85em; }
+
+.filtro-activo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: #eef2fb;
+  color: $primary;
+}
+
 .acciones {
   display: flex;
   gap: 8px;
