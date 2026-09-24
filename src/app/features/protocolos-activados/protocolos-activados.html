@@ -15,12 +15,42 @@
 }
 
 <div class="card">
-    <div style="display:flex">
+    <div class="barra">
         <button class="btn btn--primary btn--sm" style="width: auto;"
             [appPuede]="Permiso.ProtocoloActivadoCrear" (click)="abrirForm()">
             <i class="ti ti-plus"></i> Activar protocolo
         </button>
+
+        <!-- Solo sugiere estudiantes que están en algún caso. -->
+        <div class="barra__buscador">
+            <app-buscador [items]="sugerenciasAlumno()" [texto]="busquedaAlumno()"
+                (textoChange)="busquedaAlumno.set($event)" (elegir)="elegirAlumno($event)"
+                placeholder="Buscar alumno involucrado por nombre o RUT...">
+                <ng-template #item let-e>
+                    <span class="sugerencia__nombre">{{ e.nombre }}</span>
+                    <span class="sugerencia__meta">
+                        @if (e.rut) { {{ e.rut }} · }
+                        @if (e.curso) { {{ e.curso }} · }
+                        {{ e.casos.size }} {{ e.casos.size === 1 ? 'caso' : 'casos' }}
+                    </span>
+                </ng-template>
+                <ng-template #vacio>Ningún alumno involucrado coincide</ng-template>
+            </app-buscador>
+        </div>
     </div>
+
+    @if (alumnoFiltro(); as al) {
+    <div class="filtro-activo">
+        <span>
+            <i class="ti ti-user"></i>
+            Casos de <strong>{{ al.nombre }}</strong> ({{ activadosFiltrados().length }})
+        </span>
+        <button class="btn-icon" title="Quitar filtro" (click)="quitarFiltroAlumno()">
+            <i class="ti ti-x"></i>
+        </button>
+    </div>
+    }
+
     @if (loading()) {
     <div class="empty-state">
         <i class="ti ti-loader-2 spin"></i>
@@ -37,6 +67,7 @@
             <thead>
                 <tr>
                     <th>Protocolo</th>
+                    <th>Alumnos</th>
                     <th>Registro</th>
                     <th>Estado</th>
                     <th>Fecha activación</th>
@@ -44,9 +75,10 @@
                 </tr>
             </thead>
             <tbody>
-                @for (a of activados(); track a.id_protocolo_activado) {
+                @for (a of activadosFiltrados(); track a.id_protocolo_activado) {
                 <tr class="fila-clickeable" (click)="abrirCaso(a)">
                     <td>{{ a.nombre }}</td>
+                    <td class="text-muted">{{ nombresEstudiantes(a) || '—' }}</td>
                     <td class="text-muted">#{{ a.id_registro }}</td>
                     <td>
                         <span class="badge badge--{{ a.estado === 'cerrado' ? 'validado' : a.estado === 'anulado' ?
