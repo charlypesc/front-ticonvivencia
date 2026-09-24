@@ -28,6 +28,9 @@ const TIPOS_MEDIDA = [
   'servicio_comunitario', 'derivacion', 'retiro_sala', 'suspension_actividades',
   'condicionalidad', 'suspension', 'reduccion_jornada', 'separacion_temporal',
   'asistencia_solo_evaluaciones', 'otra',
+  // Normalmente las registra solas el protocolo al aprobarse la decisión de
+  // expulsión; quedan acá para los casos resueltos antes de eso.
+  'expulsion', 'cancelacion_matricula',
 ] as const;
 const TIPOS_CON_PLAZO = ['suspension', 'reduccion_jornada', 'separacion_temporal', 'asistencia_solo_evaluaciones'];
 
