@@ -112,20 +112,44 @@ export class AuthService {
   }
 
   logout() {
+    this.limpiarSesion();
+    this.router.navigate(['/login']);
+  }
+
+  /** Sesión vencida o rechazada por el backend: se limpia y se pide entrar de nuevo. */
+  sesionExpirada() {
+    if (!this.getToken()) return;
+    this.logout();
+  }
+
+  private limpiarSesion() {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
     localStorage.removeItem(this.EST_KEY);
     this.usuario.set(null);
     this.establecimientoActivo.set(null);
-    this.router.navigate(['/login']);
   }
 
   getToken(): string | null {
     return localStorage.getItem(this.TOKEN_KEY);
   }
 
+  /**
+   * No basta con que haya un token guardado: si ya venció, el sistema abre
+   * pero todas las llamadas rebotan y no carga nada. Se lee el `exp` del
+   * payload (sin validar la firma, eso lo hace el backend) para mandar al
+   * login antes de entrar.
+   */
   isLoggedIn(): boolean {
-    return !!this.getToken();
+    const token = this.getToken();
+    if (!token) return false;
+    try {
+      const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const { exp } = JSON.parse(atob(b64));
+      if (typeof exp === 'number' && exp * 1000 > Date.now()) return true;
+    } catch {}
+    this.limpiarSesion();
+    return false;
   }
 
   /**
