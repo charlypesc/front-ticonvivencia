@@ -42,7 +42,7 @@
      se ejecutan dentro de plazo, que es lo que hay que poder demostrar ante la
      Superintendencia. Las que están en cero no se muestran: un tablero lleno de
      ceros esconde el único número que importa cuando deja de serlo. -->
-@if (resumen().cumplimiento; as c) {
+@if (cumplimiento(); as c) {
 <div class="page-header" style="margin-top:24px">
     <h2>Cumplimiento de protocolos</h2>
 </div>
@@ -50,15 +50,9 @@
 <div class="stats-grid">
     <!-- "Casos activos" salió de acá: era el mismo número que "Protocolos
          activados" de arriba, y repetirlo hacía dudar de si medían cosas
-         distintas. Este bloque mide cumplimiento, no volumen. -->
-    @if (c.porcentaje_en_plazo !== null) {
-    <div class="stat-card" [class.stat-card--warn]="c.porcentaje_en_plazo < 80">
-        <div class="stat-card__num">{{ c.porcentaje_en_plazo }}%</div>
-        <div class="stat-card__label">
-            <i class="ti ti-clock-check"></i> Pasos cerrados en plazo
-        </div>
-    </div>
-    }
+         distintas. Este bloque mide cumplimiento, no volumen.
+         "Pasos cerrados en plazo" (%) también salió: era un acumulado
+         histórico, y un solo atraso viejo lo dejaba en 99% para siempre. -->
 
     @if (c.pasos_por_vencer > 0) {
     <div class="stat-card stat-card--warn">
