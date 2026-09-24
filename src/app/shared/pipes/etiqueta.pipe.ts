@@ -291,6 +291,8 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     separacion_temporal: 'Separación temporal de actividades',
     asistencia_solo_evaluaciones: 'Asistencia solo a evaluaciones',
     otra: 'Otra',
+    expulsion: 'Expulsión',
+    cancelacion_matricula: 'Cancelación de matrícula',
   },
 
   // Los dos de abajo son el catálogo de permisos: cada fila de PERMISOS tiene
