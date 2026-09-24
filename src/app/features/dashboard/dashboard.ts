@@ -17,6 +17,20 @@ export class Dashboard implements OnInit {
   resumen = signal<any>(null);
   usuario = computed(() => this.auth.usuario());
 
+  /**
+   * El bloque de cumplimiento solo muestra alertas (las que están en cero se
+   * ocultan): si no hay ninguna, tampoco se muestra el título solo.
+   */
+  cumplimiento = computed(() => {
+    const c = this.resumen()?.cumplimiento;
+    if (!c) return null;
+    const hayAlertas =
+      c.pasos_por_vencer > 0 || c.pasos_vencidos > 0 || c.registros_sin_protocolo > 0 ||
+      c.cautelares_sin_resolver > 0 || c.notificaciones_pendientes > 0 ||
+      c.medidas_vencidas > 0 || c.investigaciones_fuera_de_plazo > 0;
+    return hayAlertas ? c : null;
+  });
+
   constructor(
     private api: ApiService,
     private auth: AuthService,
