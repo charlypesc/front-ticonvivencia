@@ -594,12 +594,16 @@
                 </p>
             </div>
             <div class="form-group">
-                <label>Nota para el acta (opcional)</label>
-                <!-- Queda impresa como "Observaciones" en el papel que se firma:
-                     una citación, una condición, lo que se conversó. No se
-                     guarda aparte: vive en el acta, que vuelve firmada. -->
+                <label>Qué se notifica (opcional)</label>
+                <!-- Queda impresa bajo "SE NOTIFICA" en el papel que se firma,
+                     después de las medidas cargadas. Si se deja vacía y no hay
+                     medidas, el acta sale con líneas para llenar a mano. -->
                 <textarea appAutoAjustar rows="2" [(ngModel)]="actaNota" name="acta_nota" maxlength="2000"
-                    placeholder="Ej: se cita al apoderado a entrevista el lunes a las 10:00..."></textarea>
+                    placeholder="Ej: se notifica la citación del apoderado a entrevista el lunes a las 10:00..."></textarea>
+                <p class="text-sm text-muted">
+                    Se imprime en el acta bajo "SE NOTIFICA". Si lo dejas vacío y el caso no tiene
+                    medidas registradas, el acta sale con líneas en blanco para completar a mano.
+                </p>
             </div>
 
             <p class="text-muted formato-unico">
