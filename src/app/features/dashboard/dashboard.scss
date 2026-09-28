@@ -8,7 +8,7 @@
 // ── STATS ──────────────────────────────────────
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -105,3 +105,88 @@
   }
 }
 
+
+// ── ATENCIÓN Y ALERTAS ─────────────────────────
+.card--atencion { border-left: 4px solid $primary; margin-bottom: 20px; }
+.card--peligro  { border-left: 4px solid $danger; }
+.card--aviso    { border-left: 4px solid $warn; }
+.card--peligro .ultimo-item__info i { color: $danger; }
+
+.ultimo-item { gap: 12px; }
+.autor { color: $primary; font-size: 15px; }
+.texto-tenue { color: $gray-400; }
+.ultimo-item .badge + .badge { margin-left: 4px; }
+
+.alertas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+// ── GRÁFICOS ───────────────────────────────────
+// Una sola serie por gráfico, un solo tono: la barra del mes en curso se
+// oscurece para ubicarse, no para decir otra cosa.
+.graficos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.grafico {
+  &--ancho { grid-column: 1 / -1; }
+  &__titulo { font-size: 14px; font-weight: 600; margin: 0 0 16px; color: $gray-900; }
+}
+
+.columnas {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 180px;
+
+  &__col {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    min-width: 0;
+    cursor: default;
+    &:hover .columnas__barra { opacity: .8; }
+  }
+  &__barra {
+    width: 100%;
+    max-width: 28px;
+    min-height: 2px;
+    background: $primary-light;
+    border-radius: 4px 4px 0 0;
+    &--actual { background: $primary; }
+  }
+  &__valor { font-size: 11px; color: $gray-600; margin-bottom: 2px; min-height: 14px; }
+  &__mes { font-size: 11px; color: $gray-400; margin-top: 6px; border-top: 1px solid $gray-200; width: 100%; text-align: center; padding-top: 4px; }
+}
+
+.barras {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &__fila {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 32px;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    &:hover .barras__barra { opacity: .8; }
+  }
+  &__nombre { color: $gray-600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &__pista { height: 12px; }
+  &__barra { height: 100%; min-width: 2px; background: $primary-light; border-radius: 0 4px 4px 0; }
+  &__valor { font-weight: 600; color: $gray-900; text-align: right; }
+
+  @media (max-width: 560px) {
+    &__fila { grid-template-columns: 1fr 32px; }
+    &__nombre { grid-column: 1 / -1; white-space: normal; }
+  }
+}

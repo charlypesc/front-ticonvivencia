@@ -2,7 +2,10 @@
     <div class="modal" (click)="$event.stopPropagation()">
 
         <div class="modal__header">
-            <h3><i class="ti ti-file-plus"></i> Nuevo registro de convivencia</h3>
+            <h3>
+                <i class="ti" [class.ti-file-plus]="!registro" [class.ti-file-text]="registro"></i>
+                {{ registro ? 'Registro de convivencia #' + registro.id_registro : 'Nuevo registro de convivencia' }}
+            </h3>
             <button class="modal__close" (click)="cerrar.emit()">
                 <i class="ti ti-x"></i>
             </button>
@@ -12,13 +15,109 @@
              todavía no tiene autor guardado (lo será quien lo está llenando
              ahora mismo), así que mostrarlo ahí sería redundante. -->
         @if (registro?.autor_nombre || registro?.autor_correo) {
-        <p class="autoria">
-            <i class="ti ti-user"></i>
-            Registrado por {{ registro.autor_nombre ?? registro.autor_correo }} el {{ registro.fecha_creacion | fecha:true }}
-            @if ((registro.editor_nombre || registro.editor_correo) && registro.fecha_modificacion) {
-            · editado por {{ registro.editor_nombre ?? registro.editor_correo }} el {{ registro.fecha_modificacion | fecha:true }}
+        <!-- Quién lo llenó va destacado: es lo primero que necesita saber el
+             coordinador para decidir si atiende el registro o lo deriva. -->
+        <div class="autoria">
+            <span class="autoria__avatar"><i class="ti ti-user-edit"></i></span>
+            <div>
+                <span class="autoria__rotulo">Registrado por</span>
+                <strong class="autoria__nombre">{{ registro.autor_nombre ?? registro.autor_correo }}</strong>
+                <span class="autoria__meta">
+                    el {{ registro.fecha_creacion | fecha:true }}
+                    @if ((registro.editor_nombre || registro.editor_correo) && registro.fecha_modificacion) {
+                    · editado por {{ registro.editor_nombre ?? registro.editor_correo }} el {{ registro.fecha_modificacion | fecha:true }}
+                    }
+                </span>
+            </div>
+            <!-- Imprimir el registro tal como se llenó: abre el popover
+                 Imprimir / Descargar en vez de bajar el archivo directo. -->
+            <button type="button" class="btn btn--outline btn--sm autoria__imprimir" style="width:auto"
+                (click)="mostrarSalidaPdf.set(true)" title="Imprimir o descargar el registro">
+                <i class="ti ti-printer"></i> Imprimir
+            </button>
+        </div>
+        }
+
+        <!-- Atención y derivación. Solo en un registro guardado. -->
+        @if (registro?.id_registro && (registro?.puede_derivar || derivacionParaMi())) {
+        <div class="gestion">
+            @if (aviso()) {
+            <div class="alert alert--success"><i class="ti ti-circle-check"></i> {{ aviso() }}</div>
             }
-        </p>
+            @if (!registro.id_usuario_atiende) {
+            <div class="alert alert--warning">
+                <i class="ti ti-inbox"></i>
+                <span>Este registro todavía no lo atiende ningún coordinador.</span>
+                @if (registro.puede_derivar) {
+                <button type="button" class="btn btn--primary btn--sm" style="width:auto"
+                    [disabled]="gestionando()" (click)="atender()">
+                    <i class="ti ti-hand-grab"></i> Atender
+                </button>
+                }
+            </div>
+            } @else if (registro.atiende_nombre || registro.atiende_correo) {
+            <p class="gestion__atiende">
+                <i class="ti ti-user-check"></i>
+                Lo atiende <strong>{{ registro.atiende_nombre ?? registro.atiende_correo }}</strong>
+            </p>
+            }
+
+            @if (derivacionPendiente(); as d) {
+            <div class="alert" [class.alert--error]="d.vencida" [class.alert--info]="!d.vencida">
+                <i class="ti" [class.ti-alarm]="d.vencida" [class.ti-share]="!d.vencida"></i>
+                <span>
+                    Derivado a <strong>{{ d.destino_nombre ?? d.destino_correo }}</strong>
+                    por {{ d.origen_nombre ?? d.origen_correo }} ·
+                    {{ d.vencida ? 'venció' : 'plazo' }} el {{ d.fecha_limite | fecha:true }}
+                    @if (d.instrucciones) { <br /><em>“{{ d.instrucciones }}”</em> }
+                </span>
+                @if (derivacionParaMi()) {
+                <button type="button" class="btn btn--primary btn--sm" style="width:auto"
+                    [disabled]="gestionando()" (click)="marcarAtendida()">
+                    <i class="ti ti-check"></i> Marcar como atendido
+                </button>
+                }
+            </div>
+            }
+
+            @if (registro.puede_derivar) {
+            @if (!mostrarDerivar()) {
+            <button type="button" class="btn btn--outline btn--sm" style="width:auto" (click)="abrirDerivar()">
+                <i class="ti ti-share"></i> {{ derivacionPendiente() ? 'Derivar de nuevo' : 'Derivar a un funcionario' }}
+            </button>
+            } @else {
+            <div class="derivar">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Funcionario *</label>
+                        <select [(ngModel)]="formDerivar.id_usuario_destino" name="derivar_destino">
+                            <option [ngValue]="null" disabled>Seleccione...</option>
+                            @for (u of usuariosDerivables(); track u.id_usuario) {
+                            <option [ngValue]="u.id_usuario">{{ u.nombre || u.correo }}</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Plazo para atenderlo *</label>
+                        <input type="date" [(ngModel)]="formDerivar.fecha_limite" name="derivar_plazo" [min]="hoy" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Instrucciones</label>
+                    <textarea appAutoAjustar [(ngModel)]="formDerivar.instrucciones" name="derivar_instrucciones"
+                        placeholder="Qué se espera que haga (entrevistar al apoderado, contener al estudiante...)"></textarea>
+                </div>
+                <div class="acciones-personal">
+                    <button type="button" class="btn btn--primary btn--sm" style="width:auto"
+                        [disabled]="gestionando()" (click)="derivar()">
+                        <i class="ti ti-send"></i> Derivar
+                    </button>
+                    <button type="button" class="btn-ver" (click)="mostrarDerivar.set(false)">Cancelar</button>
+                </div>
+            </div>
+            }
+            }
+        </div>
         }
 
         @if (error()) {
@@ -52,16 +151,19 @@
                     <input type="date" [(ngModel)]="form.fecha_incidente" name="fecha" />
                 </div>
                 <div class="form-group">
-                    <label>Tipo de falta *</label>
-                    <select [(ngModel)]="form.id_tipo_falta" name="tipo"
-                        (ngModelChange)="onTipoFaltaChange()">
-                        <option [ngValue]="null" disabled>Seleccione...</option>
-                        @for (tf of tiposFalta(); track tf.id_tipo_falta) {
-                        <option [ngValue]="tf.id_tipo_falta">
-                            {{ tf.nombre }} — {{ tf.gravedad | etiqueta:'opcion_campo' }}
-                        </option>
-                        }
-                    </select>
+                    <label>Motivo del registro *</label>
+                    <!-- Buscador y no <select>: el catálogo del reglamento tiene
+                         decenas de motivos y en una lista plana no se encuentran.
+                         Al enfocar muestra todos; escribir filtra por palabra. -->
+                    <app-buscador [items]="sugerenciasMotivo()" [texto]="busquedaMotivo()"
+                        (textoChange)="busquedaMotivo.set($event)" placeholder="Buscar motivo..."
+                        [minimoCaracteres]="0" [limpiarAlAbrir]="true" [etiquetaCerrado]="etiquetaMotivo()"
+                        (elegir)="elegirMotivo($event)">
+                        <ng-template #item let-tf>
+                            <span class="sugerencia__nombre">{{ tf.nombre }}</span>
+                            <span class="sugerencia__meta">{{ tf.gravedad | etiqueta:'opcion_campo' }}</span>
+                        </ng-template>
+                    </app-buscador>
                 </div>
             </div>
 
@@ -117,7 +219,7 @@
                  es un inspector o un profesor, no un alumno. La lista de arriba
                  solo busca entre estudiantes, así que sin esto ese dato no
                  tenía dónde quedar. -->
-            <div class="form-group">
+            <div class="form-group" #seccionPersonal>
                 <label>Otros involucrados (funcionario o externo)</label>
 
                 @if (involucradosPersonal.length > 0) {
@@ -250,13 +352,13 @@
 
             <div class="form-group">
                 <label>Antecedentes *</label>
-                <textarea placeholder="Descripción detallada de los hechos..." [(ngModel)]="form.antecedentes"
+                <textarea appAutoAjustar placeholder="Descripción detallada de los hechos..." [(ngModel)]="form.antecedentes"
                     name="antecedentes"></textarea>
             </div>
 
             <div class="form-group">
                 <label>Acuerdos</label>
-                <textarea placeholder="Acuerdos y medidas adoptadas..." [(ngModel)]="form.acuerdos"
+                <textarea appAutoAjustar placeholder="Acuerdos y medidas adoptadas..." [(ngModel)]="form.acuerdos"
                     name="acuerdos"></textarea>
             </div>
 
@@ -345,3 +447,32 @@
 
     </div>
 </div>
+
+<!-- Imprimir o descargar el registro: popover y no descarga directa. -->
+@if (mostrarSalidaPdf()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarSalidaPdf.set(false) : null">
+    <div class="modal modal-box-sm" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-file-type-pdf"></i> Registro #{{ registro?.id_registro }}</h3>
+            <button class="modal__close" (click)="mostrarSalidaPdf.set(false)"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal__body">
+            <p class="text-muted">
+                El registro tal como está guardado: el hecho, los involucrados, los antecedentes y los
+                acuerdos, con espacio para firmas. No incluye el protocolo (eso es el expediente).
+            </p>
+            @if (generandoPdf()) {
+            <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Generando...</p></div>
+            }
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" style="width:auto" [disabled]="generandoPdf()" (click)="salidaPdf('imprimir')">
+                <i class="ti ti-printer"></i> Imprimir
+            </button>
+            <button class="btn btn--primary" style="width:auto" [disabled]="generandoPdf()" (click)="salidaPdf('descargar')">
+                <i class="ti ti-download"></i> Descargar PDF
+            </button>
+        </div>
+    </div>
+</div>
+}
