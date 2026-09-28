@@ -255,7 +255,14 @@ export class Estudiantes implements OnInit, AfterViewInit {
     this.api.consultarRut(`${run}-${dv}`).subscribe({
       next: (res: any) => {
         if (res.estudiante) {
-          this.seleccionado.set(res.estudiante);
+          // El estado de convivencia (pendientes, bullying) lo calcula el
+          // listado; la consulta por RUT no lo trae.
+          const fila = this.estudiantes().find((x) => x.run === run && x.dv === dv);
+          this.seleccionado.set({
+            ...res.estudiante,
+            n_pendientes: fila?.n_pendientes ?? 0,
+            senalado_bullying: fila?.senalado_bullying ?? 0,
+          });
           this.registros.set(res.registros);
         } else {
           this.error.set('No se encontró el estudiante');

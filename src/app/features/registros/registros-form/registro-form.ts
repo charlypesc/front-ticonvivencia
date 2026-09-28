@@ -1,4 +1,4 @@
-import { Component, OnInit, Output, EventEmitter, signal, Input } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, signal, Input, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { EtiquetaPipe } from '../../../shared/pipes/etiqueta.pipe';
 import { hoyIso } from '../../../shared/utils/fecha';
@@ -13,11 +13,15 @@ import { ordenarPorCoincidencia } from '../../../shared/utils/coincidencia';
 import { CerrarConEsc } from '../../../shared/directives/cerrar-con-esc.directive';
 import { GuardarConCmdEnter } from '../../../shared/directives/guardar-con-cmd-enter.directive';
 import { FechaPipe } from '../../../shared/pipes/fecha.pipe';
+import { AutoAjustarTextarea } from '../../../shared/directives/auto-ajustar-textarea.directive';
+import { ConfirmService } from '../../../core/services/confirm.service';
+import { descargarPdf, imprimirPdf, mensajeDeErrorPdf, nombreDelPdf } from '../../../shared/utils/pdf-salida';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-registro-form',
   standalone: true,
-  imports: [EtiquetaPipe, CommonModule, FormsModule, Puede, CursoNombrePipe, Buscador, CerrarConEsc, GuardarConCmdEnter, FechaPipe],
+  imports: [EtiquetaPipe, CommonModule, FormsModule, Puede, CursoNombrePipe, Buscador, CerrarConEsc, GuardarConCmdEnter, FechaPipe, AutoAjustarTextarea],
   templateUrl: './registro-form.html',
   styleUrl: './registro-form.scss',
 })
@@ -246,6 +250,150 @@ export class RegistroForm implements OnInit {
     this.toggleEstudiante(e.id_estudiante);
   }
 
+  // ── Motivo del registro ──────────────────────────────────────────────────
+  // (en la base sigue siendo TIPO_FALTA; en pantalla se llama "motivo")
+  busquedaMotivo = signal('');
+
+  sugerenciasMotivo() {
+    const q = this.busquedaMotivo().toLowerCase().trim();
+    const todos = this.tiposFalta();
+    if (!q) return todos;
+    // Cada palabra por separado, como el buscador de estudiantes: "agresion
+    // fisica" encuentra "Agresión física entre estudiantes". Sin tildes para
+    // que "agresion" calce con "agresión".
+    const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const tokens = sinTildes(q).split(/\s+/);
+    const coincidencias = todos.filter((tf) => {
+      const texto = sinTildes(`${tf.nombre} ${tf.gravedad ?? ''} ${tf.descripcion ?? ''}`);
+      return tokens.every((t) => texto.includes(t));
+    });
+    return ordenarPorCoincidencia(coincidencias, q, (tf) => tf.nombre);
+  }
+
+  /** Lo que muestra el campo cerrado: el motivo elegido. */
+  etiquetaMotivo() {
+    const tf = this.tipoFaltaSeleccionado;
+    return tf ? `${tf.nombre} — ${tf.gravedad}` : '';
+  }
+
+  elegirMotivo(tf: any) {
+    this.form.id_tipo_falta = tf.id_tipo_falta;
+    this.busquedaMotivo.set('');
+    this.onTipoFaltaChange();
+  }
+
+  // ── Atención y derivación ────────────────────────────────────────────────
+  gestionando = signal(false);
+  mostrarDerivar = signal(false);
+  readonly hoy = new Date().toISOString().slice(0, 10);
+  formDerivar = { id_usuario_destino: null as number | null, fecha_limite: '', instrucciones: '' };
+
+  derivacionPendiente() {
+    return (this.registro?.derivaciones ?? []).find((d: any) => d.estado === 'pendiente') ?? null;
+  }
+
+  derivacionParaMi() {
+    const d = this.derivacionPendiente();
+    return !!d && d.id_usuario_destino === this.auth.usuario()?.id;
+  }
+
+  /** A quién se puede derivar: cualquier funcionario activo, menos uno mismo. */
+  usuariosDerivables() {
+    const yo = this.auth.usuario()?.id;
+    return this.usuarios().filter((u) => u.id_usuario !== yo && u.activo !== 0 && u.activo !== false);
+  }
+
+  abrirDerivar() {
+    // Plazo sugerido: dos días hábiles es lo típico para una entrevista.
+    const plazo = new Date();
+    plazo.setDate(plazo.getDate() + 2);
+    this.formDerivar = { id_usuario_destino: null, fecha_limite: plazo.toISOString().slice(0, 10), instrucciones: '' };
+    this.mostrarDerivar.set(true);
+  }
+
+  /** Vuelve a pedir el detalle después de atender/derivar, sin tocar lo que se está editando. */
+  private recargarGestion() {
+    this.api.getRegistro(this.registro.id_registro).subscribe((data) => {
+      this.registro = {
+        ...this.registro,
+        id_usuario_atiende: data.id_usuario_atiende,
+        atiende_nombre: data.atiende_nombre,
+        atiende_correo: data.atiende_correo,
+        derivaciones: data.derivaciones,
+      };
+    });
+  }
+
+  private gestion(peticion: any, mensaje: string) {
+    this.gestionando.set(true);
+    this.error.set('');
+    peticion.subscribe({
+      next: (res: any) => {
+        this.gestionando.set(false);
+        this.mostrarDerivar.set(false);
+        this.aviso.set(res?.message ?? mensaje);
+        this.recargarGestion();
+      },
+      error: (err: any) => {
+        this.gestionando.set(false);
+        this.error.set(err.error?.message ?? 'No se pudo completar la acción');
+      },
+    });
+  }
+
+  /** Aviso verde de la sección de gestión (el de guardado lo muestra la pantalla de atrás). */
+  aviso = signal('');
+
+  atender() {
+    this.gestion(this.api.atenderRegistro(this.registro.id_registro), 'Registro tomado');
+  }
+
+  derivar() {
+    const f = this.formDerivar;
+    if (!f.id_usuario_destino || !f.fecha_limite) {
+      this.error.set('Elige al funcionario y el plazo');
+      return;
+    }
+    this.gestion(
+      this.api.derivarRegistro(this.registro.id_registro, {
+        id_usuario_destino: f.id_usuario_destino,
+        fecha_limite: f.fecha_limite,
+        instrucciones: f.instrucciones,
+      }),
+      'Registro derivado',
+    );
+  }
+
+  async marcarAtendida() {
+    const comentario = await this.confirm.pedirTexto(
+      'Se le avisará a quien te derivó el registro que ya lo atendiste.',
+      { etiqueta: 'Qué se hizo (opcional)', placeholder: 'Ej: se entrevistó al estudiante y al apoderado' },
+    );
+    if (comentario === null) return;
+    this.gestion(this.api.marcarDerivacionAtendida(this.registro.id_registro, comentario), 'Derivación atendida');
+  }
+
+  // ── Imprimir / descargar el registro ─────────────────────────────────────
+  mostrarSalidaPdf = signal(false);
+  generandoPdf = signal(false);
+
+  salidaPdf(accion: 'imprimir' | 'descargar') {
+    this.generandoPdf.set(true);
+    this.api.getRegistroPdf(this.registro.id_registro).subscribe({
+      next: (resp) => {
+        this.generandoPdf.set(false);
+        this.mostrarSalidaPdf.set(false);
+        if (accion === 'imprimir') imprimirPdf(resp.body!);
+        else descargarPdf(resp.body!, nombreDelPdf(resp, `Registro ${this.registro.id_registro}.pdf`));
+      },
+      error: async (err) => {
+        this.generandoPdf.set(false);
+        this.mostrarSalidaPdf.set(false);
+        this.error.set(await mensajeDeErrorPdf(err, 'No se pudo generar el PDF del registro'));
+      },
+    });
+  }
+
   form = {
     // Un registro nuevo abre con la fecha de hoy; en edición la pisa cargarForm().
     fecha_incidente: hoyIso(),
@@ -257,7 +405,7 @@ export class RegistroForm implements OnInit {
     nota_confidencial: '',
   };
 
-  constructor(private api: ApiService, private auth: AuthService) {}
+  constructor(private api: ApiService, private auth: AuthService, private confirm: ConfirmService) {}
 
   ngOnInit() {
     // Carga tipos de falta y estudiantes en paralelo
@@ -471,10 +619,32 @@ export class RegistroForm implements OnInit {
     this.involucradosPersonal.splice(i, 1);
   }
 
-  guardar() {
+  @ViewChild('seccionPersonal') seccionPersonal?: ElementRef<HTMLElement>;
+
+  /** El panel de "otros involucrados" tiene algo escrito que no se agregó a la lista. */
+  private personalAMedias(): boolean {
+    if (!this.mostrarFormPersonal()) return false;
+    const f = this.formPersonal;
+    return !!(f.id_usuario || f.nombre.trim() || f.rut.trim());
+  }
+
+  async guardar() {
     this.error.set('');
     this.errorDetalle.set([]);
     const { fecha_incidente, asunto, antecedentes, id_tipo_falta } = this.form;
+
+    // Lo escrito en el panel de funcionario/externo y no agregado se perdía al
+    // guardar: la persona creía que ya estaba en el registro. Si está completo
+    // se agrega solo; si le falta algo, se lleva a la persona a terminarlo.
+    if (this.personalAMedias()) {
+      this.agregarInvolucradoPersonal();
+      if (this.error()) {
+        this.error.set(`Termina de agregar al involucrado que empezaste: ${this.error().toLowerCase()}`);
+        this.seccionPersonal?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      this.mostrarFormPersonal.set(false);
+    }
 
     if (!fecha_incidente || !asunto || !antecedentes || !id_tipo_falta) {
       this.error.set('Complete todos los campos requeridos');
@@ -497,6 +667,10 @@ export class RegistroForm implements OnInit {
     }
 
     this.loading.set(true);
+    if (this.activarProtocolo && !(await this.confirmarSobreintervencion())) {
+      this.loading.set(false);
+      return;
+    }
     if (this.registro === null) {
       this.api
         .createRegistro({
@@ -530,6 +704,32 @@ export class RegistroForm implements OnInit {
           },
         });
     }
+  }
+
+  /**
+   * Si alguno de los estudiantes ya tiene un protocolo en curso, se le advierte
+   * al coordinador antes de activar otro: dos o tres procedimientos a la vez
+   * sobre el mismo estudiante (entrevistas, citaciones, medidas) pueden ser una
+   * sobreintervención. Es una advertencia, no un bloqueo: si falla la consulta,
+   * se sigue.
+   */
+  private async confirmarSobreintervencion(): Promise<boolean> {
+    const ids = this.estudiantesSeleccionados.map((e) => e.id_estudiante);
+    if (!ids.length) return true;
+    let enCurso: any[] = [];
+    try {
+      enCurso = await firstValueFrom(this.api.getSobreintervencion(ids));
+    } catch {
+      return true;
+    }
+    if (!enCurso.length) return true;
+    const detalle = enCurso
+      .map((e) => `${e.estudiante}: ${e.protocolos.map((p: any) => p.nombre).join(', ')}`)
+      .join('\n');
+    return this.confirm.confirmarAccion(
+      `Ya hay protocolos en curso sobre ${enCurso.length === 1 ? 'este estudiante' : 'estos estudiantes'}:\n\n` +
+        `${detalle}\n\nActivar otro puede ser sobreintervenir al estudiante. ¿Activarlo de todos modos?`,
+    );
   }
 
   /** El registro ya está guardado: acá solo falta el protocolo, si lo pidieron. */

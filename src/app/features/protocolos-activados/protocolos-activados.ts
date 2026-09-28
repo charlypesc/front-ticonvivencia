@@ -1,3 +1,4 @@
+import { firstValueFrom } from 'rxjs';
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FechaPipe } from '../../shared/pipes/fecha.pipe';
@@ -136,12 +137,13 @@ export class ProtocolosActivados implements OnInit {
     this.mostrarForm.set(false);
   }
 
-  guardar() {
+  async guardar() {
     this.error.set('');
     if (!this.form.id_protocolo_establecimiento || !this.form.id_registro) {
       this.error.set('Debe seleccionar un protocolo y un registro');
       return;
     }
+    if (!(await this.confirmarSobreintervencion(this.form.id_registro))) return;
 
     // Activar materializa el grafo del protocolo sobre el caso, así que la
     // respuesta trae el id: se entra directo a ejecutarlo en vez de dejar al
@@ -158,6 +160,30 @@ export class ProtocolosActivados implements OnInit {
           this.error.set(`${err.error.message}: ${err.error.problemas.join(' · ')}`);
       },
     });
+  }
+
+  /**
+   * Misma advertencia que al activar desde el registro: si alguno de sus
+   * estudiantes ya tiene un protocolo en curso, activar otro puede ser
+   * sobreintervenirlo. Es un aviso, no un bloqueo: si algo falla, se sigue.
+   */
+  private async confirmarSobreintervencion(idRegistro: number): Promise<boolean> {
+    try {
+      const registro: any = await firstValueFrom(this.api.getRegistro(idRegistro));
+      const ids = (registro.estudiantes ?? []).map((e: any) => e.id_estudiante);
+      if (!ids.length) return true;
+      const enCurso = await firstValueFrom(this.api.getSobreintervencion(ids));
+      if (!enCurso.length) return true;
+      const detalle = enCurso
+        .map((e: any) => `${e.estudiante}: ${e.protocolos.map((p: any) => p.nombre).join(', ')}`)
+        .join('\n');
+      return this.confirmService.confirmarAccion(
+        `Ya hay protocolos en curso sobre ${enCurso.length === 1 ? 'este estudiante' : 'estos estudiantes'}:\n\n` +
+          `${detalle}\n\nActivar otro puede ser sobreintervenir al estudiante. ¿Activarlo de todos modos?`,
+      );
+    } catch {
+      return true;
+    }
   }
 
   async eliminar(activado: any) {

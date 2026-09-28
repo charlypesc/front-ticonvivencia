@@ -13,7 +13,7 @@
         <!-- <label> y no <div>: clickear el padding o la lupa enfoca el input. -->
         <label class="toolbar__search">
             <i class="ti ti-search"></i>
-            <input type="text" placeholder="Buscar por asunto o tipo de falta..." [ngModel]="busqueda()"
+            <input type="text" placeholder="Buscar por asunto, motivo, estudiante o quién lo registró..." [ngModel]="busqueda()"
                 (ngModelChange)="busqueda.set($event)" />
         </label>
         <div class="toolbar__actions">
@@ -21,7 +21,7 @@
                 <i class="ti ti-calendar"></i> Fecha
             </button>
             <button class="btn btn--outline btn--sm">
-                <i class="ti ti-filter"></i> Tipo de falta
+                <i class="ti ti-filter"></i> Motivo
             </button>
             <button class="btn btn--primary btn--sm" [appPuede]="Permiso.RegistroCrear" (click)="abrirForm(null)">
                 <i class="ti ti-plus"></i> Nuevo
@@ -46,8 +46,9 @@
                 <tr>
                     <th>Fecha</th>
                     <th>Asunto</th>
-                    <th>Tipo de falta</th>
-                    <th>Protocolo</th>
+                    <th>Motivo del registro</th>
+                    <th>Registrado por</th>
+                    <th>Estado</th>
                     <th></th>
                 </tr>
             </thead>
@@ -68,7 +69,22 @@
                     </td>
                     <td>{{ r.tipo_falta_nombre }}</td>
                     }
+                    <td class="celda-autor">{{ r.encargado_nombre ?? r.encargado_correo }}</td>
                     <td>
+                        <!-- Atención y derivación: se ve aunque el registro sea
+                             confidencial, porque no dice nada del contenido. -->
+                        @if (!r.id_usuario_atiende) {
+                        <span class="badge badge--pendiente" title="Ningún coordinador lo ha tomado todavía">
+                            <i class="ti ti-inbox"></i> Por atender
+                        </span>
+                        }
+                        @if (r.derivado_a) {
+                        <span class="badge" [class.badge--gravísima]="vencida(r.derivacion_limite)"
+                            [class.badge--pendiente]="!vencida(r.derivacion_limite)"
+                            title="Plazo: {{ r.derivacion_limite | fecha:true }}">
+                            <i class="ti ti-share"></i> Derivado a {{ r.derivado_a }}
+                        </span>
+                        }
                         @if (!esConfidencialBloqueado(r)) {
                         @if (r.protocolos_pendientes > 0) {
                         <!-- Ley 21.809: el tipo de falta obliga a un protocolo

@@ -120,7 +120,7 @@ export const routes: Routes = [
       },
       {
         path: 'protocolos-activados',
-        canActivate: [permissionGuard(Permiso.ProtocoloActivadoVer)],
+        canActivate: [permissionGuard(Permiso.ProtocoloActivadoVerTodos)],
         loadComponent: () =>
           import('./features/protocolos-activados/protocolos-activados').then(
             (m) => m.ProtocolosActivados,

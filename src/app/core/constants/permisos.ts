@@ -78,6 +78,7 @@ export const Permiso = {
   RegistroConfirmar             : 46,
   RegistroVerConfidencial       : 75,
   RegistroEditarConfidencialidad: 76,
+  RegistroDerivar               : 116,
 
   // tipo_falta
   TipoFaltaVer     : 47,
@@ -121,6 +122,7 @@ export const Permiso = {
   ProtocoloActivadoCerrar       : 90,
   ProtocoloActivadoAnular       : 91,
   ProtocoloActivadoVerBitacora  : 92,
+  ProtocoloActivadoVerTodos     : 115,
 
   // ── Ley 21.809 ────────────────────────────────────────────────────────────
   TipoFaltaVincularProtocolo: 93,
@@ -296,4 +298,6 @@ export const CODIGO_POR_ID: Record<number, string> = {
  112: 'suspension_cautelar.registrar_reconsideracion',
  113: 'suspension_cautelar.resolver',
  114: 'usuario.asignar_permiso',
+ 115: 'protocolo_activado.ver_todos',
+ 116: 'registro.derivar',
 };

@@ -81,9 +81,22 @@
                     <td>{{ e.nombre }} {{ e.apellido }}</td>
                     <td>{{ e.curso_nombre | cursoNombre }}</td>
                     <td>
-                        <span class="badge" [class.badge--validado]="e.activo" [class.badge--pendiente]="!e.activo">
-                            {{ e.activo ? 'activo' : 'inactivo' }}
+                        <!-- Verde: convivencia sana (nada abierto). Amarillo:
+                             tiene registros pendientes (sin atender, derivados,
+                             con protocolo en curso o por activar). Rojo, además:
+                             señalado en un registro de bullying. -->
+                        @if (e.senalado_bullying) {
+                        <span class="badge badge--gravísima" title="Señalado en un registro de acoso escolar / bullying">
+                            <i class="ti ti-alert-triangle"></i> Señalado por bullying
                         </span>
+                        }
+                        @if (e.n_pendientes > 0) {
+                        <span class="badge badge--pendiente">
+                            {{ e.n_pendientes }} {{ e.n_pendientes === 1 ? 'registro pendiente' : 'registros pendientes' }}
+                        </span>
+                        } @else {
+                        <span class="badge badge--validado">Convivencia sana</span>
+                        }
                     </td>
                     <td class="acciones" (click)="$event.stopPropagation()">
                         @if (e.n_registros > 0) {
@@ -133,9 +146,16 @@
             <span><i class="ti ti-school"></i> {{ est.curso_nombre | cursoNombre }}</span>
             <span>
                 <i class="ti ti-circle"></i>
-                <span class="badge" [class.badge--validado]="est.activo" [class.badge--pendiente]="!est.activo">
-                    {{ est.activo ? 'Activo' : 'Inactivo' }}
+                @if (est.senalado_bullying) {
+                <span class="badge badge--gravísima"><i class="ti ti-alert-triangle"></i> Señalado por bullying</span>
+                }
+                @if (est.n_pendientes > 0) {
+                <span class="badge badge--pendiente">
+                    {{ est.n_pendientes }} {{ est.n_pendientes === 1 ? 'registro pendiente' : 'registros pendientes' }}
                 </span>
+                } @else {
+                <span class="badge badge--validado">Convivencia sana</span>
+                }
             </span>
         </div>
     </div>
@@ -167,7 +187,7 @@
                     <th>Fecha</th>
                     <th>Asunto</th>
                     <th>Registro</th>
-                    <th>Tipo de falta</th>
+                    <th>Motivo del registro</th>
                     <th>Rol</th>
                     <th>Gravedad</th>
                     <th>Protocolo</th>

@@ -48,7 +48,9 @@ export class Sidebar {
       label: 'Protocolos activados',
       icon: 'ti-shield-check',
       route: '/protocolos-activados',
-      permiso: Permiso.ProtocoloActivadoVer,
+      // ver_todos y no ver: Inspectoría conserva `ver` para abrir el caso donde
+      // tiene un paso (llega por la campana), pero no el listado del colegio.
+      permiso: Permiso.ProtocoloActivadoVerTodos,
     },
     // Catálogo cross-tenant (País/Región/Provincia/Comuna)
     {

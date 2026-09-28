@@ -22,6 +22,21 @@ export class ApiService {
   updateRegistro(data: any) {
     return this.http.put(`${this.base}/registros/${data.id_registro}`, data);
   }
+  /** El registro tal como se llenó, en PDF: para el popover Imprimir / Descargar. */
+  getRegistroPdf(id: number) {
+    return this.http.get(`${this.base}/registros/${id}/pdf`, { responseType: 'blob', observe: 'response' });
+  }
+  /** El coordinador toma un registro nuevo (lo "ataja"). */
+  atenderRegistro(id: number) {
+    return this.http.post(`${this.base}/registros/${id}/atender`, {});
+  }
+  derivarRegistro(id: number, data: { id_usuario_destino: number; fecha_limite: string; instrucciones?: string }) {
+    return this.http.post(`${this.base}/registros/${id}/derivar`, data);
+  }
+  /** Lo marca quien recibió la derivación. */
+  marcarDerivacionAtendida(id: number, comentario = '') {
+    return this.http.post(`${this.base}/registros/${id}/derivacion/atendida`, { comentario });
+  }
   deleteRegistro(id: number) {
     return this.http.delete(`${this.base}/registros/${id}`);
   }
@@ -425,6 +440,12 @@ export class ApiService {
   }
   getProtocolosActivadosByRegistro(idRegistro: number) {
     return this.http.get<any[]>(`${this.base}/protocolos-activados/registro/${idRegistro}`);
+  }
+  /** Protocolos ya en curso sobre estos estudiantes: para advertir sobreintervención antes de activar otro. */
+  getSobreintervencion(idsEstudiantes: number[]) {
+    return this.http.get<any[]>(`${this.base}/protocolos-activados/sobreintervencion`, {
+      params: { estudiantes: idsEstudiantes.join(',') },
+    });
   }
   createProtocoloActivado(data: any) {
     return this.http.post(`${this.base}/protocolos-activados`, data);

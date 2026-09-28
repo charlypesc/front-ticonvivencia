@@ -1,4 +1,5 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, DestroyRef, OnInit, signal, computed, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FechaPipe } from '../../shared/pipes/fecha.pipe';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -28,11 +29,13 @@ export class Registros implements OnInit {
   error = signal('');
   success = signal('');
   itemMove: any;
+  private destroyRef = inject(DestroyRef);
   filtrados = computed(() => {
     const q = this.busqueda().toLowerCase();
     return this.registros().filter(
       (r) =>
-        r.asunto?.toLowerCase().includes(q) || r.tipo_falta_nombre?.toLowerCase().includes(q),
+        r.asunto?.toLowerCase().includes(q) || r.tipo_falta_nombre?.toLowerCase().includes(q) ||
+        r.encargado_nombre?.toLowerCase().includes(q) || r.alumno_nombre?.toLowerCase().includes(q),
     );
   });
 
@@ -47,10 +50,18 @@ export class Registros implements OnInit {
   ngOnInit() {
     this.cargar();
 
-    // El dashboard abre un registro puntual navegando con ?abrir=<id>. Se abre
-    // sin esperar la lista: el formulario pide el detalle por su cuenta.
-    const abrir = Number(this.route.snapshot.queryParamMap.get('abrir'));
-    if (abrir) this.abrirForm({ id_registro: abrir });
+    // El dashboard y la campana abren un registro puntual navegando con
+    // ?abrir=<id>. Se abre sin esperar la lista: el formulario pide el detalle
+    // por su cuenta. Suscripción y no snapshot: una notificación clickeada
+    // estando ya en esta pantalla solo cambia el query param, no la recrea.
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((q) => {
+      const abrir = Number(q.get('abrir'));
+      if (!abrir || this.itemMove?.id_registro === abrir) return;
+      // Cerrar y reabrir en el tick siguiente: si ya había otro registro
+      // abierto, el formulario tiene que recrearse para cargar el nuevo.
+      this.mostrarForm.set(false);
+      setTimeout(() => this.abrirForm({ id_registro: abrir }));
+    });
   }
 
   private cargar() {
@@ -62,6 +73,10 @@ export class Registros implements OnInit {
       },
       error: () => this.loading.set(false),
     });
+  }
+
+  vencida(fecha: string | null) {
+    return !!fecha && new Date(fecha).getTime() < Date.now();
   }
 
   esConfidencialBloqueado(r: any) {

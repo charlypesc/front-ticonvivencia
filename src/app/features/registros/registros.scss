@@ -59,3 +59,12 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { display: inline-block; animation: spin .8s linear infinite; }
+// Quién lo llenó: destacado, es lo que el coordinador mira para decidir si lo
+// atiende o lo deriva.
+.celda-autor {
+  font-weight: 600;
+  color: $primary;
+  white-space: nowrap;
+}
+
+td .badge + .badge { margin-left: 4px; }
