@@ -35,7 +35,8 @@
 
 <div class="card mb-4">
     <div class="resumen">
-        <div><span class="text-sm text-muted">Registro</span><strong>N° Folio {{ caso().registro_folio ?? caso().id_registro }}</strong></div>
+        <div><span class="text-sm text-muted">N° Folio</span><strong>{{ caso().codigo }}</strong></div>
+        <div><span class="text-sm text-muted">Registro</span><strong>{{ caso().registro_codigo ?? caso().id_registro }}</strong></div>
         <div><span class="text-sm text-muted">Activado</span><strong>{{ caso().fecha_activacion | fecha:true }}</strong></div>
         @if (caso().fecha_cierre) {
         <div><span class="text-sm text-muted">Cerrado</span><strong>{{ caso().fecha_cierre | fecha:true
@@ -78,7 +79,7 @@
     @if (registro(); as r) {
     <div class="registro">
         <div class="registro__cabecera">
-            <h3><i class="ti ti-file-description"></i> {{ r.asunto ?? 'Registro N° Folio ' + (r.folio ?? r.id_registro) }}</h3>
+            <h3><i class="ti ti-file-description"></i> {{ r.asunto ?? 'Registro ' + (r.codigo ?? r.id_registro) }}</h3>
             <span class="registro__meta">
                 @if (r.tipo_falta_nombre) {
                 <!-- El color del badge es la gravedad, igual que en el listado
@@ -92,7 +93,7 @@
                 <span class="badge badge--confidencial"><i class="ti ti-lock"></i> Confidencial</span>
                 }
                 <span class="text-sm text-muted">
-                    <i class="ti ti-calendar"></i> {{ r.fecha_incidente | fecha }} · N° Folio {{ r.folio ?? r.id_registro }}
+                    <i class="ti ti-calendar"></i> {{ r.fecha_incidente | fecha }} · {{ r.codigo ?? r.id_registro }}
                 </span>
             </span>
         </div>

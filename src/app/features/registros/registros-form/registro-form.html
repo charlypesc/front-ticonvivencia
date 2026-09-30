@@ -4,7 +4,7 @@
         <div class="modal__header">
             <h3>
                 <i class="ti" [class.ti-file-plus]="!registro" [class.ti-file-text]="registro"></i>
-                {{ registro ? 'Registro de convivencia · N° Folio ' + (registro.folio ?? registro.id_registro) : 'Nuevo registro de convivencia' }}
+                {{ registro ? 'Registro de convivencia · N° Folio ' + (registro.codigo ?? registro.id_registro) : 'Nuevo registro de convivencia' }}
             </h3>
             <button class="modal__close" (click)="cerrar.emit()">
                 <i class="ti ti-x"></i>
@@ -465,7 +465,7 @@
 <div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarSalidaPdf.set(false) : null">
     <div class="modal modal-box-sm" (click)="$event.stopPropagation()">
         <div class="modal__header">
-            <h3><i class="ti ti-file-type-pdf"></i> Registro · N° Folio {{ registro?.folio ?? registro?.id_registro }}</h3>
+            <h3><i class="ti ti-file-type-pdf"></i> Registro · N° Folio {{ registro?.codigo ?? registro?.id_registro }}</h3>
             <button class="modal__close" (click)="mostrarSalidaPdf.set(false)"><i class="ti ti-x"></i></button>
         </div>
         <div class="modal__body">

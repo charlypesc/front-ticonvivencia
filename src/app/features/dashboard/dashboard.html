@@ -106,7 +106,7 @@
             <div class="ultimo-item__info">
                 <i class="ti" [class.ti-alarm]="d.vencida" [class.ti-share]="!d.vencida"></i>
                 <span>
-                    N° Folio {{ d.folio }} «{{ d.asunto }}» — de {{ d.origen_nombre }}
+                    {{ d.codigo }} «{{ d.asunto }}» — de {{ d.origen_nombre }}
                     @if (d.instrucciones) { <small class="texto-tenue">· {{ d.instrucciones }}</small> }
                 </span>
             </div>

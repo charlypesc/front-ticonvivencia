@@ -64,9 +64,10 @@ export class Registros implements OnInit {
       // Sin texto no se descarta nada: un confidencial bloqueado no trae asunto
       // ni motivo, y la comparación de abajo lo dejaba fuera de la lista.
       if (!q) return true;
-      // "12" o "n° 12" encuentra el folio exacto.
-      const folio = q.replace(/^n[°º]?\s*/, '').trim();
-      if (/^\d+$/.test(folio) && String(r.folio) === folio) return true;
+      // "13", "reg-2026-013" o "2026-013" encuentran el folio exacto.
+      const folio = q.replace(/^n[°º]?\s*(folio)?\s*/, '').trim();
+      if (/^\d+$/.test(folio) && Number(r.folio) === Number(folio)) return true;
+      if (r.codigo?.toLowerCase().includes(folio)) return true;
       return (
         r.asunto?.toLowerCase().includes(q) || r.tipo_falta_nombre?.toLowerCase().includes(q) ||
         r.encargado_nombre?.toLowerCase().includes(q) || r.alumno_nombre?.toLowerCase().includes(q)
