@@ -41,6 +41,7 @@
 
   &__actions {
     display: flex;
+    align-items: center;
     gap: 5px;
   }
 }
@@ -68,3 +69,23 @@
 }
 
 td .badge + .badge { margin-left: 4px; }
+
+// Igual a .perfil__agregar de estudiantes.
+.btn-nuevo {
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 10px;
+  background: $primary;
+  color: $white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .15s;
+
+  i { font-size: 24px; }
+
+  &:hover { background: $primary-light; }
+}
