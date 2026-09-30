@@ -30,14 +30,74 @@ export class Registros implements OnInit {
   success = signal('');
   itemMove: any;
   private destroyRef = inject(DestroyRef);
+  // ── Filtros ───────────────────────────────────────────────────────────────
+  // Todos en el cliente: la lista ya viene completa del backend y filtrar acá
+  // es instantáneo. Se combinan entre sí y con la búsqueda de texto.
+  panelFiltro = signal<'fecha' | 'motivo' | null>(null);
+  /** 'yyyy-MM-dd' contra fecha_incidente (DATE, llega como string: se compara tal cual). */
+  fechaDesde = signal('');
+  fechaHasta = signal('');
+  motivosElegidos = signal<string[]>([]);
+
+  /** Los motivos que aparecen en los registros, con cuántos hay de cada uno. */
+  motivosDisponibles = computed(() => {
+    const cuenta = new Map<string, number>();
+    for (const r of this.registros())
+      if (r.tipo_falta_nombre) cuenta.set(r.tipo_falta_nombre, (cuenta.get(r.tipo_falta_nombre) ?? 0) + 1);
+    return [...cuenta.entries()]
+      .map(([nombre, n]) => ({ nombre, n }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  });
+
+  hayFiltroFecha = computed(() => !!(this.fechaDesde() || this.fechaHasta()));
+
   filtrados = computed(() => {
     const q = this.busqueda().toLowerCase();
-    return this.registros().filter(
-      (r) =>
+    const desde = this.fechaDesde();
+    const hasta = this.fechaHasta();
+    const motivos = this.motivosElegidos();
+    return this.registros().filter((r) => {
+      const fecha = String(r.fecha_incidente ?? '').slice(0, 10);
+      if (desde && fecha < desde) return false;
+      if (hasta && fecha > hasta) return false;
+      if (motivos.length && !motivos.includes(r.tipo_falta_nombre)) return false;
+      // Sin texto no se descarta nada: un confidencial bloqueado no trae asunto
+      // ni motivo, y la comparación de abajo lo dejaba fuera de la lista.
+      if (!q) return true;
+      return (
         r.asunto?.toLowerCase().includes(q) || r.tipo_falta_nombre?.toLowerCase().includes(q) ||
-        r.encargado_nombre?.toLowerCase().includes(q) || r.alumno_nombre?.toLowerCase().includes(q),
-    );
+        r.encargado_nombre?.toLowerCase().includes(q) || r.alumno_nombre?.toLowerCase().includes(q)
+      );
+    });
   });
+
+  alternarPanel(panel: 'fecha' | 'motivo') {
+    this.panelFiltro.set(this.panelFiltro() === panel ? null : panel);
+  }
+
+  /** Atajos de fecha: días hacia atrás desde hoy, o 'mes' para el mes en curso. */
+  atajoFecha(atajo: number | 'mes') {
+    const iso = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const hoy = new Date();
+    const desde = atajo === 'mes'
+      ? new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+      : new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - atajo);
+    this.fechaDesde.set(iso(desde));
+    this.fechaHasta.set(iso(hoy));
+  }
+
+  limpiarFecha() {
+    this.fechaDesde.set('');
+    this.fechaHasta.set('');
+  }
+
+  alternarMotivo(nombre: string) {
+    const actuales = this.motivosElegidos();
+    this.motivosElegidos.set(
+      actuales.includes(nombre) ? actuales.filter((m) => m !== nombre) : [...actuales, nombre],
+    );
+  }
 
   constructor(
     private api: ApiService,
