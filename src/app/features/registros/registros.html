@@ -126,7 +126,7 @@
             <tbody>
                 @for (r of filtrados(); track r.id_registro) {
                 <tr class="fila-clickeable" (click)="abrirForm(r)">
-                    <td class="celda-folio">{{ r.folio }}</td>
+                    <td class="celda-folio">{{ r.codigo }}</td>
                     <td>{{ r.fecha_incidente | fecha }}</td>
                     @if (esConfidencialBloqueado(r)) {
                     <td colspan="2" title="{{ r.nota_confidencial }}">

@@ -66,6 +66,7 @@
         <table>
             <thead>
                 <tr>
+                    <th>N° Folio</th>
                     <th>Protocolo</th>
                     <th>Alumnos</th>
                     <th>Registro</th>
@@ -77,9 +78,10 @@
             <tbody>
                 @for (a of activadosFiltrados(); track a.id_protocolo_activado) {
                 <tr class="fila-clickeable" (click)="abrirCaso(a)">
+                    <td class="celda-folio">{{ a.codigo }}</td>
                     <td>{{ a.nombre }}</td>
                     <td class="text-muted">{{ nombresEstudiantes(a) || '—' }}</td>
-                    <td class="text-muted">N° Folio {{ a.registro_folio ?? a.id_registro }}</td>
+                    <td class="text-muted">{{ a.registro_codigo ?? a.id_registro }}</td>
                     <td>
                         <span class="badge badge--{{ a.estado === 'cerrado' ? 'validado' : a.estado === 'anulado' ?
                             'confidencial' : 'pendiente' }}">{{ a.estado | etiqueta:'estado_caso' }}</span>
@@ -140,7 +142,7 @@
                     <option [ngValue]="null" disabled>Seleccione un registro...</option>
                     @for (r of registros(); track r.id_registro) {
                     <option [ngValue]="r.id_registro">
-                        N° Folio {{ r.folio ?? r.id_registro }} — {{ r.asunto }} ({{ r.fecha_incidente | fecha }})
+                        {{ r.codigo ?? r.id_registro }} — {{ r.asunto }} ({{ r.fecha_incidente | fecha }})
                     </option>
                     }
                 </select>
