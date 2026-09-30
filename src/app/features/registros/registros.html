@@ -16,18 +16,21 @@
             <input type="text" placeholder="Buscar por asunto, motivo, estudiante o quién lo registró..." [ngModel]="busqueda()"
                 (ngModelChange)="busqueda.set($event)" />
         </label>
+        <!-- Botones cuadrados como "Agregar registro" en la ficha del
+             estudiante. Nuevo va primero y relleno: es la acción principal. -->
         <div class="toolbar__actions">
-            <button class="btn btn--outline btn--sm">
-                <i class="ti ti-calendar"></i> Fecha
-            </button>
-            <button class="btn btn--outline btn--sm">
-                <i class="ti ti-filter"></i> Motivo
-            </button>
-            <!-- Mismo botón grande que "Agregar registro" en la ficha del
-                 estudiante: es la acción principal de la pantalla. -->
-            <button class="btn-nuevo" title="Nuevo registro" aria-label="Nuevo registro"
+            <button class="btn-cuadro btn-cuadro--primario" title="Nuevo registro"
                 [appPuede]="Permiso.RegistroCrear" (click)="abrirForm(null)">
                 <i class="ti ti-file-plus"></i>
+                <span>Nuevo</span>
+            </button>
+            <button class="btn-cuadro" title="Filtrar por fecha">
+                <i class="ti ti-calendar"></i>
+                <span>Fecha</span>
+            </button>
+            <button class="btn-cuadro" title="Filtrar por motivo">
+                <i class="ti ti-filter"></i>
+                <span>Motivo</span>
             </button>
         </div>
     </div>

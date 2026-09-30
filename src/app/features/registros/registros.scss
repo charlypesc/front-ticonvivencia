@@ -42,7 +42,7 @@
   &__actions {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
   }
 }
 
@@ -70,22 +70,32 @@
 
 td .badge + .badge { margin-left: 4px; }
 
-// Igual a .perfil__agregar de estudiantes.
-.btn-nuevo {
+// Mismo tamaño que .perfil__agregar de estudiantes. El primario va relleno;
+// el resto, con borde, para que la acción principal se siga distinguiendo.
+.btn-cuadro {
   width: 68px;
   height: 68px;
   flex-shrink: 0;
-  border: none;
+  border: 1px solid $primary;
   border-radius: 10px;
-  background: $primary;
-  color: $white;
+  background: $white;
+  color: $primary;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   cursor: pointer;
-  transition: background .15s;
+  transition: background .15s, color .15s;
 
   i { font-size: 24px; }
+  span { font-size: 11px; font-weight: 600; }
 
-  &:hover { background: $primary-light; }
+  &:hover { background: $primary-bg; }
+
+  &--primario {
+    background: $primary;
+    color: $white;
+    &:hover { background: $primary-light; }
+  }
 }
