@@ -44,6 +44,18 @@
             @if (aviso()) {
             <div class="alert alert--success"><i class="ti ti-circle-check"></i> {{ aviso() }}</div>
             }
+            @if (protocoloSugeridoAlRevisar; as sugerido) {
+            <div class="alert" [class.alert--error]="protocoloEsObligatorio" [class.alert--warning]="!protocoloEsObligatorio">
+                <i class="ti ti-shield-exclamation"></i>
+                <span>
+                    El motivo de este registro está asociado al protocolo {{ sugerido }}, y todavía no se activó.
+                    @if (activarProtocolo) { Quedó preseleccionado: se activa al guardar. }
+                </span>
+                <button type="button" class="btn btn--outline btn--sm" style="width:auto" (click)="irAProtocolo()">
+                    Revisar
+                </button>
+            </div>
+            }
             @if (!registro.id_usuario_atiende) {
             <div class="alert alert--warning">
                 <i class="ti ti-inbox"></i>
@@ -365,7 +377,7 @@
             <!-- Activar protocolo sobre el caso. El protocolo se activa sobre el
                  registro, que es lo que ya tiene a los estudiantes involucrados. -->
             @if (puedeActivarProtocolo) {
-            <div class="form-group">
+            <div class="form-group" #seccionProtocolo>
                 @if (protocolosActivados().length > 0) {
                 <label>Protocolos ya activados</label>
                 <div class="estudiantes-list">
