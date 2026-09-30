@@ -11,6 +11,7 @@ import { CredencialesModal } from '../../shared/components/credenciales-modal/cr
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
 import { EtiquetaPipe } from '../../shared/pipes/etiqueta.pipe';
+import { ImportarUsuarios } from './importar-usuarios/importar-usuarios';
 import {
   completarDominio,
   dominioDe,
@@ -21,7 +22,7 @@ import {
 @Component({
   selector: 'app-usuarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, CredencialesModal, CerrarConEsc, GuardarConCmdEnter, EtiquetaPipe],
+  imports: [CommonModule, FormsModule, Puede, CredencialesModal, CerrarConEsc, GuardarConCmdEnter, EtiquetaPipe, ImportarUsuarios],
   templateUrl: './usuarios.html',
   styleUrl: './usuarios.scss',
 })
@@ -35,6 +36,8 @@ export class Usuarios implements OnInit {
   roles = signal<Rol[]>([]);
   loading = signal(true);
   mostrarForm = signal(false);
+  /** Modal de carga masiva desde Excel. */
+  mostrarImportar = signal(false);
   /** Usuario que se está editando; null cuando el modal es un alta. */
   editando = signal<any | null>(null);
   error = signal('');

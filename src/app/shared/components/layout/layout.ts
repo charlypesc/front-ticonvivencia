@@ -4,10 +4,13 @@ import { Navbar } from '../navbar/navbar';
 import { Sidebar } from '../sidebar/sidebar';
 import { ConfirmModal } from '../confirm-modal/confirm-modal';
 import { ProgresoImportacion } from '../progreso-importacion/progreso-importacion';
+import { SidebarService } from '../../../core/services/sidebar.service';
 @Component({
   selector: 'app-layout',
   imports: [RouterOutlet, Navbar, Sidebar, ConfirmModal, ProgresoImportacion],
   templateUrl: './layout.html',
   styleUrl: './layout.scss',
 })
-export class Layout {}
+export class Layout {
+  constructor(public sidebar: SidebarService) {}
+}

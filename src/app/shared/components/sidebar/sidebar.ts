@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { Permiso, PermisoId } from '../../../core/constants/permisos';
+import { SidebarService } from '../../../core/services/sidebar.service';
 
 interface NavItem {
   label: string;
@@ -74,5 +75,5 @@ export class Sidebar {
     return this.allItems.filter((i) => this.auth.can(i.permiso));
   });
 
-  constructor(public auth: AuthService) {}
+  constructor(public auth: AuthService, public estado: SidebarService) {}
 }

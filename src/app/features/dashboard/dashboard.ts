@@ -75,7 +75,7 @@ export class Dashboard implements OnInit {
 
   hayAlertasEstudiantes = computed(() => {
     const a = this.resumen()?.alertas;
-    return !!a && (a.afectados_reiterados.length > 0 || a.senalados_bullying.length > 0);
+    return !!a && (a.afectados_reiterados.length > 0 || a.senalados_reiterados.length > 0);
   });
 
   atendiendo = signal<number | null>(null);

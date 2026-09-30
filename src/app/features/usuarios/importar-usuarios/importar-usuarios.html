@@ -1,0 +1,108 @@
+<!-- Sin cierre por backdrop: con cuentas recién creadas, las claves solo
+     están acá. La X pasa por salir(), que pregunta antes de cerrar. -->
+<div class="modal-backdrop">
+    <div class="modal modal--lg">
+        <div class="modal__header">
+            <h3><i class="ti ti-file-spreadsheet"></i> Carga masiva de usuarios</h3>
+            <button class="modal__close" (click)="salir()" title="Cerrar">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        <div class="modal__body">
+            @if (creados().length === 0) {
+            <ol class="pasos">
+                <li>
+                    <div>
+                        <strong>Descarga la plantilla</strong>
+                        <p>Trae las instrucciones y la lista de roles del colegio. Se la puedes pasar a quien la vaya a llenar.</p>
+                    </div>
+                    <button class="btn btn--outline btn--sm" (click)="descargarPlantilla()" [disabled]="descargando()">
+                        <i class="ti" [class.ti-download]="!descargando()" [class.ti-loader-2]="descargando()"
+                            [class.spin]="descargando()"></i> Plantilla Excel
+                    </button>
+                </li>
+                <li>
+                    <div>
+                        <strong>Sube el Excel ya llenado</strong>
+                        <p>Si alguna fila tiene un problema no se crea nadie: se indica qué corregir y se vuelve a subir.</p>
+                    </div>
+                    <label class="btn btn--primary btn--sm subir" [class.subir--ocupado]="subiendo()">
+                        <i class="ti" [class.ti-upload]="!subiendo()" [class.ti-loader-2]="subiendo()"
+                            [class.spin]="subiendo()"></i>
+                        {{ subiendo() ? 'Importando…' : 'Subir Excel' }}
+                        <input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                            (change)="subir($event)" [disabled]="subiendo()" hidden />
+                    </label>
+                </li>
+            </ol>
+
+            @if (error()) {
+            <div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+            }
+            @if (errores().length) {
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Fila</th><th>Correo</th><th>Qué corregir</th></tr>
+                    </thead>
+                    <tbody>
+                        @for (e of errores(); track e.fila) {
+                        <tr>
+                            <td>{{ e.fila }}</td>
+                            <td>{{ e.correo || '—' }}</td>
+                            <td>{{ e.problemas.join('; ') }}</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+            } @else {
+            <div class="cred-aviso">
+                <i class="ti ti-alert-triangle"></i>
+                <p>
+                    Se crearon <strong>{{ creados().length }}</strong> usuarios. Esta es la <strong>única vez</strong>
+                    que se muestran sus contraseñas: imprime o descarga el documento (una hoja por persona)
+                    antes de cerrar. Al entrar por primera vez, cada uno deberá cambiarla.
+                </p>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Contraseña</th></tr>
+                    </thead>
+                    <tbody>
+                        @for (c of creados(); track c.id_usuario) {
+                        <tr>
+                            <td>{{ c.nombre }}</td>
+                            <td>{{ c.correo }}</td>
+                            <td>{{ c.rol }}</td>
+                            <td class="cred-clave clave">{{ c.password }}</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="salir()">Cerrar</button>
+            @if (creados().length && hayPdf) {
+            <div class="cred-exportar">
+                <button class="btn btn--primary" style="width:auto" (click)="mostrarExportar.set(!mostrarExportar())">
+                    <i class="ti ti-file-text"></i> Credenciales
+                    <i class="ti ti-chevron-up"></i>
+                </button>
+                @if (mostrarExportar()) {
+                <div class="cred-popover">
+                    <button (click)="imprimir()"><i class="ti ti-printer"></i> Imprimir</button>
+                    <button (click)="descargar()"><i class="ti ti-download"></i> Descargar</button>
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </div>
+</div>

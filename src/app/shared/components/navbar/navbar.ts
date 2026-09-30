@@ -4,6 +4,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { SelectorEstablecimiento } from '../selector-establecimiento/selector-establecimiento';
 import { CambiarPasswordModal } from '../cambiar-password-modal/cambiar-password-modal';
 import { CampanaNotificaciones } from '../campana-notificaciones/campana-notificaciones';
+import { SidebarService } from '../../../core/services/sidebar.service';
 
 @Component({
   selector: 'app-navbar',
@@ -54,7 +55,7 @@ export class Navbar {
   // cualquier módulo, que es donde la persona se acuerda de hacerlo.
   mostrarCambiarPassword = signal(false);
 
-  constructor(public auth: AuthService) {
+  constructor(public auth: AuthService, public sidebar: SidebarService) {
     // El saludo y el colegio salen de datos que no viajan en el token: se
     // refrescan al montar la barra, que es una vez por carga de la app.
     this.auth.refrescarUsuario();
