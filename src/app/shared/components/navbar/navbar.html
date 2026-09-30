@@ -1,5 +1,10 @@
 <header class="navbar">
     <div class="navbar__brand">
+        <!-- Retrae el menú en escritorio y lo abre/cierra en celular. -->
+        <button class="navbar__icon-btn navbar__menu" (click)="sidebar.alternar()"
+            [title]="sidebar.colapsado() ? 'Mostrar menú' : 'Ocultar menú'" aria-label="Menú">
+            <i class="ti ti-menu-2"></i>
+        </button>
         <img src="logo.png" alt="MiConvivencia" class="navbar__logo" />
         <span>MiConvivencia</span>
     </div>

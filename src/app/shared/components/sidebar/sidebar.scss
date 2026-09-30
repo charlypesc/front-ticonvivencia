@@ -14,6 +14,8 @@
   border-right: 1px solid $gray-200;
   padding: 16px 12px;
   overflow-y: auto;
+  overflow-x: hidden;
+  transition: width .2s, transform .2s;
 
   &__nav {
     display: flex;
@@ -47,4 +49,46 @@
       i { color: $primary; }
     }
   }
+
+  // Escritorio, retraído: solo íconos. El nombre queda en el title del enlace.
+  &--colapsado {
+    width: $sidebar-w-colapsado;
+    padding: 16px 8px;
+
+    .sidebar__item {
+      justify-content: center;
+      padding: 9px 0;
+      span { display: none; }
+    }
+  }
+
+  // Celular/tablet: el menú no ocupa lugar. Está fuera de la pantalla y se
+  // desliza encima del contenido con el botón de la navbar. El modo
+  // colapsado de escritorio no aplica acá: abierto, se ve completo.
+  @media (max-width: 900px) {
+    width: $sidebar-w;
+    padding: 16px 12px;
+    transform: translateX(-100%);
+    box-shadow: none;
+
+    &--colapsado .sidebar__item {
+      justify-content: flex-start;
+      padding: 9px 12px;
+      span { display: inline; }
+    }
+
+    &--abierto {
+      transform: translateX(0);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+    }
+  }
+}
+
+.sidebar-fondo {
+  position: fixed;
+  inset: $navbar-h 0 0 0;
+  background: rgba(0, 0, 0, .35);
+  z-index: 89;
+
+  @media (min-width: 901px) { display: none; }
 }

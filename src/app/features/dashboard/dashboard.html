@@ -122,19 +122,22 @@
 <!-- Alertas por estudiante: el patrón que registro por registro no se ve. -->
 @if (hayAlertasEstudiantes()) {
 <div class="alertas-grid">
-    @if (resumen().alertas.senalados_bullying.length) {
+    @if (resumen().alertas.senalados_reiterados.length) {
     <div class="card card--peligro">
         <div class="card__header">
-            <span class="section-label"><i class="ti ti-alert-triangle"></i> Señalados por bullying</span>
+            <span class="section-label"><i class="ti ti-alert-triangle"></i> Señalados en más de un registro</span>
         </div>
         <div class="ultimos-list">
-            @for (e of resumen().alertas.senalados_bullying; track e.id_estudiante) {
+            @for (e of resumen().alertas.senalados_reiterados; track e.id_estudiante) {
             <a class="ultimo-item" (click)="verEstudiante(e)">
                 <div class="ultimo-item__info">
                     <i class="ti ti-user-exclamation"></i>
                     <span>{{ e.nombre }} <small class="texto-tenue">· {{ e.curso_nombre | cursoNombre }}</small></span>
                 </div>
-                <span class="badge badge--gravísima">{{ e.veces }} {{ e.veces === 1 ? 'registro' : 'registros' }}</span>
+                <span>
+                    @if (e.bullying) { <span class="badge badge--gravísima"><i class="ti ti-alert-triangle"></i> Bullying</span> }
+                    <span class="badge badge--gravísima">{{ e.veces }} registros</span>
+                </span>
             </a>
             }
         </div>
@@ -252,11 +255,13 @@
 </div>
 }
 
-<!-- Últimos registros -->
+<!-- Últimos registros: el registro manda (código, asunto, motivo y fecha);
+     los estudiantes van como detalle. Antes se titulaba "Estudiantes
+     involucrados" y encabezaba cada fila con el nombre del estudiante. -->
 <div class="card">
     <div class="card__header">
         <span class="section-label">
-            <i class="ti ti-history"></i> Estudiantes involucrados
+            <i class="ti ti-history"></i> Últimos registros
         </span>
         <a routerLink="/registros" class="ver-todos">
             Ver todos <i class="ti ti-arrow-right"></i>
@@ -266,7 +271,7 @@
     @if (resumen().ultimos.length === 0) {
     <div class="empty-state">
         <i class="ti ti-clipboard-off"></i>
-        <p>No hay registros este mes</p>
+        <p>Aún no hay registros</p>
     </div>
     } @else {
     <div class="ultimos-list">
@@ -276,17 +281,22 @@
             <div class="ultimo-item__info ultimo-item__info--confidencial">
                 <i class="ti ti-lock"></i>
                 <span>
-                    {{ r.alumno_nombre ?? 'Sin estudiante' }} —
-                    <strong>Confidencial</strong> — {{ r.asunto }}
+                    <strong>{{ r.codigo }}</strong> <strong>Confidencial</strong> — {{ r.asunto }}
+                    <br /><small class="texto-tenue">{{ r.alumno_nombre ?? 'Sin estudiante' }} · {{ r.fecha_creacion | fecha:true }}</small>
                 </span>
             </div>
             <span class="badge badge--confidencial">reservado</span>
             } @else {
             <div class="ultimo-item__info">
-                <i class="ti ti-user"></i>
+                <i class="ti ti-file-text"></i>
                 <span>
                     @if (r.es_confidencial) { <i class="ti ti-lock" title="Confidencial"></i> }
-                    {{ r.alumno_nombre ?? 'Sin estudiante' }} — {{ r.asunto }}
+                    <strong>{{ r.codigo }}</strong> {{ r.asunto }}
+                    <br /><small class="texto-tenue">
+                        {{ r.alumno_nombre ?? 'Sin estudiante' }}
+                        @if (r.tipo_falta_nombre) { · {{ r.tipo_falta_nombre }} }
+                        · {{ r.fecha_creacion | fecha:true }}
+                    </small>
                 </span>
             </div>
             }

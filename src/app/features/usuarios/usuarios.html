@@ -15,10 +15,15 @@
 }
 
 <div class="card">
-    <div style="display: flex;">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <button class="btn btn--primary btn--sm" style="width: auto;" [appPuede]="Permiso.UsuarioCrear"
             (click)="abrirForm()">
             <i class="ti ti-user-plus"></i> Nuevo usuario
+        </button>
+        <!-- Alta de muchos a la vez: plantilla Excel para llenar y subir. -->
+        <button class="btn btn--outline btn--sm" style="width: auto;" [appPuede]="Permiso.UsuarioCrear"
+            (click)="mostrarImportar.set(true)">
+            <i class="ti ti-file-spreadsheet"></i> Cargar varios (Excel)
         </button>
     </div>
     @if (loading()) {
@@ -412,6 +417,10 @@
 
 <!-- Se muestra tanto al crear como al restablecer: en los dos casos hay una
      clave en claro que existe solo en este momento. -->
+@if (mostrarImportar()) {
+<app-importar-usuarios (cerrar)="mostrarImportar.set(false)" (importados)="cargar()" />
+}
+
 @if (credenciales(); as cred) {
 <app-credenciales-modal [credenciales]="cred" [titulo]="tituloCredenciales()"
     [rol]="rolCredenciales()" (cerrar)="cerrarCredenciales()" />

@@ -372,9 +372,37 @@ table {
 
 .main-content {
   flex: 1;
+  // Sin esto un hijo ancho (una tabla) estira el main más allá de la
+  // pantalla y en el celular toda la página se corre de lado.
+  min-width: 0;
   margin-left: $sidebar-w;
   padding: 28px;
   min-height: calc(100vh - #{$navbar-h});
+  transition: margin-left .2s;
+}
+
+.layout--colapsado .main-content { margin-left: $sidebar-w-colapsado; }
+
+// En celular/tablet el menú se abre encima: el contenido usa todo el ancho.
+@media (max-width: 900px) {
+  .main-content,
+  .layout--colapsado .main-content {
+    margin-left: 0;
+    padding: 16px;
+  }
+}
+
+// iOS hace zoom solo al enfocar un campo con letra menor a 16px, y no vuelve
+// a su tamaño al salir: la página (o el modal) queda agrandada y corrida.
+// Por eso "al escribir cambia el zoom". Con 16px en los campos no hay zoom
+// automático, y el pellizco para ampliar sigue funcionando (no se toca el
+// viewport con maximum-scale, que en Android bloquea el zoom a propósito).
+@media (max-width: 900px), (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 // ─── UTILIDADES ───────────────────────────────────
@@ -410,6 +438,9 @@ table {
   width: 100%;
   max-width: 520px;
   max-height: calc(100vh - 32px);
+  // dvh: en el celular el teclado achica la pantalla visible; con vh el
+  // modal quedaba más alto que lo visible y el pie (Guardar) se escondía.
+  max-height: calc(100dvh - 32px);
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0,0,0,.2);
@@ -525,8 +556,20 @@ table {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 20px;
   h2 { font-size: 1.25rem; font-weight: 700; }
+}
+
+@media (max-width: 600px) {
+  // Dos campos lado a lado no entran en un celular: uno bajo el otro.
+  .form-row { grid-template-columns: 1fr !important; }
+  .modal-backdrop { padding: 8px; }
+  .modal {
+    max-height: calc(100dvh - 16px);
+    &__header, &__body, &__footer { padding-left: 16px; padding-right: 16px; }
+  }
 }
 
 .btn-icon {

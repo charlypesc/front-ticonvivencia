@@ -122,6 +122,23 @@ export class ApiService {
   createUsuario(data: { correo: string; nombre: string; roles: string[] }) {
     return this.http.post<Credenciales>(`${this.base}/usuarios`, data);
   }
+  /** Excel vacío para la carga masiva, con instrucciones y los roles del colegio. */
+  descargarPlantillaUsuarios() {
+    return this.http.get(`${this.base}/usuarios/plantilla`, { responseType: 'blob' });
+  }
+  /**
+   * Crea todas las cuentas del Excel, o ninguna: si una fila tiene problemas
+   * responde 400 con `errores` por fila. Igual que el alta de a uno, las
+   * claves vienen en claro solo en esta respuesta (y en el PDF conjunto).
+   */
+  importarUsuariosExcel(archivo: FormData) {
+    return this.http.post<{
+      message: string;
+      creados: { id_usuario: number; nombre: string; correo: string; rol: string; password: string }[];
+      pdf_base64: string | null;
+      pdf_nombre: string | null;
+    }>(`${this.base}/usuarios/importar`, archivo);
+  }
 
   /**
    * Crea un usuario en un establecimiento puntual, distinto del que el ADMIN

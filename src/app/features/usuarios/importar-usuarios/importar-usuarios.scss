@@ -1,0 +1,56 @@
+@use '../../../../styles/variables' as *;
+
+.pasos {
+  list-style: none;
+  counter-reset: paso;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  li {
+    counter-increment: paso;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    border: 1px solid $gray-200;
+    border-radius: $radius;
+    padding: 14px 16px 14px 52px;
+    position: relative;
+
+    &::before {
+      content: counter(paso);
+      position: absolute;
+      left: 16px;
+      top: 14px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: $primary;
+      color: $white;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    > div { flex: 1; min-width: 200px; }
+    strong { font-size: 14px; color: $gray-900; }
+    p { font-size: 12.5px; color: $gray-600; margin-top: 2px; }
+    .btn { width: auto; }
+  }
+}
+
+.subir {
+  cursor: pointer;
+  &--ocupado { opacity: .7; pointer-events: none; }
+}
+
+.clave {
+  font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-weight: 600;
+  white-space: nowrap;
+}
