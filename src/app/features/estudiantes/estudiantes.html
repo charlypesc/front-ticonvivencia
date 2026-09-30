@@ -81,9 +81,10 @@
                     <td>{{ e.nombre }} {{ e.apellido }}</td>
                     <td>{{ e.curso_nombre | cursoNombre }}</td>
                     <td>
-                        <!-- Verde: convivencia sana (nada abierto). Amarillo:
-                             tiene registros pendientes (sin atender, derivados,
-                             con protocolo en curso o por activar). Rojo, además:
+                        <!-- Verde: convivencia sana (ningún registro). Azul:
+                             tiene registros, pero ninguno pendiente. Amarillo:
+                             registros pendientes (sin atender, derivados, con
+                             protocolo en curso o por activar). Rojo, además:
                              señalado en un registro de bullying. -->
                         @if (e.senalado_bullying) {
                         <span class="badge badge--gravísima" title="Señalado en un registro de acoso escolar / bullying">
@@ -93,6 +94,10 @@
                         @if (e.n_pendientes > 0) {
                         <span class="badge badge--pendiente">
                             {{ e.n_pendientes }} {{ e.n_pendientes === 1 ? 'registro pendiente' : 'registros pendientes' }}
+                        </span>
+                        } @else if (e.n_registros > 0) {
+                        <span class="badge badge--con-registros" title="Tiene registros, ninguno pendiente">
+                            Estudiante con registros
                         </span>
                         } @else {
                         <span class="badge badge--validado">Convivencia sana</span>
@@ -153,6 +158,8 @@
                 <span class="badge badge--pendiente">
                     {{ est.n_pendientes }} {{ est.n_pendientes === 1 ? 'registro pendiente' : 'registros pendientes' }}
                 </span>
+                } @else if (registros().length > 0) {
+                <span class="badge badge--con-registros">Estudiante con registros</span>
                 } @else {
                 <span class="badge badge--validado">Convivencia sana</span>
                 }
