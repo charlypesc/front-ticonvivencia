@@ -92,10 +92,61 @@ td .badge + .badge { margin-left: 4px; }
   span { font-size: 11px; font-weight: 600; }
 
   &:hover { background: $primary-bg; }
+  &--activo { background: $primary-bg; }
+  &--abierto { box-shadow: 0 0 0 3px rgba(30, 58, 110, .2); }
 
   &--primario {
     background: $primary;
     color: $white;
     &:hover { background: $primary-light; }
   }
+}
+
+// Panel de un filtro, bajo la barra.
+.panel-filtro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 20px;
+  padding: 14px;
+  margin: -8px 0 16px;
+  border: 1px solid $gray-200;
+  border-radius: $radius;
+  background: $gray-50;
+
+  &__fechas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: $gray-600; }
+    input { padding: 7px 10px; border: 1px solid $gray-200; border-radius: 6px; font-size: 14px; }
+  }
+  &__atajos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  &__vacio { margin: 0; font-size: 13px; color: $gray-400; }
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid $gray-200;
+  border-radius: 999px;
+  background: $white;
+  font-size: 13px;
+  color: $gray-600;
+  cursor: pointer;
+  &:hover { border-color: $primary; color: $primary; }
+  &--activo { background: $primary; border-color: $primary; color: $white; &:hover { color: $white; } }
+  &__n { font-size: 11px; opacity: .7; }
+}
+
+.filtros-activos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: -6px 0 14px;
+  font-size: 13px;
+  color: $gray-600;
 }

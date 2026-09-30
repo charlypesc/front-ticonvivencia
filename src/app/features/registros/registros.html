@@ -24,16 +24,80 @@
                 <i class="ti ti-file-plus"></i>
                 <span>Nuevo</span>
             </button>
-            <button class="btn-cuadro" title="Filtrar por fecha">
+            <!-- Relleno claro cuando el filtro está aplicado, y el panel
+                 abierto se marca aparte: así se ve qué está filtrando la lista
+                 aunque el panel esté cerrado. -->
+            <button class="btn-cuadro" title="Filtrar por fecha del incidente"
+                [class.btn-cuadro--activo]="hayFiltroFecha()" [class.btn-cuadro--abierto]="panelFiltro() === 'fecha'"
+                (click)="alternarPanel('fecha')">
                 <i class="ti ti-calendar"></i>
                 <span>Fecha</span>
             </button>
-            <button class="btn-cuadro" title="Filtrar por motivo">
+            <button class="btn-cuadro" title="Filtrar por motivo del registro"
+                [class.btn-cuadro--activo]="motivosElegidos().length > 0"
+                [class.btn-cuadro--abierto]="panelFiltro() === 'motivo'"
+                (click)="alternarPanel('motivo')">
                 <i class="ti ti-filter"></i>
-                <span>Motivo</span>
+                <span>Motivo{{ motivosElegidos().length ? ' (' + motivosElegidos().length + ')' : '' }}</span>
             </button>
         </div>
     </div>
+
+    @if (panelFiltro() === 'fecha') {
+    <div class="panel-filtro">
+        <div class="panel-filtro__fechas">
+            <label>Desde
+                <input type="date" [ngModel]="fechaDesde()" (ngModelChange)="fechaDesde.set($event)"
+                    [max]="fechaHasta() || null" name="fecha_desde" />
+            </label>
+            <label>Hasta
+                <input type="date" [ngModel]="fechaHasta()" (ngModelChange)="fechaHasta.set($event)"
+                    [min]="fechaDesde() || null" name="fecha_hasta" />
+            </label>
+        </div>
+        <div class="panel-filtro__atajos">
+            <button type="button" class="chip" (click)="atajoFecha(7)">Últimos 7 días</button>
+            <button type="button" class="chip" (click)="atajoFecha(30)">Últimos 30 días</button>
+            <button type="button" class="chip" (click)="atajoFecha('mes')">Este mes</button>
+            @if (hayFiltroFecha()) {
+            <button type="button" class="btn-ver" (click)="limpiarFecha()"><i class="ti ti-x"></i> Quitar</button>
+            }
+        </div>
+    </div>
+    }
+
+    @if (panelFiltro() === 'motivo') {
+    <div class="panel-filtro">
+        @if (motivosDisponibles().length === 0) {
+        <p class="panel-filtro__vacio">No hay registros con motivo para filtrar.</p>
+        }
+        <div class="panel-filtro__atajos">
+            @for (m of motivosDisponibles(); track m.nombre) {
+            <button type="button" class="chip" [class.chip--activo]="motivosElegidos().includes(m.nombre)"
+                (click)="alternarMotivo(m.nombre)">
+                @if (motivosElegidos().includes(m.nombre)) { <i class="ti ti-check"></i> }
+                {{ m.nombre }} <span class="chip__n">{{ m.n }}</span>
+            </button>
+            }
+            @if (motivosElegidos().length) {
+            <button type="button" class="btn-ver" (click)="motivosElegidos.set([])"><i class="ti ti-x"></i> Quitar</button>
+            }
+        </div>
+    </div>
+    }
+
+    <!-- Resumen de lo aplicado: queda a la vista con los paneles cerrados. -->
+    @if (hayFiltroFecha() || motivosElegidos().length) {
+    <p class="filtros-activos">
+        <i class="ti ti-filter"></i>
+        {{ filtrados().length }} de {{ registros().length }} registros
+        @if (hayFiltroFecha()) {
+        · {{ fechaDesde() ? 'desde ' + (fechaDesde() | fecha) : '' }} {{ fechaHasta() ? 'hasta ' + (fechaHasta() | fecha) : '' }}
+        }
+        @if (motivosElegidos().length) { · {{ motivosElegidos().join(', ') }} }
+        <button type="button" class="btn-ver" (click)="limpiarFecha(); motivosElegidos.set([])">Quitar filtros</button>
+    </p>
+    }
 
     @if (loading()) {
     <div class="empty-state">
@@ -75,7 +139,7 @@
                     </td>
                     <td>{{ r.tipo_falta_nombre }}</td>
                     }
-                    <td class="celda-autor">{{ r.encargado_nombre ?? r.encargado_correo }}</td>
+                    <td class="celda-autor">{{ r.encargado_nombre ?? r.autor_nombre ?? r.encargado_correo ?? r.autor_correo }}</td>
                     <td>
                         <!-- Atención y derivación: se ve aunque el registro sea
                              confidencial, porque no dice nada del contenido. -->
