@@ -23,8 +23,11 @@
             <button class="btn btn--outline btn--sm">
                 <i class="ti ti-filter"></i> Motivo
             </button>
-            <button class="btn btn--primary btn--sm" [appPuede]="Permiso.RegistroCrear" (click)="abrirForm(null)">
-                <i class="ti ti-plus"></i> Nuevo
+            <!-- Mismo botón grande que "Agregar registro" en la ficha del
+                 estudiante: es la acción principal de la pantalla. -->
+            <button class="btn-nuevo" title="Nuevo registro" aria-label="Nuevo registro"
+                [appPuede]="Permiso.RegistroCrear" (click)="abrirForm(null)">
+                <i class="ti ti-file-plus"></i>
             </button>
         </div>
     </div>
