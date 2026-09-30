@@ -95,6 +95,25 @@ export class MedidasDisciplinarias implements OnInit {
     return this.pasosQueCumple('disciplinaria');
   }
 
+  /**
+   * El paso de resolución del protocolo, si lo tiene. Cuando existe, la medida
+   * de cada señalado se aplica en su tarjeta de ese paso (vía oficial), y acá
+   * solo queda registrar una prórroga de una medida ya aplicada.
+   */
+  get pasoDeResolucion(): PasoQueOrdenaMedida | null {
+    return this.pasosConMedida.find((p) => p.tipo === 'disciplinaria') ?? null;
+  }
+
+  /** Solo las medidas con plazo se prorrogan (Circular 482). */
+  get hayMedidasProrrogables(): boolean {
+    return this.medidas().some((m) => !!m.dias_habiles && !m.es_prorroga);
+  }
+
+  abrirProrroga() {
+    this.abrirForm();
+    this.form.es_prorroga = true;
+  }
+
   get pasosCautelares(): PasoQueOrdenaMedida[] {
     return this.pasosQueCumple('cautelar');
   }

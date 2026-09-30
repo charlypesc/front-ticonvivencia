@@ -123,6 +123,18 @@ export class ProtocoloCaso implements OnInit {
     return this.camposEditables().filter((c: any) => this.campoVisible(c));
   }
 
+  /**
+   * Los que se muestran en el formulario del paso. En un paso de resolución
+   * con tarjetas por señalado, "Tipo de medida" no se pregunta: se calcula de
+   * lo resuelto en cada tarjeta (derivarTipoMedida) y viaja igual en los
+   * datos del paso, porque de él depende el camino del protocolo.
+   */
+  camposEnPantalla() {
+    const paso = this.pasoActual();
+    const derivado = paso?.tipo_medida_requerida === 'disciplinaria' && paso?.involucrados?.length;
+    return this.camposVisibles().filter((c: any) => !(derivado && c.codigo === 'tipo_medida'));
+  }
+
   activo = computed(() => this.caso()?.estado === 'activo');
 
   mostrarGrafo = signal(false);
@@ -343,6 +355,7 @@ export class ProtocoloCaso implements OnInit {
     if (!this.actasListas(paso)) return;
     if (!(await this.confirmarSiEsAjeno(paso, paso.puede_ejecutar, paso.rol_ejecutor_nombre, 'completarlo')))
       return;
+    if (!this.derivarTipoMedida(paso)) return;
     if (!(await this.guardarGestionesDelPaso(paso))) return;
     this.ejecutar(this.api.completarPaso(this.id, paso.id_activado_paso, this.datosLimpios()));
   }
@@ -361,6 +374,21 @@ export class ProtocoloCaso implements OnInit {
     // En un paso de resguardo, "Cumplida" sin medida no se deja pasar: el
     // backend lo rechazaría igual, pero así el aviso dice a quién le falta
     // antes de guardar a nadie.
+    for (const g of pendientes) {
+      const f = this.formsGestion[g.id_paso_involucrado];
+      if (!this.pideResolucion(paso, g, f)) continue;
+      if (!f.md_sel) {
+        this.error.set(`Indica qué se resolvió para ${g.involucrado_nombre}.`);
+        return false;
+      }
+      if (this.TIPOS_CON_PLAZO.includes(f.md_sel) && (!f.md_dias || !f.md_fundamento?.trim())) {
+        this.error.set(
+          `La medida de ${g.involucrado_nombre} requiere los días hábiles y el fundamento ` +
+            '(Circular 482: justificada antes de adoptarla).',
+        );
+        return false;
+      }
+    }
     for (const g of pendientes) {
       const f = this.formsGestion[g.id_paso_involucrado];
       if (!this.pideMedida(paso, g, f)) continue;
@@ -430,6 +458,7 @@ export class ProtocoloCaso implements OnInit {
     );
     if (comentario === null) return;
 
+    if (decision && !this.derivarTipoMedida(paso)) return;
     if (!(await this.guardarGestionesDelPaso(paso))) return;
     this.ejecutar(
       this.api.aprobarPaso(this.id, paso.id_activado_paso, {
@@ -564,6 +593,90 @@ export class ProtocoloCaso implements OnInit {
    *  marcada como cumplida y todavía sin medida aplicada en este paso. */
   pideMedida(p: any, g: any, f: any) {
     return p?.tipo_medida_requerida === 'proteccion' && !g.medida_tipo && f?.estado_ui === 'cumplido';
+  }
+
+  /** Mismo catálogo que la tarjeta de medidas disciplinarias, sin expulsión ni
+   *  cancelación: esas no se aplican acá, se inician (las registra el director
+   *  al decidir). */
+  readonly TIPOS_MEDIDA_DISCIPLINARIA = [
+    'amonestacion', 'citacion_apoderado', 'medida_formativa', 'medida_reparatoria',
+    'servicio_comunitario', 'derivacion', 'retiro_sala', 'suspension_actividades',
+    'condicionalidad', 'suspension', 'reduccion_jornada', 'separacion_temporal',
+    'asistencia_solo_evaluaciones', 'otra',
+  ];
+  readonly TIPOS_CON_PLAZO = ['suspension', 'reduccion_jornada', 'separacion_temporal', 'asistencia_solo_evaluaciones'];
+  readonly INICIA_EXPULSION = '__expulsion__';
+  readonly SIN_MEDIDA = '__sin_medida__';
+
+  /** Categoría de cada medida, para calcular el "Tipo de medida" del paso. */
+  private categoriaDe(tipo: string): string {
+    if (['medida_formativa', 'servicio_comunitario', 'derivacion', 'citacion_apoderado'].includes(tipo))
+      return 'formativa';
+    if (tipo === 'medida_reparatoria') return 'reparatoria';
+    return 'disciplinaria';
+  }
+
+  /** Las categorías que admite el paso (opciones de su campo tipo_medida). */
+  opcionesTipoMedida(p: any): string[] {
+    const campo = (p?.campos ?? []).find((c: any) => c.codigo === 'tipo_medida');
+    const op = campo?.opciones;
+    return Array.isArray(op) ? op : typeof op === 'string' ? JSON.parse(op) : [];
+  }
+
+  /** La tarjeta de este señalado tiene que pedir su resolución. */
+  pideResolucion(p: any, g: any, f: any) {
+    return p?.tipo_medida_requerida === 'disciplinaria' && !g.medida_disc_tipo
+      && (f?.estado_ui === 'cumplido' || f?.estado_ui === 'cumplido_notificado');
+  }
+
+  /**
+   * Calcula el "Tipo de medida" del paso desde las tarjetas y lo deja en los
+   * datos que se envían. Es el dato que decide el camino del protocolo (la vía
+   * de expulsión, por ejemplo), así que se calcula siempre igual:
+   *  - si algún señalado inicia expulsión o cancelación, es eso;
+   *  - si todas las medidas son de una misma clase, esa clase;
+   *  - si se mezclan, 'mixta' o 'ambas' (según el paso) o, si el paso no tiene
+   *    esa opción, 'disciplinaria' cuando hay alguna;
+   *  - si nadie tiene medida, 'sin_medida'.
+   * Devuelve false (con el error puesto) si no se puede calcular.
+   */
+  private derivarTipoMedida(paso: any): boolean {
+    const opciones = this.opcionesTipoMedida(paso);
+    if (paso?.tipo_medida_requerida !== 'disciplinaria' || !paso?.involucrados?.length || !opciones.length)
+      return true;
+
+    const elegidas: string[] = [];
+    for (const g of paso.involucrados) {
+      const f = this.formsGestion[g.id_paso_involucrado];
+      if (g.medida_disc_tipo) elegidas.push(g.medida_disc_tipo);
+      else if (this.pideResolucion(paso, g, f) && f.md_sel) elegidas.push(f.md_sel);
+    }
+    if (!elegidas.length) {
+      this.error.set('Marca como cumplida la tarjeta de al menos un señalado e indica qué se resolvió.');
+      return false;
+    }
+
+    let valor: string;
+    if (elegidas.includes(this.INICIA_EXPULSION)) valor = 'expulsion_o_cancelacion';
+    else {
+      const clases = new Set(elegidas.filter((t) => t !== this.SIN_MEDIDA).map((t) => this.categoriaDe(t)));
+      if (clases.size === 0) valor = 'sin_medida';
+      else if (clases.size === 1) {
+        const [c] = [...clases];
+        // Hay pasos sin 'reparatoria' (bullying, ciberacoso): ahí la
+        // reparatoria cuenta como formativa, que es lo que es.
+        valor = opciones.includes(c) ? c : c === 'reparatoria' ? 'formativa' : c;
+      } else
+        valor = opciones.includes('mixta') ? 'mixta'
+          : opciones.includes('ambas') ? 'ambas'
+          : clases.has('disciplinaria') ? 'disciplinaria' : 'formativa';
+    }
+    if (!opciones.includes(valor)) {
+      this.error.set(`Lo resuelto en las tarjetas (${valor}) no es una opción de este paso.`);
+      return false;
+    }
+    this.datos['tipo_medida'] = valor;
+    return true;
   }
 
   involucrados = computed<any[]>(() => this.caso()?.involucrados ?? []);
@@ -881,6 +994,11 @@ export class ProtocoloCaso implements OnInit {
           medida_tipo: '',
           medida_dias: null as number | null,
           medida_fundamento: '',
+          // Paso de resolución: la medida (o iniciar expulsión / sin medida)
+          // de este señalado, con sus días y fundamento si la ley los pide.
+          md_sel: '',
+          md_dias: null as number | null,
+          md_fundamento: '',
         };
         const previo = this.formsGestion[id];
         const sinTocar = !previo || this.gestionesOriginales[id] === JSON.stringify(previo);
@@ -908,6 +1026,16 @@ export class ProtocoloCaso implements OnInit {
     };
     // La medida viaja con la gestión y se guardan juntas: la tarjeta de la
     // persona es la vía para aplicar la medida de protección del paso.
+    if (this.pideResolucion(paso, g, f))
+      data.medida_disciplinaria =
+        f.md_sel === this.INICIA_EXPULSION ? { modo: 'expulsion' }
+        : f.md_sel === this.SIN_MEDIDA ? { modo: 'sin_medida' }
+        : {
+            modo: 'medida',
+            tipo_medida: f.md_sel,
+            dias_habiles: this.TIPOS_CON_PLAZO.includes(f.md_sel) ? f.md_dias : null,
+            fundamento: f.md_fundamento?.trim() || null,
+          };
     if (this.pideMedida(paso, g, f))
       data.medida_proteccion = {
         tipo: f.medida_tipo,
