@@ -205,7 +205,8 @@
         <i class="ti ti-shield-exclamation"></i>
         <span>
             @if (paso.tipo_medida_requerida === 'disciplinaria') {
-            Este paso resuelve el caso y todavía no hay ninguna medida disciplinaria registrada.
+            Este paso resuelve el caso. En la tarjeta de cada señalado, más abajo, marca
+            <strong>Cumplida</strong> e indica la medida que se le aplicó.
             } @else if (paso.tipo_medida_requerida === 'proteccion') {
             Este paso ordena proteger a la persona afectada. En la tarjeta de cada afectado, más
             abajo, marca <strong>Cumplida</strong> y elige la medida de protección que se le aplicó.
@@ -216,9 +217,9 @@
             Este paso ordena una medida y todavía no hay ninguna registrada.
             }
         </span>
-        <!-- La de protección no tiene botón: se aplica en la tarjeta de cada
-             afectado, que es la vía oficial para este paso. -->
-        @if (activo() && paso.tipo_medida_requerida !== 'proteccion') {
+        <!-- Protección y disciplinaria no tienen botón: se aplican en la
+             tarjeta de cada afectado / señalado, que es la vía oficial. -->
+        @if (activo() && paso.tipo_medida_requerida === 'cautelar') {
         <button type="button" class="btn btn-sm btn-primary" (click)="registrarMedidaDe(paso)">
             <i class="ti ti-plus"></i> Registrar medida
         </button>
@@ -228,7 +229,7 @@
 
     <ng-container *ngTemplateOutlet="gestiones; context: { $implicit: paso, editable: true }" />
 
-    @for (campo of camposVisibles(); track campo.codigo) {
+    @for (campo of camposEnPantalla(); track campo.codigo) {
     <div class="form-group">
         <label>{{ campo.etiqueta }} @if (campo.es_obligatorio) {<span class="req">*</span>}</label>
         @if (campo.tipo_campo === 'seleccion') {
@@ -728,6 +729,14 @@
                      pregunta dos veces, porque no hay notificación sin gestión
                      cumplida. A la persona NO se le pide firma: lo que se
                      acredita es que se le notificó, cuándo y por qué vía. -->
+                @if (g.medida_disc_tipo) {
+                <p class="gestion__medida">
+                    <i class="ti ti-gavel"></i>
+                    Medida: <strong>{{ g.medida_disc_tipo | etiqueta:'tipo_medida_disciplinaria' }}</strong>
+                    desde el {{ g.medida_disc_fecha | fecha }}
+                    @if (g.medida_disc_termino) { hasta el {{ g.medida_disc_termino | fecha }} }
+                </p>
+                }
                 @if (g.medida_tipo) {
                 <p class="gestion__medida">
                     <i class="ti ti-shield-check"></i>
@@ -784,9 +793,9 @@
                     </label>
 
                     <label class="gestion__campo gestion__campo--obs">
-                        <span>{{ pideMedida(p, g, f) ? 'Descripción de la medida' : 'Observación' }}</span>
+                        <span>{{ pideMedida(p, g, f) || pideResolucion(p, g, f) ? 'Descripción de la medida' : 'Observación' }}</span>
                         <input type="text" [(ngModel)]="f.observacion" [name]="'obs_' + g.id_paso_involucrado"
-                            [placeholder]="pideMedida(p, g, f) ? 'Cómo se aplicará (opcional)' : 'Opcional'" />
+                            [placeholder]="pideMedida(p, g, f) || pideResolucion(p, g, f) ? 'Cómo se aplicará (opcional)' : 'Opcional'" />
                     </label>
 
                     <!-- Paso de resguardo: la medida de protección de esta
@@ -812,6 +821,41 @@
                         <input type="text" [(ngModel)]="f.medida_fundamento"
                             [name]="'medida_fund_' + g.id_paso_involucrado"
                             placeholder="Por qué no basta otra medida para resguardar a la persona" />
+                    </label>
+                    }
+                    }
+
+                    <!-- Paso de resolución: lo que se resolvió para este
+                         señalado. La medida se registra junto con la gestión;
+                         iniciar expulsión solo en los protocolos que tienen
+                         esa vía. -->
+                    @if (pideResolucion(p, g, f)) {
+                    <label class="gestion__campo gestion__campo--medida">
+                        <span>Medida <span class="req">*</span></span>
+                        <select [(ngModel)]="f.md_sel" [name]="'md_' + g.id_paso_involucrado">
+                            <option value="" disabled>Seleccione...</option>
+                            @for (t of TIPOS_MEDIDA_DISCIPLINARIA; track t) {
+                            <option [value]="t">{{ t | etiqueta:'tipo_medida_disciplinaria' }}</option>
+                            }
+                            @if (opcionesTipoMedida(p).includes('expulsion_o_cancelacion')) {
+                            <option [value]="INICIA_EXPULSION">Iniciar procedimiento de expulsión o cancelación</option>
+                            }
+                            @if (opcionesTipoMedida(p).includes('sin_medida')) {
+                            <option [value]="SIN_MEDIDA">Sin medida</option>
+                            }
+                        </select>
+                    </label>
+                    @if (TIPOS_CON_PLAZO.includes(f.md_sel)) {
+                    <label class="gestion__campo gestion__campo--fecha">
+                        <span>Días hábiles <span class="req">*</span></span>
+                        <input type="number" min="1" [(ngModel)]="f.md_dias" [name]="'md_dias_' + g.id_paso_involucrado" />
+                    </label>
+                    }
+                    @if (f.md_sel && f.md_sel !== SIN_MEDIDA) {
+                    <label class="gestion__campo gestion__campo--obs">
+                        <span>Fundamento @if (TIPOS_CON_PLAZO.includes(f.md_sel)) {<span class="req">*</span>}</span>
+                        <input type="text" [(ngModel)]="f.md_fundamento" [name]="'md_fund_' + g.id_paso_involucrado"
+                            placeholder="Por qué corresponde esta medida y su proporcionalidad" />
                     </label>
                     }
                     }

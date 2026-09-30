@@ -3,11 +3,26 @@
         <span class="section-label">
             <i class="ti ti-gavel"></i> Medidas disciplinarias
         </span>
+        @if (!pasoDeResolucion) {
         <button class="btn btn--primary btn--sm" style="width:auto"
             [appPuede]="Permiso.MedidaDisciplinariaRegistrar" (click)="abrirForm()">
             <i class="ti ti-plus"></i> Registrar medida
         </button>
+        } @else if (hayMedidasProrrogables) {
+        <button class="btn btn--outline btn--sm" style="width:auto"
+            [appPuede]="Permiso.MedidaDisciplinariaRegistrar" (click)="abrirProrroga()">
+            <i class="ti ti-clock-plus"></i> Registrar prórroga
+        </button>
+        }
     </div>
+
+    @if (pasoDeResolucion; as paso) {
+    <p class="text-sm text-muted">
+        <i class="ti ti-info-circle"></i>
+        Las medidas se aplican en el paso <strong>«{{ paso.nombre }}»</strong>, en la tarjeta de cada
+        señalado. Acá quedan para registrar su resultado y, si corresponde, su prórroga.
+    </p>
+    }
 
     @if (success()) {
     <div class="alert alert--success"><i class="ti ti-circle-check"></i> {{ success() }}</div>
