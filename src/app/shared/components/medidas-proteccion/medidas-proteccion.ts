@@ -75,6 +75,16 @@ export class MedidasProteccion implements OnInit {
     );
   }
 
+  /**
+   * El paso de resguardo del protocolo, si lo tiene. Cuando existe, la medida
+   * se aplica desde la tarjeta de cada afectado en ese paso (vía oficial) y
+   * esta tarjeta deja de ofrecer "Aplicar medida": queda para ver, corregir,
+   * hacer seguimiento y concluir.
+   */
+  get pasoDeResguardo(): PasoQueOrdenaMedida | null {
+    return this.pasosConMedida.find((p) => p.tipo === 'proteccion') ?? null;
+  }
+
   /** Abre el formulario ya atado a un paso concreto. Lo llama la pantalla del
    *  caso desde el aviso del paso: el usuario aprieta ahí y no tiene que bajar
    *  a buscar la tarjeta ni elegir el paso de nuevo. */
