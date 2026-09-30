@@ -208,6 +208,43 @@ export class RegistroForm implements OnInit {
   }
 
   /**
+   * Al revisar un registro que llenó otro funcionario, el protocolo que el
+   * reglamento asocia al motivo se preselecciona igual que al llenarlo. Antes
+   * solo pasaba al *cambiar* el motivo: quien llena el registro sin permiso
+   * para activar (Inspectoría, un profesor) nunca veía la sugerencia, y el
+   * coordinador que lo revisaba tampoco, porque no tocaba el motivo.
+   *
+   * Corre una sola vez y recién cuando llegaron las cuatro cargas (motivos,
+   * catálogo, activados y el detalle): con cualquiera a medias decidiría sobre
+   * datos incompletos. Solo si el registro no tiene ningún protocolo activado.
+   */
+  private preseleccionHecha = false;
+  private protocolosActivadosCargados = false;
+  @ViewChild('seccionProtocolo') seccionProtocolo?: ElementRef<HTMLElement>;
+
+  private preseleccionarAlRevisar() {
+    if (this.preseleccionHecha || !this.registro?.id_registro || !this.puedeActivarProtocolo) return;
+    if (!this.tiposFalta().length || !this.protocolos().length || !this.protocolosActivadosCargados) return;
+    if (!this.registro.derivaciones) return; // el detalle todavía no llegó
+    this.preseleccionHecha = true;
+    if (this.protocolosActivados().length > 0) return;
+    this.onTipoFaltaChange();
+  }
+
+  /** Aviso de arriba: el registro no tiene protocolo y su motivo tiene uno asociado. */
+  get protocoloSugeridoAlRevisar(): string | null {
+    if (!this.registro?.id_registro || !this.puedeActivarProtocolo || !this.protocolosActivadosCargados) return null;
+    if (this.protocolosActivados().length > 0 || this.protocolosDeLaFalta.length === 0) return null;
+    return (this.obligatoriosPendientes.length ? this.obligatoriosPendientes : this.protocolosDeLaFalta)
+      .map((p) => `"${p.protocolo_nombre}"`)
+      .join(' o ');
+  }
+
+  irAProtocolo() {
+    this.seccionProtocolo?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  /**
    * Tocar el tilde o el desplegable convierte la preselección en una decisión
    * propia: desde acá el cambio de tipo de falta ya no la toca.
    */
@@ -409,7 +446,10 @@ export class RegistroForm implements OnInit {
 
   ngOnInit() {
     // Carga tipos de falta y estudiantes en paralelo
-    this.api.getTiposFalta().subscribe((data) => this.tiposFalta.set(data));
+    this.api.getTiposFalta().subscribe((data) => {
+      this.tiposFalta.set(data);
+      this.preseleccionarAlRevisar();
+    });
     this.api.getEstudiantes().subscribe((data) => this.estudiantes.set(data));
     // Para elegir un funcionario de la lista en vez de escribirlo a mano. Es
     // una lista larga que no hace falta para mostrar el formulario, y si la
@@ -427,11 +467,18 @@ export class RegistroForm implements OnInit {
     // permiso la sección ni se muestra, y sería una llamada que devuelve 403.
     this.puedeActivarProtocolo = this.auth.can(Permiso.ProtocoloActivadoCrear);
     if (this.puedeActivarProtocolo) {
-      this.api.getProtocolosEstablecimiento().subscribe((data) => this.protocolos.set(data));
+      this.api.getProtocolosEstablecimiento().subscribe((data) => {
+        this.protocolos.set(data);
+        this.preseleccionarAlRevisar();
+      });
       if (this.registro) {
         this.api
           .getProtocolosActivadosByRegistro(this.registro.id_registro)
-          .subscribe((data) => this.protocolosActivados.set(data));
+          .subscribe((data) => {
+            this.protocolosActivados.set(data);
+            this.protocolosActivadosCargados = true;
+            this.preseleccionarAlRevisar();
+          });
       }
     }
 
@@ -445,6 +492,7 @@ export class RegistroForm implements OnInit {
           // El detalle manda: quien abre desde el dashboard solo pasa el id, así
           // que sin este segundo llenado el formulario quedaría en blanco.
           this.cargarForm(data);
+          this.preseleccionarAlRevisar();
         },
         // Si el detalle no se pudo cargar (403 por confidencial, por ejemplo),
         // el formulario queda con datos incompletos: se cierra en vez de

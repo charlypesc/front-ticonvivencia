@@ -76,6 +76,12 @@
                     @if (r.contenido_oculto) { <i class="ti ti-lock"></i> }
                     «{{ r.asunto }}» — {{ r.alumno_nombre ?? 'Sin estudiante' }}
                     <small class="texto-tenue">· {{ r.tipo_falta_nombre }} · {{ r.fecha_creacion | fecha:true }}</small>
+                    @if (r.protocolo_sugerido) {
+                    <br />
+                    <span class="badge" [class.badge--gravísima]="r.protocolo_obligatorio" [class.badge--pendiente]="!r.protocolo_obligatorio">
+                        <i class="ti ti-shield-exclamation"></i> Sugiere activar: {{ r.protocolo_sugerido }}
+                    </span>
+                    }
                 </span>
             </div>
             <button class="btn btn--primary btn--sm" style="width:auto"
