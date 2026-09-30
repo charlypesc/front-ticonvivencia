@@ -79,7 +79,7 @@
                 <tr class="fila-clickeable" (click)="abrirCaso(a)">
                     <td>{{ a.nombre }}</td>
                     <td class="text-muted">{{ nombresEstudiantes(a) || '—' }}</td>
-                    <td class="text-muted">N° {{ a.registro_folio ?? a.id_registro }}</td>
+                    <td class="text-muted">N° Folio {{ a.registro_folio ?? a.id_registro }}</td>
                     <td>
                         <span class="badge badge--{{ a.estado === 'cerrado' ? 'validado' : a.estado === 'anulado' ?
                             'confidencial' : 'pendiente' }}">{{ a.estado | etiqueta:'estado_caso' }}</span>
@@ -140,7 +140,7 @@
                     <option [ngValue]="null" disabled>Seleccione un registro...</option>
                     @for (r of registros(); track r.id_registro) {
                     <option [ngValue]="r.id_registro">
-                        N° {{ r.folio ?? r.id_registro }} — {{ r.asunto }} ({{ r.fecha_incidente | fecha }})
+                        N° Folio {{ r.folio ?? r.id_registro }} — {{ r.asunto }} ({{ r.fecha_incidente | fecha }})
                     </option>
                     }
                 </select>
