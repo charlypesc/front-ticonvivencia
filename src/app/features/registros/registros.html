@@ -13,7 +13,7 @@
         <!-- <label> y no <div>: clickear el padding o la lupa enfoca el input. -->
         <label class="toolbar__search">
             <i class="ti ti-search"></i>
-            <input type="text" placeholder="Buscar por asunto, motivo, estudiante o quién lo registró..." [ngModel]="busqueda()"
+            <input type="text" placeholder="Buscar por N°, asunto, motivo, estudiante o quién lo registró..." [ngModel]="busqueda()"
                 (ngModelChange)="busqueda.set($event)" />
         </label>
         <!-- Botones cuadrados como "Agregar registro" en la ficha del
@@ -114,6 +114,7 @@
         <table>
             <thead>
                 <tr>
+                    <th>N°</th>
                     <th>Fecha</th>
                     <th>Asunto</th>
                     <th>Motivo del registro</th>
@@ -125,6 +126,7 @@
             <tbody>
                 @for (r of filtrados(); track r.id_registro) {
                 <tr class="fila-clickeable" (click)="abrirForm(r)">
+                    <td class="celda-folio">{{ r.folio }}</td>
                     <td>{{ r.fecha_incidente | fecha }}</td>
                     @if (esConfidencialBloqueado(r)) {
                     <td colspan="2" title="{{ r.nota_confidencial }}">

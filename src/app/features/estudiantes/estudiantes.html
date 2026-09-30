@@ -212,7 +212,7 @@
                     <td><span class="badge badge--confidencial">reservado</span></td>
                     } @else {
                     <td>{{ r.asunto }}</td>
-                    <td class="celda-folio">#{{ r.id_registro }}</td>
+                    <td class="celda-folio">N° {{ r.folio ?? r.id_registro }}</td>
                     <td>{{ r.tipo_falta_nombre }}</td>
                     <td>{{ r.rol_en_incidente | etiqueta:'rol_involucrado' }}</td>
                     <td>
