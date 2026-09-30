@@ -422,3 +422,16 @@
 .grafo-ayuda {
   margin: 0 0 8px;
 }
+
+// Medida de protección ya aplicada a la persona en un paso de resguardo.
+.gestion__medida {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 8px;
+  font-size: 13px;
+  color: #065f46;
+  i { font-size: 16px; }
+}
+.gestion__campo--medida { flex: 1 1 220px; }

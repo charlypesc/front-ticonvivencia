@@ -207,8 +207,8 @@
             @if (paso.tipo_medida_requerida === 'disciplinaria') {
             Este paso resuelve el caso y todavía no hay ninguna medida disciplinaria registrada.
             } @else if (paso.tipo_medida_requerida === 'proteccion') {
-            Este paso ordena proteger a la persona afectada y todavía no hay ninguna medida de
-            protección registrada. Una suspensión cautelar no lo cumple: recae sobre el señalado.
+            Este paso ordena proteger a la persona afectada. En la tarjeta de cada afectado, más
+            abajo, marca <strong>Cumplida</strong> y elige la medida de protección que se le aplicó.
             } @else if (paso.tipo_medida_requerida === 'cautelar') {
             Este paso ordena suspender cautelarmente al señalado y todavía no hay ninguna
             suspensión cautelar registrada.
@@ -216,7 +216,9 @@
             Este paso ordena una medida y todavía no hay ninguna registrada.
             }
         </span>
-        @if (activo()) {
+        <!-- La de protección no tiene botón: se aplica en la tarjeta de cada
+             afectado, que es la vía oficial para este paso. -->
+        @if (activo() && paso.tipo_medida_requerida !== 'proteccion') {
         <button type="button" class="btn btn-sm btn-primary" (click)="registrarMedidaDe(paso)">
             <i class="ti ti-plus"></i> Registrar medida
         </button>
@@ -726,6 +728,15 @@
                      pregunta dos veces, porque no hay notificación sin gestión
                      cumplida. A la persona NO se le pide firma: lo que se
                      acredita es que se le notificó, cuándo y por qué vía. -->
+                @if (g.medida_tipo) {
+                <p class="gestion__medida">
+                    <i class="ti ti-shield-check"></i>
+                    Medida de protección: <strong>{{ g.medida_tipo | etiqueta:'tipo_medida_proteccion' }}</strong>
+                    desde el {{ g.medida_fecha_inicio | fecha }}
+                    @if (g.medida_fecha_termino) { hasta el {{ g.medida_fecha_termino | fecha }} }
+                    @if (g.medida_estado && g.medida_estado !== 'vigente') { · {{ g.medida_estado }} }
+                </p>
+                }
                 @if (editable && formsGestion[g.id_paso_involucrado]; as f) {
                 <div class="gestion__form" [appPuede]="Permiso.ProtocoloActivadoCompletarPaso" [appPuedeSi]="activo()"
                     appPuedeMotivo="El protocolo ya no está activo">
@@ -773,10 +784,37 @@
                     </label>
 
                     <label class="gestion__campo gestion__campo--obs">
-                        <span>Observación</span>
+                        <span>{{ pideMedida(p, g, f) ? 'Descripción de la medida' : 'Observación' }}</span>
                         <input type="text" [(ngModel)]="f.observacion" [name]="'obs_' + g.id_paso_involucrado"
-                            placeholder="Opcional" />
+                            [placeholder]="pideMedida(p, g, f) ? 'Cómo se aplicará (opcional)' : 'Opcional'" />
                     </label>
+
+                    <!-- Paso de resguardo: la medida de protección de esta
+                         persona se aplica acá, junto con su gestión. -->
+                    @if (pideMedida(p, g, f)) {
+                    <label class="gestion__campo gestion__campo--medida">
+                        <span>Medida de protección <span class="req">*</span></span>
+                        <select [(ngModel)]="f.medida_tipo" [name]="'medida_' + g.id_paso_involucrado">
+                            <option value="" disabled>Seleccione...</option>
+                            @for (t of TIPOS_MEDIDA_PROTECCION; track t) {
+                            <option [value]="t">{{ t | etiqueta:'tipo_medida_proteccion' }}</option>
+                            }
+                        </select>
+                    </label>
+                    @if (f.medida_tipo === 'suspension') {
+                    <label class="gestion__campo gestion__campo--fecha">
+                        <span>Días hábiles <span class="req">*</span></span>
+                        <input type="number" min="1" [max]="MAX_DIAS_SUSPENSION" [(ngModel)]="f.medida_dias"
+                            [name]="'medida_dias_' + g.id_paso_involucrado" />
+                    </label>
+                    <label class="gestion__campo gestion__campo--obs">
+                        <span>Fundamento de la suspensión <span class="req">*</span></span>
+                        <input type="text" [(ngModel)]="f.medida_fundamento"
+                            [name]="'medida_fund_' + g.id_paso_involucrado"
+                            placeholder="Por qué no basta otra medida para resguardar a la persona" />
+                    </label>
+                    }
+                    }
                 </div>
                 } @else if (!editable) {
                 @if (g.fecha_gestion || g.observacion || g.notificador_nombre) {

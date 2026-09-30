@@ -358,10 +358,29 @@ export class ProtocoloCaso implements OnInit {
     const pendientes = this.gestionesModificadas(paso);
     if (pendientes.length === 0) return true;
 
+    // En un paso de resguardo, "Cumplida" sin medida no se deja pasar: el
+    // backend lo rechazaría igual, pero así el aviso dice a quién le falta
+    // antes de guardar a nadie.
+    for (const g of pendientes) {
+      const f = this.formsGestion[g.id_paso_involucrado];
+      if (!this.pideMedida(paso, g, f)) continue;
+      if (!f.medida_tipo) {
+        this.error.set(`Elige la medida de protección aplicada a ${g.involucrado_nombre}.`);
+        return false;
+      }
+      if (f.medida_tipo === 'suspension' && (!f.medida_dias || !f.medida_fundamento?.trim())) {
+        this.error.set(
+          `La suspensión de ${g.involucrado_nombre} requiere los días hábiles (máximo ` +
+            `${this.MAX_DIAS_SUSPENSION}) y el fundamento de por qué no basta otra medida.`,
+        );
+        return false;
+      }
+    }
+
     this.error.set('');
     this.guardando.set(true);
     try {
-      for (const g of pendientes) await this.guardarGestion(g);
+      for (const g of pendientes) await this.guardarGestion(g, paso);
       return true;
     } catch (err: any) {
       this.error.set(
@@ -531,6 +550,21 @@ export class ProtocoloCaso implements OnInit {
 
   readonly ROLES_INVOLUCRADO = ['afectado', 'senalado', 'testigo', 'denunciante'];
   readonly MEDIOS_NOTIFICACION = ['presencial', 'correo', 'telefono', 'plataforma', 'carta'];
+  /** Mismo catálogo y orden que la tarjeta de medidas de protección (de menos a
+   *  más gravosa): en un paso de resguardo, cada afectado elige acá la suya. */
+  readonly TIPOS_MEDIDA_PROTECCION = [
+    'separacion_aula', 'prohibicion_contacto', 'cambio_curso', 'cambio_jornada',
+    'acompanamiento', 'derivacion_red', 'resguardo_confidencialidad',
+    'reorganizacion_espacios', 'separacion_funciones', 'teletrabajo',
+    'suspension', 'otra',
+  ];
+  readonly MAX_DIAS_SUSPENSION = 15;
+
+  /** La tarjeta de esta persona tiene que pedir la medida: paso de resguardo,
+   *  marcada como cumplida y todavía sin medida aplicada en este paso. */
+  pideMedida(p: any, g: any, f: any) {
+    return p?.tipo_medida_requerida === 'proteccion' && !g.medida_tipo && f?.estado_ui === 'cumplido';
+  }
 
   involucrados = computed<any[]>(() => this.caso()?.involucrados ?? []);
 
@@ -842,6 +876,11 @@ export class ProtocoloCaso implements OnInit {
           fecha_gestion: g.fecha_gestion ? String(g.fecha_gestion).slice(0, 10) : hoy,
           observacion: g.observacion ?? '',
           medio_notificacion: g.medio_notificacion ?? 'presencial',
+          // Solo se usan en un paso de resguardo, si la persona aún no tiene
+          // su medida: se envían junto con la gestión y el backend la crea.
+          medida_tipo: '',
+          medida_dias: null as number | null,
+          medida_fundamento: '',
         };
         const previo = this.formsGestion[id];
         const sinTocar = !previo || this.gestionesOriginales[id] === JSON.stringify(previo);
@@ -859,7 +898,7 @@ export class ProtocoloCaso implements OnInit {
    * cumple de una vez, y un guardado aparte invitaba a completar el paso
    * creyendo que la notificación ya estaba registrada cuando no lo estaba.
    */
-  private guardarGestion(g: any) {
+  private guardarGestion(g: any, paso?: any) {
     const f = this.formsGestion[g.id_paso_involucrado];
     const notifico = f.estado_ui === 'cumplido_notificado';
     const data: any = {
@@ -867,6 +906,14 @@ export class ProtocoloCaso implements OnInit {
       fecha_gestion: f.fecha_gestion || null,
       observacion: f.observacion?.trim() || null,
     };
+    // La medida viaja con la gestión y se guardan juntas: la tarjeta de la
+    // persona es la vía para aplicar la medida de protección del paso.
+    if (this.pideMedida(paso, g, f))
+      data.medida_proteccion = {
+        tipo: f.medida_tipo,
+        dias_habiles: f.medida_tipo === 'suspension' ? f.medida_dias : null,
+        fundamento: f.medida_fundamento?.trim() || null,
+      };
     if (notifico) {
       // La fecha de la notificación se sella una sola vez: si ya la tenía, no
       // se pisa. La vía sí viaja siempre, para poder corregir un "presencial"
