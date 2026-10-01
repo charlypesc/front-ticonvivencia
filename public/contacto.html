@@ -148,8 +148,8 @@
     flex-direction:column;
     align-items:center;
     gap:12px;
-    padding-top:20px;
-    border-top:1px solid var(--borde);
+    padding-bottom:20px;
+    border-bottom:1px solid var(--borde);
   }
   .qr-box{
     background:var(--blanco);
@@ -194,6 +194,11 @@
   </div>
 
   <div class="body">
+    <div class="qr-wrap">
+      <div class="qr-box"><canvas id="qr"></canvas></div>
+      <div class="qr-hint"><strong>Escanea para guardar</strong>El código QR agrega el contacto directamente a tu teléfono.</div>
+    </div>
+
     <div class="fields">
       <a class="field" href="tel:+56990769101"><span class="label">Tel.</span><span class="value">+56 9 9076 9101</span></a>
       <a class="field" href="mailto:ventas@miconvivencia.cl"><span class="label">Ventas</span><span class="value">ventas@miconvivencia.cl</span></a>
@@ -203,11 +208,6 @@
     <div class="acciones">
       <button type="button" class="btn btn--primario" id="guardar">Guardar contacto</button>
       <a class="btn btn--whatsapp" href="https://wa.me/56990769101?text=Hola%2C%20quiero%20saber%20m%C3%A1s%20sobre%20miConvivencia" target="_blank" rel="noopener">WhatsApp</a>
-    </div>
-
-    <div class="qr-wrap">
-      <div class="qr-box"><canvas id="qr"></canvas></div>
-      <div class="qr-hint"><strong>Escanea para guardar</strong>El código QR agrega el contacto directamente a tu teléfono.</div>
     </div>
 
     <a class="web" href="https://miconvivencia.cl">miconvivencia.cl</a>
