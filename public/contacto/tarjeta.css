@@ -192,3 +192,25 @@
   .btn--primario:hover{background:rgba(102,227,255,.18)}
   .btn--whatsapp{background:#25d366;color:#0b3d1f;border:1px solid #25d366}
   .btn--whatsapp:hover{background:#1ebe5a}
+
+/* Teléfono: toda la tarjeta entra sin scroll en un iPhone 11 con las barras de Safari (~414×715) */
+@media (max-width:480px){
+  body{padding:12px 12px 16px}
+  .card{padding:18px 18px 16px;gap:12px}
+  .card-top{flex-direction:row;gap:10px}
+  .logo-mark{width:46px;height:46px}
+  .brand{align-items:flex-start}
+  .logo-text{font-size:21px}
+  .qr-wrap{padding-top:12px;gap:8px}
+  .qr-box{padding:8px}
+  .qr-box canvas{width:156px;height:156px}
+  .qr-hint{font-size:12px}
+  .qr-hint strong{display:inline;margin:0}
+  .qr-hint .qr-hint-detalle{display:none}
+  .person{padding-top:12px}
+  .person h2{font-size:25px}
+  .fields{gap:6px;margin-top:-2px}
+  .rubros{padding-top:12px;gap:5px}
+  .rubro{font-size:9.5px;padding:4px 10px}
+  .btn{padding:10px 8px}
+}
