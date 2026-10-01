@@ -4,156 +4,93 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Contacto — miConvivencia</title>
-<meta name="description" content="Tarjeta de contacto de miConvivencia: gestión de la convivencia escolar." />
+<meta name="description" content="Tarjeta de contacto de Rodrigo Paredes, miConvivencia: gestión de la convivencia escolar." />
 <link rel="icon" type="image/png" href="contacto/logo.png" />
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=JetBrains+Mono:wght@300;400;500&family=Manrope:wght@400;500;600;700&display=swap');
 
-  /* Mismos tokens que la landing (miconvivencia.cl) */
+  /* Mismo modelo que la tarjeta de Active2 (Active2/contacto.php), con los colores de miConvivencia */
   :root{
-    --petroleo:#23535f;
-    --petroleo-osc:#173c45;
-    --azul:#3d94ad;
-    --celeste:#66e3ff;
-    --celeste-suave:#7ecbe9;
-    --fondo:#f3f8fb;
-    --blanco:#ffffff;
-    --texto:#16323a;
-    --texto-suave:#4a6570;
-    --borde:#d8e6ec;
+    --acento:#66e3ff;
+    --bg:#0f1f24;
+    --card:#152a31;
+    --card2:rgba(102,227,255,.10);
+    --border:rgba(102,227,255,.22);
+    --border2:rgba(102,227,255,.4);
+    --text:#f4f8fa;
+    --text2:#9db4bc;
+    --qr-bg:#ffffff;
   }
 
   *{box-sizing:border-box}
   body{
     margin:0;
-    min-height:100vh;
-    background:var(--fondo);
-    color:var(--texto);
-    font-family:'Source Sans 3',-apple-system,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Manrope',-apple-system,sans-serif;
     padding:40px 16px 56px;
-    display:flex;
-    justify-content:center;
-    align-items:flex-start;
   }
 
   .card{
-    width:100%;
-    max-width:400px;
-    background:var(--blanco);
-    border:1px solid var(--borde);
+    max-width:420px;
+    margin:0 auto;
+    background:var(--card);
+    border:1px solid var(--border);
     border-radius:16px;
-    overflow:hidden;
-    box-shadow:0 1px 3px rgba(22,50,58,.08), 0 12px 32px rgba(22,50,58,.12);
+    padding:32px 28px 28px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
     text-align:center;
+    gap:20px;
+    box-shadow:0 1px 3px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.4);
   }
 
   .card-top{
-    background:linear-gradient(160deg,var(--petroleo) 0%,var(--petroleo-osc) 100%);
-    color:var(--blanco);
-    padding:28px 24px 24px;
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:10px;
+    gap:12px;
   }
   .logo-mark{
-    width:84px;
-    height:84px;
+    width:92px;
+    height:92px;
     object-fit:contain;
-    background:var(--blanco);
-    border-radius:50%;
-    padding:10px;
+    flex-shrink:0;
+  }
+  .brand{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
   }
   .logo-text{
-    font-family:'Lexend',sans-serif;
-    font-weight:700;
-    font-size:26px;
-    letter-spacing:-0.3px;
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:900;
+    font-size:22px;
+    letter-spacing:-0.2px;
+    color:var(--text);
   }
-  .logo-text span{color:var(--celeste)}
   .logo-sub{
-    font-size:14px;
-    color:var(--celeste-suave);
-  }
-
-  .body{
-    padding:24px 24px 28px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:20px;
-  }
-
-  .fields{
-    width:100%;
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-  }
-  .field{
-    display:flex;
-    align-items:center;
-    gap:12px;
-    padding:10px 14px;
-    border:1px solid var(--borde);
-    border-radius:10px;
-    color:var(--texto);
-    text-decoration:none;
-    text-align:left;
-    transition:border-color .15s ease, background .15s ease;
-  }
-  .field:hover{border-color:var(--azul);background:var(--fondo)}
-  .field .label{
-    width:74px;
-    flex-shrink:0;
-    font-family:'Lexend',sans-serif;
-    font-size:11px;
-    font-weight:600;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    color:var(--acento);
+    letter-spacing:0.8px;
     text-transform:uppercase;
-    letter-spacing:0.6px;
-    color:var(--azul);
   }
-  .field .value{
-    font-size:15px;
-    font-weight:600;
-    font-variant-numeric:tabular-nums;
-    word-break:break-all;
-  }
-
-  .acciones{
-    width:100%;
-    display:flex;
-    gap:8px;
-  }
-  .btn{
-    flex:1;
-    font-family:'Lexend',sans-serif;
-    font-weight:600;
-    font-size:14px;
-    border:none;
-    border-radius:10px;
-    padding:12px 10px;
-    cursor:pointer;
-    text-decoration:none;
-    text-align:center;
-  }
-  .btn--primario{background:var(--petroleo);color:var(--blanco)}
-  .btn--primario:hover{background:var(--petroleo-osc)}
-  .btn--whatsapp{background:#25d366;color:#0b3d1f}
-  .btn--whatsapp:hover{background:#1ebe5a}
 
   .qr-wrap{
-    width:100%;
     display:flex;
     flex-direction:column;
     align-items:center;
     gap:12px;
-    padding-bottom:20px;
-    border-bottom:1px solid var(--borde);
+    padding-top:18px;
+    border-top:1px solid var(--border);
+    width:100%;
   }
   .qr-box{
-    background:var(--blanco);
-    border:1px solid var(--borde);
+    background:var(--qr-bg);
+    border:1px solid var(--border2);
     border-radius:10px;
     padding:10px;
     line-height:0;
@@ -164,24 +101,106 @@
     height:180px;
   }
   .qr-hint{
-    font-size:13px;
-    color:var(--texto-suave);
+    font-size:12.5px;
+    color:var(--text2);
     line-height:1.5;
   }
   .qr-hint strong{
     display:block;
-    color:var(--texto);
-    font-size:14px;
+    color:var(--text);
+    font-size:13px;
     margin-bottom:2px;
   }
 
-  .web{
-    font-size:13px;
-    color:var(--azul);
-    text-decoration:none;
-    font-weight:600;
+  .person{
+    padding-top:16px;
+    border-top:1px solid var(--border);
+    width:100%;
   }
-  .web:hover{text-decoration:underline}
+  .person h2{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:900;
+    font-size:27px;
+    letter-spacing:-0.2px;
+    margin:0;
+    color:var(--text);
+  }
+
+  .fields{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:9px;
+    margin-top:-4px;
+  }
+  .field{
+    display:flex;
+    justify-content:flex-start;
+    align-items:baseline;
+    gap:10px;
+    font-size:14px;
+    color:var(--text);
+    text-decoration:none;
+  }
+  .field .label{
+    width:64px;
+    flex-shrink:0;
+    text-align:right;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    font-weight:500;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    color:var(--acento);
+  }
+  .field .value{
+    font-variant-numeric:tabular-nums;
+    word-break:break-all;
+    text-align:left;
+  }
+  a.field:hover .value{text-decoration:underline}
+
+  .rubros{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:7px;
+    padding-top:16px;
+    border-top:1px solid var(--border);
+    width:100%;
+  }
+  .rubro{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    font-weight:500;
+    letter-spacing:0.4px;
+    color:var(--acento);
+    background:var(--card2);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:5px 12px;
+  }
+
+  .acciones{
+    width:100%;
+    display:flex;
+    gap:8px;
+  }
+  .btn{
+    flex:1;
+    font-family:'Manrope',sans-serif;
+    font-weight:700;
+    font-size:13.5px;
+    border-radius:10px;
+    padding:11px 10px;
+    cursor:pointer;
+    text-decoration:none;
+    text-align:center;
+  }
+  .btn--primario{background:var(--card2);color:var(--acento);border:1px solid var(--border2)}
+  .btn--primario:hover{background:rgba(102,227,255,.18)}
+  .btn--whatsapp{background:#25d366;color:#0b3d1f;border:1px solid #25d366}
+  .btn--whatsapp:hover{background:#1ebe5a}
 </style>
 </head>
 <body>
@@ -189,28 +208,37 @@
 <article class="card">
   <div class="card-top">
     <img class="logo-mark" src="contacto/logo.png" alt="miConvivencia" />
-    <div class="logo-text">mi<span>Convivencia</span></div>
-    <div class="logo-sub">Gestión de la convivencia escolar</div>
+    <div class="brand">
+      <span class="logo-text">miConvivencia</span>
+      <span class="logo-sub">Convivencia escolar</span>
+    </div>
   </div>
 
-  <div class="body">
-    <div class="qr-wrap">
-      <div class="qr-box"><canvas id="qr"></canvas></div>
-      <div class="qr-hint"><strong>Escanea para guardar</strong>El código QR agrega el contacto directamente a tu teléfono.</div>
-    </div>
+  <div class="qr-wrap">
+    <div class="qr-box"><canvas id="qr"></canvas></div>
+    <div class="qr-hint"><strong>Escanea para guardar</strong>El código QR agrega el contacto directamente a tu teléfono.</div>
+  </div>
 
-    <div class="fields">
-      <a class="field" href="tel:+56990769101"><span class="label">Tel.</span><span class="value">+56 9 9076 9101</span></a>
-      <a class="field" href="mailto:ventas@miconvivencia.cl"><span class="label">Ventas</span><span class="value">ventas@miconvivencia.cl</span></a>
-      <a class="field" href="mailto:contacto@miconvivencia.cl"><span class="label">Contacto</span><span class="value">contacto@miconvivencia.cl</span></a>
-    </div>
+  <div class="person">
+    <h2>Rodrigo Paredes</h2>
+  </div>
+  <div class="fields">
+    <a class="field" href="tel:+56990769101"><span class="label">Tel.</span><span class="value">+56 9 9076 9101</span></a>
+    <a class="field" href="mailto:ventas@miconvivencia.cl"><span class="label">Ventas</span><span class="value">ventas@miconvivencia.cl</span></a>
+    <a class="field" href="mailto:contacto@miconvivencia.cl"><span class="label">Contacto</span><span class="value">contacto@miconvivencia.cl</span></a>
+    <a class="field" href="https://miconvivencia.cl"><span class="label">Web</span><span class="value">miconvivencia.cl</span></a>
+  </div>
 
-    <div class="acciones">
-      <button type="button" class="btn btn--primario" id="guardar">Guardar contacto</button>
-      <a class="btn btn--whatsapp" href="https://wa.me/56990769101?text=Hola%2C%20quiero%20saber%20m%C3%A1s%20sobre%20miConvivencia" target="_blank" rel="noopener">WhatsApp</a>
-    </div>
+  <div class="rubros">
+    <span class="rubro">Protocolos</span>
+    <span class="rubro">Seguimiento de casos</span>
+    <span class="rubro">Expedientes</span>
+    <span class="rubro">Ley 21.809</span>
+  </div>
 
-    <a class="web" href="https://miconvivencia.cl">miconvivencia.cl</a>
+  <div class="acciones">
+    <button type="button" class="btn btn--primario" id="guardar">Guardar contacto</button>
+    <a class="btn btn--whatsapp" href="https://wa.me/56990769101?text=Hola%2C%20quiero%20saber%20m%C3%A1s%20sobre%20miConvivencia" target="_blank" rel="noopener">WhatsApp</a>
   </div>
 </article>
 
@@ -219,14 +247,14 @@
   var VCARD = [
     'BEGIN:VCARD',
     'VERSION:3.0',
-    'N:;miConvivencia;;;',
-    'FN:miConvivencia',
+    'N:Paredes;Rodrigo;;;',
+    'FN:Rodrigo Paredes',
     'ORG:miConvivencia',
     'TEL;TYPE=CELL:+56990769101',
     'EMAIL;TYPE=WORK:ventas@miconvivencia.cl',
     'EMAIL;TYPE=WORK:contacto@miconvivencia.cl',
     'URL:https://miconvivencia.cl',
-    'NOTE:Gestión de la convivencia escolar',
+    'NOTE:miConvivencia — Gestión de la convivencia escolar',
     'END:VCARD'
   ].join('\r\n');
 
@@ -244,7 +272,7 @@
   var ctx = canvas.getContext('2d');
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#16323a';
+  ctx.fillStyle = '#1a1a18';
   for(var r=0;r<cell;r++){
     for(var c=0;c<cell;c++){
       if(qr.isDark(r,c)){
@@ -258,7 +286,7 @@
     var blob = new Blob([VCARD], {type:'text/vcard;charset=utf-8'});
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'miConvivencia.vcf';
+    a.download = 'Rodrigo Paredes - miConvivencia.vcf';
     document.body.appendChild(a);
     a.click();
     a.remove();
