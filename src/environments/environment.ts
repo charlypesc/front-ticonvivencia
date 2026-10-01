@@ -6,4 +6,5 @@ export const environment = {
   // dar error (la llamada nunca vuelve). Se consulta con `ipconfig getifaddr en0`.
   apiUrl: 'http://192.168.1.136:3000/api',
   // apiUrl: 'https://backticonvivencia.onrender.com/api',
+  landingUrl: 'https://miconvivencia.cl',
 };

@@ -1,8 +1,10 @@
 <div class="login-wrapper">
     <div class="login-card">
         <div class="login-header">
-            <img src="logo.png" alt="MiConvivencia" class="login-logo" />
-            <h1>MiConvivencia</h1>
+            <a [href]="landingUrl" class="login-marca" title="Ir a la página de MiConvivencia">
+                <img src="logo.png" alt="MiConvivencia" class="login-logo" />
+                <h1>MiConvivencia</h1>
+            </a>
             <p class="text-muted">Ingresa con tu cuenta</p>
         </div>
         @if (error()) {
