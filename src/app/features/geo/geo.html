@@ -16,11 +16,13 @@
 
 <div class="card">
     <app-buscador class="toolbar__search" [items]="resultadosBusquedaRbd()" [texto]="busquedaRbd()"
-        (textoChange)="onBuscarRbdChange($event)" placeholder="Buscar por RBD..." [cargando]="buscandoRbd()"
+        (textoChange)="onBuscarRbdChange($event)" placeholder="Buscar por RBD o nombre..." [cargando]="buscandoRbd()"
         (elegir)="irAEstablecimiento($event)">
         <ng-template #item let-est>
             <span class="sugerencia__nombre">{{ est.nombre }}</span>
-            <span class="sugerencia__meta">RBD {{ est.rbd }}</span>
+            <span class="sugerencia__meta">
+                RBD {{ est.rbd }}@if (est.direccion) { · {{ est.direccion }}}@if (est.comuna_nombre) { · {{ est.comuna_nombre }}}
+            </span>
         </ng-template>
         <ng-template #vacio>
             @if (buscandoRbd()) { Buscando… } @else { Sin resultados para "{{ busquedaRbd() }}" }
