@@ -58,7 +58,7 @@ export class Geo implements OnInit {
   provinciaSel = signal<any | null>(null);
   comunaSel = signal<any | null>(null);
 
-  // Buscador por RBD — salta directo al establecimiento sin navegar el
+  // Buscador por RBD o nombre — salta directo al establecimiento sin navegar el
   // breadcrumb a mano (busca contra toda la BD, no solo la comuna actual).
   busquedaRbd = signal('');
   resultadosBusquedaRbd = signal<any[]>([]);
