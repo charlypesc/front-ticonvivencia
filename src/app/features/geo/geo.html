@@ -252,6 +252,7 @@
                 <!-- En verde los que ya tienen usuarios: son los que operan el
                      sistema, un puñado entre las miles de filas del directorio. -->
                 <tr class="fila-clickeable" [class.fila--activa]="tieneUsuarios(e)"
+                    [class.fila--observaciones]="e.observaciones && !tieneUsuarios(e)"
                     [class.fila--destacada]="esDestacado(e)"
                     (click)="verDetalleEstablecimiento(e)">
                     <td>
