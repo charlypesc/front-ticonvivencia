@@ -62,6 +62,16 @@
             (click)="abrirFormEstablecimiento()">
             <i class="ti ti-plus"></i> Agregar establecimiento
         </button>
+        @if (establecimientos().length > 0) {
+        <select class="filtro-dependencia" [ngModel]="filtroDependencia()"
+            (ngModelChange)="filtroDependencia.set($event)" name="filtro_dependencia"
+            title="Filtrar por tipo de dependencia">
+            <option value="">Todos los tipos ({{ establecimientos().length }})</option>
+            @for (t of tiposDependencia(); track t.tipo) {
+            <option [value]="t.tipo">{{ t.tipo }} ({{ t.cantidad }})</option>
+            }
+        </select>
+        }
         }
     </div>
 
@@ -216,6 +226,14 @@
         <i class="ti ti-building-off"></i>
         <p>No hay establecimientos registrados para {{ comunaSel()?.nombre }}</p>
     </div>
+    } @else if (establecimientosOrdenados().length === 0) {
+    <div class="empty-state">
+        <i class="ti ti-filter-off"></i>
+        <p>No hay establecimientos "{{ filtroDependencia() }}" en {{ comunaSel()?.nombre }}</p>
+        <button class="btn btn--outline btn--sm" style="width:auto" (click)="filtroDependencia.set('')">
+            Ver todos
+        </button>
+    </div>
     } @else {
     <div class="table-wrap">
         <table>
@@ -248,6 +266,9 @@
                         <span class="badge-bloqueado" title="Sus usuarios no pueden iniciar sesión">
                             <i class="ti ti-lock"></i> Acceso suspendido
                         </span>
+                        }
+                        @if (e.observaciones) {
+                        <i class="ti ti-notes text-muted" [title]="e.observaciones"></i>
                         }
                     </td>
                     <td class="text-muted">{{ e.rbd }}</td>
@@ -411,6 +432,22 @@
                     <span class="text-muted">Sin sostenedor</span>
                     }
                 </div>
+            </div>
+
+            <div class="form-group observaciones">
+                <label for="observaciones">Observaciones</label>
+                <textarea id="observaciones" appAutoAjustar rows="2" [(ngModel)]="observacionesTexto"
+                    name="observaciones" placeholder="Notas internas sobre este establecimiento"
+                    [readonly]="!auth.can(Permiso.EstablecimientoEditar)"></textarea>
+                @if (observacionesCambiadas(det)) {
+                <button class="btn btn--primary btn--sm" style="width:auto"
+                    [appPuede]="Permiso.EstablecimientoEditar" [disabled]="guardandoObservaciones()"
+                    (click)="guardarObservaciones(det)">
+                    <i class="ti" [class.ti-device-floppy]="!guardandoObservaciones()"
+                        [class.ti-loader-2]="guardandoObservaciones()" [class.spin]="guardandoObservaciones()"></i>
+                    Guardar observaciones
+                </button>
+                }
             </div>
         </div>
 

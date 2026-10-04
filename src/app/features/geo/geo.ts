@@ -12,6 +12,7 @@ import { Buscador } from '../../shared/components/buscador/buscador';
 import { Credenciales } from '../../core/models/usuario.model';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
+import { AutoAjustarTextarea } from '../../shared/directives/auto-ajustar-textarea.directive';
 import {
   completarDominio,
   dominioDe,
@@ -27,10 +28,13 @@ import {
  */
 const ROL_POR_DEFECTO = 'ENCARGADO';
 
+/** Etiqueta del filtro para los establecimientos sin tipo de dependencia cargado. */
+const SIN_TIPO = 'Sin tipo';
+
 @Component({
   selector: 'app-geo',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, CredencialesModal, Buscador, CerrarConEsc, GuardarConCmdEnter],
+  imports: [CommonModule, FormsModule, Puede, CredencialesModal, Buscador, CerrarConEsc, GuardarConCmdEnter, AutoAjustarTextarea],
   templateUrl: './geo.html',
   styleUrl: './geo.scss',
 })
@@ -141,8 +145,38 @@ export class Geo implements OnInit {
    * buscó en esta pantalla, no de los datos: pedirlo al servidor obligaría a
    * mandarle el id en cada listado de comuna.
    */
+  /**
+   * Filtro por tipo de dependencia ('' = todos). No se limpia al cambiar de
+   * comuna: quien busca, por ejemplo, particulares subvencionados suele
+   * recorrer varias comunas seguidas con el mismo criterio.
+   */
+  filtroDependencia = signal('');
+
+  /**
+   * Tipos presentes en la comuna abierta, con su cantidad. Salen de los datos
+   * y no de una lista fija: el directorio de RBD trae sus propios textos
+   * ("Servicio Local de Educación(SLE)", etc.) y una lista a mano se desfasa.
+   * El tipo elegido se conserva aunque esta comuna no tenga ninguno, para que
+   * el selector no quede mostrando algo distinto de lo que filtra.
+   */
+  tiposDependencia = computed(() => {
+    const conteo = new Map<string, number>();
+    for (const e of this.establecimientos()) {
+      const tipo = e.tipo_dependencia || SIN_TIPO;
+      conteo.set(tipo, (conteo.get(tipo) ?? 0) + 1);
+    }
+    const sel = this.filtroDependencia();
+    if (sel && !conteo.has(sel)) conteo.set(sel, 0);
+    return [...conteo.entries()]
+      .map(([tipo, cantidad]) => ({ tipo, cantidad }))
+      .sort((a, b) => a.tipo.localeCompare(b.tipo));
+  });
+
   establecimientosOrdenados = computed(() => {
-    const lista = this.establecimientos();
+    const filtro = this.filtroDependencia();
+    const lista = filtro
+      ? this.establecimientos().filter((e) => (e.tipo_dependencia || SIN_TIPO) === filtro)
+      : this.establecimientos();
     const id = this.destacadoId();
     if (id === null) return lista;
 
@@ -555,7 +589,43 @@ export class Geo implements OnInit {
 
   verDetalleEstablecimiento(item: any) {
     this.detalleEstablecimiento.set(item);
+    this.observacionesTexto = item.observaciones ?? '';
     this.mostrarDetalleEstablecimiento.set(true);
+  }
+
+  // Observaciones de la ficha
+
+  observacionesTexto = '';
+  guardandoObservaciones = signal(false);
+
+  /** Hay algo escrito que todavía no está guardado: habilita el botón. */
+  observacionesCambiadas(det: any) {
+    return this.observacionesTexto.trim() !== (det?.observaciones ?? '').trim();
+  }
+
+  guardarObservaciones(est: any) {
+    this.error.set('');
+    this.success.set('');
+    this.guardandoObservaciones.set(true);
+    this.api
+      .cambiarObservacionesEstablecimientoGeo(est.id_establecimiento, this.observacionesTexto)
+      .subscribe({
+        next: (res) => {
+          this.success.set(`Observaciones guardadas en ${est.nombre}`);
+          // Igual que con el acceso: se actualiza la fila en memoria en vez de
+          // recargar la comuna entera, que puede tener cientos de colegios.
+          // Por id y no mutando `est`: la ficha puede tener una copia de la fila.
+          const id = est.id_establecimiento;
+          this.establecimientos.update((lista) =>
+            lista.map((e) => (e.id_establecimiento === id ? { ...e, observaciones: res.observaciones } : e)),
+          );
+          this.observacionesTexto = res.observaciones ?? '';
+          if (this.detalleEstablecimiento()?.id_establecimiento === id)
+            this.detalleEstablecimiento.set({ ...this.detalleEstablecimiento(), observaciones: res.observaciones });
+        },
+        error: (err) => this.error.set(err.error?.message ?? 'Error al guardar las observaciones'),
+      })
+      .add(() => this.guardandoObservaciones.set(false));
   }
 
   cerrarDetalleEstablecimiento() {

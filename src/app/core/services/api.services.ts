@@ -409,6 +409,13 @@ export class ApiService {
       { acceso_bloqueado },
     );
   }
+  /** Notas libres del establecimiento, editadas desde su ficha en Geo. */
+  cambiarObservacionesEstablecimientoGeo(id: number, observaciones: string) {
+    return this.http.patch<{ observaciones: string | null; message: string }>(
+      `${this.base}/geo/establecimientos/${id}/observaciones`,
+      { observaciones },
+    );
+  }
   deleteEstablecimientoGeo(id: number) {
     return this.http.delete(`${this.base}/geo/establecimientos/${id}`);
   }
