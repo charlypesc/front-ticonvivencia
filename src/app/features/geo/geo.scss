@@ -133,6 +133,16 @@
   }
 }
 
+// En amarillo los que tienen observaciones, mismo formato que el verde de
+// .fila--activa. Si el colegio además tiene usuarios gana el verde (es cliente);
+// el ícono de nota sigue avisando que hay observaciones.
+.fila--observaciones {
+  td { background: #fefce8; }
+  &:hover td { background: #fef9c3; }
+
+  td:first-child { box-shadow: inset 3px 0 0 #eab308; }
+}
+
 // Mismo formato que `.badge-usuarios` pero en rojo: marca las filas cuyo acceso
 // está suspendido, que es lo contrario de "operando el sistema".
 .badge-bloqueado {
