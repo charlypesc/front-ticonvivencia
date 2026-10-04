@@ -201,3 +201,20 @@
 
   i { color: $primary; font-size: 15px; flex-shrink: 0; margin-top: 1px; }
 }
+
+// Filtro por tipo de dependencia, en la barra de acciones de la comuna.
+.filtro-dependencia {
+  width: auto;
+  max-width: 100%;
+  margin-left: auto;
+  font-size: 13px;
+}
+
+// Observaciones de la ficha: separadas del listado de datos de arriba.
+.observaciones {
+  margin-top: 16px;
+  margin-bottom: 0;
+
+  textarea { width: 100%; }
+  .btn { margin-top: 8px; }
+}
