@@ -270,8 +270,13 @@
                             <i class="ti ti-lock"></i> Acceso suspendido
                         </span>
                         }
+                        <!-- Escrita en la fila y no solo como tooltip: en el
+                             celular no hay hover, y la idea es leerla al
+                             recorrer la lista sin abrir cada ficha. -->
                         @if (e.observaciones) {
-                        <i class="ti ti-notes text-muted" [title]="e.observaciones"></i>
+                        <div class="obs-fila" [title]="e.observaciones">
+                            <i class="ti ti-notes"></i> {{ e.observaciones }}
+                        </div>
                         }
                     </td>
                     <td class="text-muted">{{ e.rbd }}</td>
