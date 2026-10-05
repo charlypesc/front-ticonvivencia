@@ -78,10 +78,13 @@ import { normalizar, ordenarPorCoincidencia } from '../../utils/coincidencia';
         gap: 0.5rem;
       }
       /* El campo, el dropdown y el chevron los pinta <app-buscador>; acá
-         solo se le fija el ancho, que es propio del header. */
+         solo se le fija el ancho, que es propio del header. Con 22rem el RBD
+         quedaba cortado por los puntos suspensivos ya con nombres medianos
+         ("AULA HOSPITALARIA SAN ANTONIO · RBD 31…"), y el RBD es justamente
+         el dato con el que se confirma en qué colegio se está parado. */
       .selector-est__campo {
         display: block;
-        width: 22rem;
+        width: 36rem;
         max-width: 60vw;
       }
       .selector-est__aviso {
