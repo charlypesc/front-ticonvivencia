@@ -170,6 +170,7 @@ export const Permiso = {
   UsuarioActivar            : 68,
   UsuarioAsignarRol         : 69,
   UsuarioRestablecerPassword: 78,
+  UsuarioEliminar           : 117,
   UsuarioAsignarPermiso     : 114,
 
   // rol

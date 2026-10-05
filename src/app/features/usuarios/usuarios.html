@@ -108,6 +108,11 @@
                                 (click)="toggle(u)">
                                 <i class="ti" [class.ti-user-off]="u.activo" [class.ti-user-check]="!u.activo"></i>
                             </button>
+
+                            <button class="btn-icon btn-icon--danger" title="Eliminar usuario"
+                                [appPuede]="Permiso.UsuarioEliminar" (click)="eliminar(u)">
+                                <i class="ti ti-trash"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>

@@ -173,6 +173,10 @@ export class ApiService {
   toggleUsuario(id: number) {
     return this.http.patch(`${this.base}/usuarios/${id}/toggle`, {});
   }
+  /** Borra la cuenta. El backend responde 409 si tiene historial: ahí se desactiva. */
+  deleteUsuario(id: number) {
+    return this.http.delete<{ message: string }>(`${this.base}/usuarios/${id}`);
+  }
 
   /**
    * Emite una contraseña nueva para otro usuario y la devuelve en claro. Es el

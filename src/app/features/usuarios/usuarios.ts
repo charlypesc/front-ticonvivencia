@@ -331,6 +331,31 @@ export class Usuarios implements OnInit {
     return codigos.map((c) => this.roles().find((r) => r.codigo === c)?.nombre ?? c).join(', ');
   }
 
+  /**
+   * Borra la cuenta. Si la persona tiene registros a su nombre el backend lo
+   * rechaza (el expediente tiene que conservar quién hizo cada cosa) y el
+   * mensaje sugiere desactivarla, que es la otra acción de la fila.
+   */
+  async eliminar(u: any) {
+    this.error.set('');
+    this.success.set('');
+
+    const ok = await this.confirm.confirmarAccion(
+      `¿Eliminar a ${u.nombre || u.correo}?\n\n` +
+        'La cuenta se borra definitivamente. Si tiene registros a su nombre no se podrá ' +
+        'eliminar y habrá que desactivarla.',
+    );
+    if (!ok) return;
+
+    this.api.deleteUsuario(u.id_usuario).subscribe({
+      next: () => {
+        this.success.set(`Usuario ${u.correo} eliminado`);
+        this.cargar();
+      },
+      error: (err) => this.error.set(err.error?.message ?? 'Error al eliminar el usuario'),
+    });
+  }
+
   toggle(u: any) {
     this.api.toggleUsuario(u.id_usuario).subscribe({
       next: () => this.cargar(),
