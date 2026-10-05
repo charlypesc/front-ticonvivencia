@@ -62,6 +62,16 @@
   &:hover { background: #f9fafb; }
 }
 
+// El .acciones global es display:flex, y sobre un <td> eso lo saca del modelo
+// de tabla: la celda no se estira al alto de la fila (que crece con la nota de
+// observaciones) y su fondo de color queda cortado. Acá se devuelve a celda.
+td.acciones {
+  display: table-cell;
+  white-space: nowrap;
+  vertical-align: middle;
+  > * + * { margin-left: 8px; }
+}
+
 .btn--disabled {
   opacity: .5;
   cursor: not-allowed;
