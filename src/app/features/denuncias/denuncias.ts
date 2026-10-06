@@ -44,8 +44,9 @@ export class Denuncias implements OnInit {
   qr = signal('');
   copiado = signal(false);
   mostrarAfiche = signal(false);
-  // A la raíz con el token como parámetro: ver la redirección en app.routes.ts.
-  link = computed(() => (this.token() ? `${location.origin}/?denuncia=${this.token()}` : ''));
+  // Con # porque la app usa hash routing (app.config.ts): sin él, Render no
+  // encuentra la ruta y el router nunca la ve.
+  link = computed(() => (this.token() ? `${location.origin}/#/denuncia/${this.token()}` : ''));
 
   // Bandeja
   denuncias = signal<any[]>([]);
