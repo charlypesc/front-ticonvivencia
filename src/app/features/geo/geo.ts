@@ -628,35 +628,40 @@ export class Geo implements OnInit {
       .add(() => this.guardandoObservaciones.set(false));
   }
 
-  // Respuesta al correo de contacto: se guarda apenas se cambia el select.
+  // Estado del correo de contacto (0 sin enviar, 1 enviado, 2 respondió): se
+  // guarda apenas se cambia el select, desde la lista o desde la ficha.
 
-  guardandoCorreoRespondido = signal(false);
+  /** Id del colegio cuyo estado se está guardando: bloquea solo ese select. */
+  guardandoEstadoCorreo = signal<number | null>(null);
 
-  correoRespondido(est: any) {
-    return !!+est?.correo_respondido;
+  estadoCorreo(est: any): number {
+    return +(est?.estado_correo ?? 0);
   }
 
-  cambiarCorreoRespondido(est: any, valor: string) {
-    const respondido = valor === '1';
+  cambiarEstadoCorreo(est: any, valor: string) {
+    const id = est.id_establecimiento;
     this.error.set('');
     this.success.set('');
-    this.guardandoCorreoRespondido.set(true);
+    this.guardandoEstadoCorreo.set(id);
     this.api
-      .cambiarCorreoRespondidoEstablecimientoGeo(est.id_establecimiento, respondido)
+      .cambiarEstadoCorreoEstablecimientoGeo(id, +valor)
       .subscribe({
         next: (res) => {
           this.success.set(`${est.nombre}: ${res.message.toLowerCase()}`);
           // Mismo criterio que observaciones: actualizar la fila en memoria por id.
-          const id = est.id_establecimiento;
+          // Las observaciones vuelven porque "enviado" les agrega la fecha de seguimiento.
+          const cambios = { estado_correo: res.estado_correo, observaciones: res.observaciones };
           this.establecimientos.update((lista) =>
-            lista.map((e) => (e.id_establecimiento === id ? { ...e, correo_respondido: res.correo_respondido } : e)),
+            lista.map((e) => (e.id_establecimiento === id ? { ...e, ...cambios } : e)),
           );
-          if (this.detalleEstablecimiento()?.id_establecimiento === id)
-            this.detalleEstablecimiento.set({ ...this.detalleEstablecimiento(), correo_respondido: res.correo_respondido });
+          if (this.detalleEstablecimiento()?.id_establecimiento === id) {
+            this.detalleEstablecimiento.set({ ...this.detalleEstablecimiento(), ...cambios });
+            this.observacionesTexto = res.observaciones ?? '';
+          }
         },
-        error: (err) => this.error.set(err.error?.message ?? 'Error al guardar la respuesta del correo'),
+        error: (err) => this.error.set(err.error?.message ?? 'Error al guardar el estado del correo'),
       })
-      .add(() => this.guardandoCorreoRespondido.set(false));
+      .add(() => this.guardandoEstadoCorreo.set(null));
   }
 
   cerrarDetalleEstablecimiento() {

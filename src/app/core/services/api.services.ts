@@ -447,11 +447,11 @@ export class ApiService {
       { observaciones },
     );
   }
-  /** Marca si el colegio ya respondió el correo de contacto. */
-  cambiarCorreoRespondidoEstablecimientoGeo(id: number, correo_respondido: boolean) {
-    return this.http.patch<{ correo_respondido: number; message: string }>(
-      `${this.base}/geo/establecimientos/${id}/correo-respondido`,
-      { correo_respondido },
+  /** Estado del correo de contacto: 0 sin enviar, 1 enviado, 2 respondió. */
+  cambiarEstadoCorreoEstablecimientoGeo(id: number, estado_correo: number) {
+    return this.http.patch<{ estado_correo: number; observaciones: string | null; message: string }>(
+      `${this.base}/geo/establecimientos/${id}/estado-correo`,
+      { estado_correo },
     );
   }
   deleteEstablecimientoGeo(id: number) {

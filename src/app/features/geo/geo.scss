@@ -153,21 +153,22 @@ td.acciones {
   td:first-child { box-shadow: inset 3px 0 0 #eab308; }
 }
 
-// En naranjo los que ya respondieron el correo de contacto. Gana sobre el
-// amarillo de observaciones (es un paso más avanzado de la gestión) y pierde
-// contra el verde (ya es cliente).
+// En azul los que ya respondieron el correo de contacto (los que solo tienen el
+// correo enviado usan el amarillo de .fila--observaciones). Gana sobre el
+// amarillo, porque es un paso más avanzado de la gestión, y pierde contra el
+// verde (ya es cliente).
 .fila--respondido {
-  td { background: #fff7ed; }
-  &:hover td { background: #ffedd5; }
+  td { background: #eff6ff; }
+  &:hover td { background: #dbeafe; }
 
-  td:first-child { box-shadow: inset 3px 0 0 #f97316; }
+  td:first-child { box-shadow: inset 3px 0 0 #3b82f6; }
 }
 
 // Está fuera de un .form-group, así que no hereda el estilo global de los
 // campos y quedaba como select nativo del navegador: se repite acá.
-.select-correo-respondido {
+.select-correo {
   width: auto;
-  padding: 7px 10px;
+  padding: 5px 8px;
   border: 1px solid $gray-200;
   border-radius: $radius;
   font-size: 14px;
@@ -185,10 +186,17 @@ td.acciones {
 
   &:disabled { cursor: default; opacity: .7; }
 
-  &--si {
-    border-color: #f97316;
-    background: #fff7ed;
-    color: #9a3412;
+  &--enviado {
+    border-color: #eab308;
+    background: #fefce8;
+    color: #854d0e;
+    font-weight: 500;
+  }
+
+  &--respondido {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    color: #1e40af;
     font-weight: 500;
   }
 }
