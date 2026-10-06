@@ -106,7 +106,7 @@
                     </label>
                     @for (s of g.secciones; track s.recurso) {
                         <div class="permiso-card__items">
-                            @if (g.secciones.length > 1) {
+                            @if (g.subtitulos) {
                             <small class="permiso-card__seccion">{{ s.recurso | etiqueta:'recurso' }}</small>
                             }
                             @for (p of s.permisos; track p.permiso_id) {

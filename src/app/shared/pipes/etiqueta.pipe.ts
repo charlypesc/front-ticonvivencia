@@ -315,7 +315,6 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     documento: 'Documentos',
     establecimiento: 'Establecimientos',
     estudiante: 'Estudiantes',
-    mi_establecimiento: 'Mi establecimiento',
     pais: 'Países',
     protocolo_activado: 'Protocolos activados',
     protocolo_establecimiento: 'Protocolos del establecimiento',

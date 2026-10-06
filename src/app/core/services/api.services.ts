@@ -118,13 +118,9 @@ export class ApiService {
   getProgresoImportacion(jobId: string) {
     return this.http.get<any>(`${this.base}/cursos/importar/${jobId}/progreso`);
   }
-  // Establecimiento (registro único del tenant) — todavía no conectado a
-  // sidebar/rutas: queda listo para engancharlo desde el futuro panel admin.
+  // Datos del establecimiento de la sesión, solo lectura (se editan desde Geo).
   getEstablecimiento() {
     return this.http.get<any>(`${this.base}/establecimiento`);
-  }
-  updateEstablecimiento(data: any) {
-    return this.http.put(`${this.base}/establecimiento`, data);
   }
   /**
    * Tenants: solo los colegios que usan el sistema (es_tenant = TRUE), no las

@@ -49,10 +49,6 @@ export const Permiso = {
   SostenedorEliminar              : 25,
   SostenedorAsignarEstablecimiento: 26,
 
-  // mi_establecimiento
-  MiEstablecimientoVer   : 27,
-  MiEstablecimientoEditar: 28,
-
   // curso
   CursoVer           : 29,
   CursoCrear         : 30,
@@ -219,8 +215,6 @@ export const CODIGO_POR_ID: Record<number, string> = {
   24: 'sostenedor.editar',
   25: 'sostenedor.eliminar',
   26: 'sostenedor.asignar_establecimiento',
-  27: 'mi_establecimiento.ver',
-  28: 'mi_establecimiento.editar',
   29: 'curso.ver',
   30: 'curso.crear',
   31: 'curso.editar',

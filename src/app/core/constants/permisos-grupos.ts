@@ -24,8 +24,12 @@ export interface GrupoPermisos {
   icono: string;
   /** Todos los permisos de la tarjeta: los usa el check del título y el contador. */
   permisos: PermisoModel[];
-  /** Una por recurso. Solo se muestran como subtítulos cuando hay más de una. */
   secciones: SeccionPermisos[];
+  /**
+   * Si cada sección lleva su subtítulo: cuando hay más de una, y siempre en
+   * "Otros", donde el título no dice a qué pantalla pertenecen los permisos.
+   */
+  subtitulos: boolean;
 }
 
 export function agruparPermisos(catalogo: readonly PermisoModel[]): GrupoPermisos[] {
@@ -39,7 +43,11 @@ export function agruparPermisos(catalogo: readonly PermisoModel[]): GrupoPermiso
     const secciones = recursos
       .filter((r) => porRecurso.has(r))
       .map((r) => ({ recurso: r, permisos: porRecurso.get(r)! }));
-    return { clave, titulo, icono, secciones, permisos: secciones.flatMap((s) => s.permisos) };
+    return {
+      clave, titulo, icono, secciones,
+      permisos: secciones.flatMap((s) => s.permisos),
+      subtitulos: secciones.length > 1 || clave === 'otros',
+    };
   };
 
   const grupos = MENU.map((i) => armar(i.route, i.label, i.icon, i.recursos));

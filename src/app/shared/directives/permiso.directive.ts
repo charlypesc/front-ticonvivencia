@@ -6,7 +6,7 @@ import { PermisoId, CODIGO_POR_ID } from '../../core/constants/permisos';
  * Opaca y bloquea cualquier control cuya acción el usuario no tiene permitida.
  *
  *   <button class="btn" [appPuede]="Permiso.CursoCrear">Nuevo curso</button>
- *   <input [appPuede]="Permiso.MiEstablecimientoEditar" [(ngModel)]="nombre" />
+ *   <input [appPuede]="Permiso.EstablecimientoEditar" [(ngModel)]="nombre" />
  *
  * Por qué opacar en vez de ocultar: esconder el botón deja la pantalla sin
  * explicación — la persona no sabe si la acción no existe, si está en el lugar
