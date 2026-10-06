@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { inicioGuard } from './core/guards/inicio.guard';
 import { permissionGuard } from './core/guards/permission.guard';
 import { Permiso } from './core/constants/permisos';
 export const routes: Routes = [
@@ -38,7 +39,7 @@ export const routes: Routes = [
       },
       {
         path: 'dashboard',
-        canActivate: [authGuard],
+        canActivate: [inicioGuard],
         loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard),
       },
       {

@@ -1,5 +1,6 @@
 <div class="page-header">
-    <h2>Resumen del mes</h2>
+    <!-- Sin dashboard.ver_resumen, Inicio muestra solo los pendientes propios. -->
+    <h2>{{ resumen()?.ver_resumen === false ? 'Mis pendientes' : 'Resumen del mes' }}</h2>
 </div>
 
 @if (loading()) {
@@ -12,6 +13,7 @@
 @if (resumen()) {
 <!-- Cards -->
 <div class="stats-grid">
+    @if (resumen().ver_resumen) {
     <div class="stat-card">
         <div class="stat-card__num">{{ resumen().registros_mes }}</div>
         <div class="stat-card__label">
@@ -37,6 +39,7 @@
             <i class="ti ti-file-search"></i> Protocolos activados
         </div>
     </div>
+    }
     }
 
     @if (resumen().derivaciones; as d) {
@@ -119,6 +122,15 @@
 </div>
 }
 
+@if (!resumen().ver_resumen && !resumen().por_atender?.length && !resumen().mis_derivaciones?.length) {
+<div class="empty-state">
+    <i class="ti ti-circle-check"></i>
+    <p>No tienes pendientes.</p>
+</div>
+}
+
+<!-- De acá al final, las cifras del establecimiento (dashboard.ver_resumen). -->
+@if (resumen().ver_resumen) {
 <!-- Alertas por estudiante: el patrón que registro por registro no se ve. -->
 @if (hayAlertasEstudiantes()) {
 <div class="alertas-grid">
@@ -359,4 +371,5 @@
     </div>
     }
 </div>
+}
 }

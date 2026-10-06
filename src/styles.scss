@@ -675,12 +675,17 @@ table {
     background: rgba(47, 111, 237, 0.04);
   }
 
+  // Tarjetas que juntan muchos recursos (Protocolos activados, Geo): a lo
+  // ancho de la grilla, para que no queden como una columna larguísima.
+  &--ancha {
+    grid-column: 1 / -1;
+  }
+
   &__titulo {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-weight: 600;
-    text-transform: capitalize;
     cursor: pointer;
 
     span { flex: 1; min-width: 0; }
@@ -700,6 +705,15 @@ table {
     margin-top: 0.5rem;
     padding-top: 0.5rem;
     border-top: 1px dashed var(--border, #eaecf0);
+  }
+
+  // Subtítulo de cada recurso dentro de una tarjeta que junta varios (Geo).
+  // Ocupa la fila entera para que sus checkboxes queden debajo y no al lado.
+  &__seccion {
+    flex-basis: 100%;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted, #667085);
   }
 }
 
