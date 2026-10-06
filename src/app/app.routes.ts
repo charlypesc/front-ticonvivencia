@@ -15,14 +15,16 @@ export const routes: Routes = [
       import('./features/canal-denuncia/canal-denuncia').then((m) => m.CanalDenuncia),
   },
   {
-    // El QR apunta a la raíz (/?denuncia=<token>) y no a /denuncia/<token>: el
-    // sitio estático de Render solo sirve index.html en "/", y una ruta
-    // profunda abierta directo responde 404. Desde acá el router la lleva al
-    // formulario público; sin el parámetro, sigue al dashboard como siempre.
+    // Compatibilidad con el primer QR publicado, que apuntaba a /?denuncia=<token>.
+    // Con hash routing ese parámetro queda fuera del #, así que el router no lo
+    // ve en queryParams: se lee de location.search. El QR actual ya apunta a
+    // /#/denuncia/<token> y no pasa por acá.
     path: '',
     pathMatch: 'full',
-    redirectTo: ({ queryParams }) =>
-      queryParams['denuncia'] ? `/denuncia/${queryParams['denuncia']}` : '/dashboard',
+    redirectTo: () => {
+      const token = new URLSearchParams(location.search).get('denuncia');
+      return token ? `/denuncia/${encodeURIComponent(token)}` : '/dashboard';
+    },
   },
   {
     path: '',
