@@ -252,7 +252,8 @@
                 <!-- En verde los que ya tienen usuarios: son los que operan el
                      sistema, un puñado entre las miles de filas del directorio. -->
                 <tr class="fila-clickeable" [class.fila--activa]="tieneUsuarios(e)"
-                    [class.fila--observaciones]="e.observaciones && !tieneUsuarios(e)"
+                    [class.fila--respondido]="correoRespondido(e) && !tieneUsuarios(e)"
+                    [class.fila--observaciones]="e.observaciones && !tieneUsuarios(e) && !correoRespondido(e)"
                     [class.fila--destacada]="esDestacado(e)"
                     (click)="verDetalleEstablecimiento(e)">
                     <td>
@@ -422,6 +423,18 @@
                     <a [href]="'mailto:' + det.correo">{{ det.correo }}</a>
                 </div>
                 }
+                <!-- Siempre visible: el contacto pudo hacerse a otro correo
+                     (sostenedor, director) aunque la ficha no tenga uno. -->
+                <div class="detalle-item">
+                    <i class="ti ti-mail-check"></i>
+                    <select class="select-correo-respondido" [class.select-correo-respondido--si]="correoRespondido(det)"
+                        [ngModel]="correoRespondido(det) ? '1' : '0'"
+                        (ngModelChange)="cambiarCorreoRespondido(det, $event)" name="correo_respondido"
+                        [disabled]="guardandoCorreoRespondido() || !auth.can(Permiso.EstablecimientoEditar)">
+                        <option value="0">Correo sin respuesta</option>
+                        <option value="1">Respondió el correo</option>
+                    </select>
+                </div>
                 <!-- El directorio de RBD llega sin sostenedores: la fila se
                      muestra siempre, también cuando falta, porque es justo el
                      dato que hay que completar desde acá. -->
