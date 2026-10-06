@@ -15,6 +15,16 @@ export const routes: Routes = [
       import('./features/canal-denuncia/canal-denuncia').then((m) => m.CanalDenuncia),
   },
   {
+    // El QR apunta a la raíz (/?denuncia=<token>) y no a /denuncia/<token>: el
+    // sitio estático de Render solo sirve index.html en "/", y una ruta
+    // profunda abierta directo responde 404. Desde acá el router la lleva al
+    // formulario público; sin el parámetro, sigue al dashboard como siempre.
+    path: '',
+    pathMatch: 'full',
+    redirectTo: ({ queryParams }) =>
+      queryParams['denuncia'] ? `/denuncia/${queryParams['denuncia']}` : '/dashboard',
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () => import('./shared/components/layout/layout').then((m) => m.Layout),
