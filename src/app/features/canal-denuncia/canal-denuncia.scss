@@ -94,20 +94,7 @@
   &--activa { border-color: $primary-light; background: $primary-bg; }
 }
 
-.adjuntar {
-  width: auto;
-  align-self: flex-start;
-  cursor: pointer;
-  &.deshabilitado { opacity: .5; cursor: not-allowed; }
-}
-
-.archivo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-}
+.ayuda { color: $gray-600; font-size: 12px; }
 
 .enviar { padding: 14px; font-size: 16px; }
 

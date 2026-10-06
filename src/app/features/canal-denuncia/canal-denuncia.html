@@ -80,43 +80,15 @@
             }
         </div>
 
+        <!-- Un solo campo a propósito: pedirle fecha, lugar, nombres y pruebas a
+             quien está pasándolo mal es cargarle el armado del caso (la ley pide
+             no revictimizar). Eso se recoge después, en el registro. -->
         <div class="tarjeta">
             <h2>¿Qué pasó?</h2>
             <div class="form-group">
                 <label for="relato">Cuéntalo con tus palabras *</label>
-                <textarea id="relato" appAutoAjustar rows="5" maxlength="10000" [(ngModel)]="form.relato"
-                    placeholder="Qué pasó, quiénes estaban, si pasó más de una vez…"></textarea>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="fecha">¿Cuándo? (si te acuerdas)</label>
-                    <input id="fecha" type="date" [(ngModel)]="form.fecha_hechos">
-                </div>
-                <div class="form-group">
-                    <label for="lugar">¿Dónde?</label>
-                    <input id="lugar" type="text" maxlength="200" [(ngModel)]="form.lugar" placeholder="Ej: patio, sala, baño, Instagram">
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="personas">¿Quiénes estaban o participaron?</label>
-                <textarea id="personas" appAutoAjustar rows="2" maxlength="500" [(ngModel)]="form.personas_involucradas"
-                    placeholder="Nombres, apodos o cursos, si los sabes"></textarea>
-            </div>
-
-            <div class="form-group">
-                <label>Fotos o capturas de pantalla (opcional, hasta 5)</label>
-                <label class="btn btn--outline adjuntar" [class.deshabilitado]="archivos().length >= 5 || procesandoArchivos()">
-                    <i class="ti" [class.ti-paperclip]="!procesandoArchivos()" [class.ti-loader-2]="procesandoArchivos()" [class.spin]="procesandoArchivos()"></i>
-                    {{ procesandoArchivos() ? 'Preparando...' : 'Adjuntar' }}
-                    <input type="file" accept="image/*,application/pdf" multiple hidden
-                        [disabled]="archivos().length >= 5 || procesandoArchivos()" (change)="alElegirArchivos($event)">
-                </label>
-                @for (f of archivos(); track $index) {
-                <div class="archivo">
-                    <i class="ti ti-photo"></i><span>{{ f.name }}</span>
-                    <button type="button" class="btn-icon" title="Quitar" (click)="quitarArchivo($index)"><i class="ti ti-x"></i></button>
-                </div>
-                }
+                <textarea id="relato" appAutoAjustar rows="6" maxlength="10000" [(ngModel)]="form.relato"></textarea>
+                <small class="ayuda">Si puedes, cuenta cuándo y dónde pasó y quiénes estaban. Si no lo sabes, no importa.</small>
             </div>
         </div>
 
@@ -129,7 +101,7 @@
         <div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
         }
 
-        <button class="btn btn--primary enviar" [disabled]="enviando() || procesandoArchivos()" (click)="enviar()">
+        <button class="btn btn--primary enviar" [disabled]="enviando()" (click)="enviar()">
             <i class="ti" [class.ti-send]="!enviando()" [class.ti-loader-2]="enviando()" [class.spin]="enviando()"></i>
             {{ enviando() ? 'Enviando...' : 'Enviar denuncia' }}
         </button>

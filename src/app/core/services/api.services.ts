@@ -13,7 +13,7 @@ export class ApiService {
   getCanalPublico(token: string) {
     return this.http.get<{ nombre_establecimiento: string }>(`${this.base}/canal-denuncia/${token}`);
   }
-  enviarDenuncia(token: string, data: FormData) {
+  enviarDenuncia(token: string, data: object) {
     return this.http.post<{ codigo: string; message: string }>(`${this.base}/canal-denuncia/${token}`, data);
   }
   // Canal de denuncias — bandeja
