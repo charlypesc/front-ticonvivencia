@@ -44,7 +44,8 @@ export class Denuncias implements OnInit {
   qr = signal('');
   copiado = signal(false);
   mostrarAfiche = signal(false);
-  link = computed(() => (this.token() ? `${location.origin}/denuncia/${this.token()}` : ''));
+  // A la raíz con el token como parámetro: ver la redirección en app.routes.ts.
+  link = computed(() => (this.token() ? `${location.origin}/?denuncia=${this.token()}` : ''));
 
   // Bandeja
   denuncias = signal<any[]>([]);
