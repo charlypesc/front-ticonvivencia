@@ -628,6 +628,37 @@ export class Geo implements OnInit {
       .add(() => this.guardandoObservaciones.set(false));
   }
 
+  // Respuesta al correo de contacto: se guarda apenas se cambia el select.
+
+  guardandoCorreoRespondido = signal(false);
+
+  correoRespondido(est: any) {
+    return !!+est?.correo_respondido;
+  }
+
+  cambiarCorreoRespondido(est: any, valor: string) {
+    const respondido = valor === '1';
+    this.error.set('');
+    this.success.set('');
+    this.guardandoCorreoRespondido.set(true);
+    this.api
+      .cambiarCorreoRespondidoEstablecimientoGeo(est.id_establecimiento, respondido)
+      .subscribe({
+        next: (res) => {
+          this.success.set(`${est.nombre}: ${res.message.toLowerCase()}`);
+          // Mismo criterio que observaciones: actualizar la fila en memoria por id.
+          const id = est.id_establecimiento;
+          this.establecimientos.update((lista) =>
+            lista.map((e) => (e.id_establecimiento === id ? { ...e, correo_respondido: res.correo_respondido } : e)),
+          );
+          if (this.detalleEstablecimiento()?.id_establecimiento === id)
+            this.detalleEstablecimiento.set({ ...this.detalleEstablecimiento(), correo_respondido: res.correo_respondido });
+        },
+        error: (err) => this.error.set(err.error?.message ?? 'Error al guardar la respuesta del correo'),
+      })
+      .add(() => this.guardandoCorreoRespondido.set(false));
+  }
+
   cerrarDetalleEstablecimiento() {
     this.mostrarDetalleEstablecimiento.set(false);
   }

@@ -153,6 +153,28 @@ td.acciones {
   td:first-child { box-shadow: inset 3px 0 0 #eab308; }
 }
 
+// En naranjo los que ya respondieron el correo de contacto. Gana sobre el
+// amarillo de observaciones (es un paso más avanzado de la gestión) y pierde
+// contra el verde (ya es cliente).
+.fila--respondido {
+  td { background: #fff7ed; }
+  &:hover td { background: #ffedd5; }
+
+  td:first-child { box-shadow: inset 3px 0 0 #f97316; }
+}
+
+.select-correo-respondido {
+  width: auto;
+  font-size: 13px;
+
+  &--si {
+    border-color: #f97316;
+    background: #fff7ed;
+    color: #9a3412;
+    font-weight: 500;
+  }
+}
+
 // Mismo formato que `.badge-usuarios` pero en rojo: marca las filas cuyo acceso
 // está suspendido, que es lo contrario de "operando el sistema".
 .badge-bloqueado {
