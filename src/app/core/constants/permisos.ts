@@ -157,6 +157,11 @@ export const Permiso = {
   SuspensionCautelarRegistrarReconsideracion: 112,
   SuspensionCautelarResolver                : 113,
 
+  // denuncia (canal con reserva de identidad, art. 46 e LGE)
+  DenunciaVer         : 118,
+  DenunciaGestionar   : 119,
+  DenunciaVerIdentidad: 120,
+
   // documento
   DocumentoVer  : 63,
   DocumentoSubir: 64,

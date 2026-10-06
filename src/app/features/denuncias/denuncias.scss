@@ -1,0 +1,102 @@
+@use '../../../styles/variables' as *;
+
+.canal {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 20px;
+
+  &__qr {
+    flex-shrink: 0;
+    width: 180px;
+    img { width: 100%; display: block; border: 1px solid $gray-200; border-radius: $radius; }
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    h3 { display: flex; align-items: center; gap: 8px; color: $primary; }
+  }
+
+  &__link {
+    display: flex;
+    gap: 8px;
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: 7px 10px;
+      border: 1px solid $gray-200;
+      border-radius: $radius;
+      font-size: 13px;
+      color: $gray-600;
+      background: $gray-50;
+    }
+  }
+
+  &__acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: stretch;
+    &__qr { width: 200px; align-self: center; }
+  }
+}
+
+.filtros { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.filtro {
+  border: 1px solid $gray-200;
+  background: $white;
+  color: $gray-600;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  &--activo { background: $primary-bg; border-color: $primary-light; color: $primary; font-weight: 500; }
+}
+
+.urgente { margin-left: 6px; i { font-size: 12px; } }
+
+.extracto { max-width: 420px; color: $gray-600; }
+
+.small { font-size: 12px; }
+
+.ficha {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin-bottom: 16px;
+  dt { color: $gray-400; font-size: 13px; }
+  dd { color: $gray-900; min-width: 0; overflow-wrap: anywhere; }
+}
+
+// El relato tal como lo escribió quien denunció, con sus saltos de línea.
+.relato {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: $gray-50;
+  border: 1px solid $gray-200;
+  border-radius: $radius;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.adjuntos { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+
+.identidad {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  border: 1px dashed $accent-warn;
+  background: #fffbeb;
+  border-radius: $radius;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  p { width: 100%; }
+}
+
+.desestimar { margin-bottom: 0; }

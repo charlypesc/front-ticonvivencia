@@ -1,0 +1,249 @@
+<div class="page-header">
+    <h2>QR denuncias</h2>
+</div>
+
+@if (success()) {
+<div class="alert alert--success"><i class="ti ti-circle-check"></i> {{ success() }}</div>
+}
+@if (error()) {
+<div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+}
+
+<!-- El canal: QR y link del formulario público. -->
+<div class="card canal">
+    <div class="canal__qr">
+        @if (qr()) {
+        <img [src]="qr()" alt="Código QR del canal de denuncias">
+        } @else {
+        <div class="empty-state"><i class="ti ti-loader-2 spin"></i></div>
+        }
+    </div>
+    <div class="canal__info">
+        <h3><i class="ti ti-shield-lock"></i> Canal de denuncias de {{ nombreColegio() }}</h3>
+        <p class="text-muted">
+            Cualquier estudiante, apoderado o funcionario puede denunciar desde este link, sin cuenta,
+            de forma anónima o con reserva de identidad. Lo que entra aparece en la bandeja de abajo
+            y avisa a los coordinadores de convivencia.
+        </p>
+        <div class="canal__link">
+            <input type="text" readonly [value]="link()" (focus)="$any($event.target).select()">
+            <button class="btn btn--outline btn--sm" style="width:auto" (click)="copiarLink()" [disabled]="!token()">
+                <i class="ti" [class.ti-copy]="!copiado()" [class.ti-check]="copiado()"></i>
+                {{ copiado() ? 'Copiado' : 'Copiar' }}
+            </button>
+        </div>
+        <div class="canal__acciones">
+            <button class="btn btn--primary btn--sm" style="width:auto" (click)="mostrarAfiche.set(true)" [disabled]="!token()">
+                <i class="ti ti-printer"></i> Afiche con QR
+            </button>
+            <button class="btn btn--outline btn--sm" style="width:auto" [appPuede]="Permiso.DenunciaGestionar"
+                (click)="regenerar()" title="Invalida el QR y el link actuales">
+                <i class="ti ti-refresh"></i> Regenerar QR
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Bandeja -->
+<div class="card">
+    <div class="card__header">
+        <div class="filtros">
+            @for (e of estados; track e.valor) {
+            <button class="filtro" [class.filtro--activo]="filtro() === e.valor" (click)="filtrar(e.valor)">
+                {{ e.etiqueta }}
+            </button>
+            }
+        </div>
+        @if (pendientes() > 0) {
+        <span class="badge badge--pendiente">{{ pendientes() }} por resolver</span>
+        }
+    </div>
+
+    @if (loading()) {
+    <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
+    } @else if (denuncias().length === 0) {
+    <div class="empty-state"><i class="ti ti-inbox"></i><p>No hay denuncias {{ filtro() ? 'en este estado' : 'todavía' }}</p></div>
+    } @else {
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Recibida</th>
+                    <th>Relato</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (d of denuncias(); track d.id_denuncia) {
+                <tr class="fila-clickeable" (click)="abrir(d)">
+                    <td>
+                        <strong>{{ d.codigo }}</strong>
+                        @if (d.urgente && gestionable(d)) {
+                        <span class="badge badge--gravísima urgente"><i class="ti ti-alert-triangle"></i> Urgente</span>
+                        }
+                    </td>
+                    <td>{{ d.fecha_creacion | fecha:true }}</td>
+                    <td class="extracto">
+                        {{ d.extracto }}{{ d.extracto?.length >= 160 ? '…' : '' }}
+                        @if (d.archivos > 0) { <i class="ti ti-paperclip text-muted" title="Tiene adjuntos"></i> }
+                    </td>
+                    <td>{{ d.modo === 'reservada' ? 'Con reserva' : 'Anónima' }}</td>
+                    <td>
+                        <span class="badge" [class.badge--pendiente]="d.estado === 'nueva'"
+                            [class.badge--leve]="d.estado === 'en_revision'"
+                            [class.badge--validado]="d.estado === 'convertida'"
+                            [class.badge--confidencial]="d.estado === 'desestimada'">
+                            {{ etiquetaEstado(d.estado) }}
+                        </span>
+                        @if (d.registro_codigo) { <div class="text-muted small">{{ d.registro_codigo }}</div> }
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
+
+<!-- Detalle de una denuncia -->
+@if (detalle() || cargandoDetalle()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarDetalle() : null">
+    <div class="modal modal--lg" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-message-report"></i> Denuncia {{ detalle()?.codigo }}</h3>
+            <button class="modal__close" (click)="cerrarDetalle()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal__body">
+            @if (cargandoDetalle()) {
+            <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
+            } @else {
+            @let d = detalle();
+            @if (errorDetalle()) {
+            <div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ errorDetalle() }}</div>
+            }
+            @if (d.urgente && gestionable(d)) {
+            <div class="alert alert--error">
+                <i class="ti ti-alert-triangle"></i>
+                <span>Quien denunció indicó que <strong>está en peligro ahora</strong>. Actúa de inmediato y, si corresponde, activa el protocolo.</span>
+            </div>
+            }
+
+            <dl class="ficha">
+                <dt>Recibida</dt><dd>{{ d.fecha_creacion | fecha:true }}</dd>
+                <dt>Tipo</dt><dd>{{ d.modo === 'reservada' ? 'Con reserva de identidad' : 'Anónima' }}</dd>
+                @if (d.fecha_hechos) { <dt>Fecha de los hechos</dt><dd>{{ d.fecha_hechos | fecha }}</dd> }
+                @if (d.lugar) { <dt>Lugar</dt><dd>{{ d.lugar }}</dd> }
+                @if (d.personas_involucradas) { <dt>Personas mencionadas</dt><dd>{{ d.personas_involucradas }}</dd> }
+                <dt>Estado</dt>
+                <dd>
+                    {{ etiquetaEstado(d.estado) }}
+                    @if (d.gestiona_nombre || d.gestiona_correo) {
+                    · por {{ d.gestiona_nombre ?? d.gestiona_correo }} el {{ d.fecha_gestion | fecha:true }}
+                    }
+                </dd>
+                @if (d.motivo_desestimacion) { <dt>Motivo</dt><dd>{{ d.motivo_desestimacion }}</dd> }
+            </dl>
+
+            <div class="relato">{{ d.relato }}</div>
+
+            @if (d.archivos?.length) {
+            <div class="adjuntos">
+                @for (a of d.archivos; track a.id_archivo) {
+                <button class="btn btn--outline btn--sm" style="width:auto" (click)="verArchivo(a)">
+                    <i class="ti" [class.ti-photo]="a.tipo_archivo.startsWith('image/')" [class.ti-file-type-pdf]="!a.tipo_archivo.startsWith('image/')"></i>
+                    {{ a.nombre_archivo }}
+                </button>
+                }
+            </div>
+            }
+
+            <!-- Identidad: solo con permiso, y queda registrado. -->
+            @if (d.modo === 'reservada') {
+            <div class="identidad" [appPuede]="Permiso.DenunciaVerIdentidad">
+                @if (identidad(); as i) {
+                <p><i class="ti ti-user"></i> <strong>{{ i.nombre }}</strong>
+                    @if (i.curso) { · {{ i.curso }} }
+                    @if (i.contacto) { · {{ i.contacto }} }
+                </p>
+                <p class="text-muted small">
+                    Consultada {{ i.accesos.length }} {{ i.accesos.length === 1 ? 'vez' : 'veces' }}:
+                    @for (a of i.accesos; track $index) {
+                    {{ a.nombre ?? a.correo }} ({{ a.fecha | fecha:true }}){{ $last ? '' : ', ' }}
+                    }
+                </p>
+                } @else {
+                <button class="btn btn--outline btn--sm" style="width:auto" (click)="verIdentidad()">
+                    <i class="ti ti-eye"></i> Ver identidad reservada
+                </button>
+                <span class="text-muted small">Queda registrado quién la consulta.</span>
+                }
+            </div>
+            }
+
+            @if (mostrarDesestimar()) {
+            <div class="form-group desestimar">
+                <label for="motivo">Motivo para desestimar *</label>
+                <textarea id="motivo" appAutoAjustar rows="2" [(ngModel)]="motivo"
+                    placeholder="Ej: duplicada de DEN-2026-004, no corresponde a convivencia escolar..."></textarea>
+            </div>
+            }
+            }
+        </div>
+        @if (detalle(); as d) {
+        <div class="modal__footer">
+            @if (d.id_registro) {
+            <button class="btn btn--outline" style="width:auto" (click)="irAlRegistro(d)">
+                <i class="ti ti-folder"></i> Ver registro {{ d.registro_codigo }}
+            </button>
+            }
+            @if (gestionable(d)) {
+            @if (mostrarDesestimar()) {
+            <button class="btn btn--outline" style="width:auto" (click)="mostrarDesestimar.set(false)">Cancelar</button>
+            <button class="btn btn--danger" style="width:auto" [disabled]="enviando()" (click)="desestimar()">
+                <i class="ti ti-ban"></i> Confirmar desestimación
+            </button>
+            } @else {
+            <button class="btn btn--outline" style="width:auto" [appPuede]="Permiso.DenunciaGestionar"
+                (click)="mostrarDesestimar.set(true)">
+                <i class="ti ti-ban"></i> Desestimar
+            </button>
+            <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.DenunciaGestionar"
+                (click)="crearRegistro()">
+                <i class="ti ti-file-plus"></i> Crear registro
+            </button>
+            }
+            }
+        </div>
+        }
+    </div>
+</div>
+}
+
+<!-- Afiche: popover Imprimir / Descargar en vez de descarga directa. -->
+@if (mostrarAfiche()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarAfiche.set(false) : null">
+    <div class="modal modal-box-sm" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-qrcode"></i> Afiche del canal de denuncias</h3>
+            <button class="modal__close" (click)="mostrarAfiche.set(false)"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal__body">
+            <p class="text-muted">Hoja tamaño carta/A4 con el QR, una invitación a denunciar y el link, para pegar en salas, pasillos y diario mural.</p>
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" style="width:auto" (click)="salidaAfiche('imprimir')">
+                <i class="ti ti-printer"></i> Imprimir
+            </button>
+            <button class="btn btn--primary" style="width:auto" (click)="salidaAfiche('descargar')">
+                <i class="ti ti-download"></i> Descargar
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+@if (denunciaParaRegistro()) {
+<app-registro-form [registro]="null" [denunciaOrigen]="denunciaParaRegistro()" (cerrar)="cerrarRegistro($event)" />
+}

@@ -4,7 +4,7 @@
         <div class="modal__header">
             <h3>
                 <i class="ti" [class.ti-file-plus]="!registro" [class.ti-file-text]="registro"></i>
-                {{ registro ? 'Registro de convivencia · N° Folio ' + (registro.codigo ?? registro.id_registro) : 'Nuevo registro de convivencia' }}
+                {{ registro ? 'Registro de convivencia · N° Folio ' + (registro.codigo ?? registro.id_registro) : denunciaOrigen ? 'Nuevo registro desde la denuncia ' + denunciaOrigen.codigo : 'Nuevo registro de convivencia' }}
             </h3>
             <button class="modal__close" (click)="cerrar.emit()">
                 <i class="ti ti-x"></i>

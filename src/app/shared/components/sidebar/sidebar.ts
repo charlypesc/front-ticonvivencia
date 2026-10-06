@@ -31,6 +31,8 @@ export class Sidebar {
     { label: 'Estudiantes',   icon: 'ti-users',  route: '/estudiantes',   permiso: Permiso.EstudianteVer },
     { label: 'Cursos',        icon: 'ti-school', route: '/cursos',        permiso: Permiso.CursoVer },
     { label: 'Registros',     icon: 'ti-folder', route: '/registros',     permiso: Permiso.RegistroVer },
+    // El QR y el link del canal de denuncias, junto con la bandeja de lo que entra.
+    { label: 'QR denuncias', icon: 'ti-qrcode', route: '/denuncias', permiso: Permiso.DenunciaVer },
     { label: 'Subir documento', icon: 'ti-file', route: '/subir-documento', permiso: Permiso.DocumentoSubir },
     { label: 'Tipos de falta', icon: 'ti-settings', route: '/tipos-falta', permiso: Permiso.TipoFaltaVer },
     {

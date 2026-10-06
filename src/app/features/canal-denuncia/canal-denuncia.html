@@ -1,0 +1,138 @@
+<div class="canal">
+    <header class="canal__cabecera">
+        <i class="ti ti-shield-heart"></i>
+        <div>
+            <h1>Canal de denuncias</h1>
+            @if (colegio()) { <p>{{ colegio() }}</p> }
+        </div>
+    </header>
+
+    <main class="canal__cuerpo">
+        @if (cargando()) {
+        <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
+
+        } @else if (invalido()) {
+        <div class="tarjeta centro">
+            <i class="ti ti-link-off grande"></i>
+            <p>{{ invalido() }}</p>
+            <p class="text-muted">Pide el código QR actualizado en tu colegio.</p>
+        </div>
+
+        } @else if (codigo()) {
+        <div class="tarjeta centro">
+            <i class="ti ti-circle-check grande ok"></i>
+            <h2>Recibimos tu denuncia</h2>
+            <p>El equipo de convivencia escolar la va a revisar. Gracias por contarlo: hiciste lo correcto.</p>
+            <p class="codigo">{{ codigo() }}</p>
+            <p class="text-muted">Guarda este código por si necesitas referirte a tu denuncia.</p>
+            <button class="btn btn--outline" style="width:auto" (click)="otraDenuncia()">Hacer otra denuncia</button>
+        </div>
+
+        } @else {
+        <div class="tarjeta intro">
+            <p><strong>¿Te pasó algo o viste algo que no está bien?</strong> Acoso, burlas, peleas, amenazas,
+                discriminación, algo en redes sociales… Cuéntanos aquí. Lo recibe el equipo de convivencia escolar.</p>
+        </div>
+
+        <!-- Urgencia primero: si alguien está en peligro, lo que necesita no es un formulario. -->
+        <label class="urgente" [class.urgente--activo]="form.urgente">
+            <input type="checkbox" [(ngModel)]="form.urgente">
+            <span><strong>Estoy en peligro ahora</strong> o alguien lo está</span>
+        </label>
+        @if (form.urgente) {
+        <div class="tarjeta emergencia">
+            <p><strong>Busca ahora a un adulto de confianza</strong> del colegio o de tu familia. Si es una emergencia, llama:</p>
+            <ul>
+                <li><a href="tel:133">133</a> Carabineros</li>
+                <li><a href="tel:147">147</a> Fono Niños (Carabineros)</li>
+                <li><a href="tel:*4141">*4141</a> Línea de prevención del suicidio</li>
+            </ul>
+            <p class="text-muted">Igual puedes enviar la denuncia: la marcaremos como urgente.</p>
+        </div>
+        }
+
+        <div class="tarjeta">
+            <h2>¿Cómo quieres hacer la denuncia?</h2>
+            <label class="opcion" [class.opcion--activa]="form.modo === 'anonima'">
+                <input type="radio" name="modo" value="anonima" [(ngModel)]="form.modo">
+                <span><strong>Anónima</strong><br><small>No guardamos tu nombre ni ningún dato tuyo. Tampoco podremos contactarte.</small></span>
+            </label>
+            <label class="opcion" [class.opcion--activa]="form.modo === 'reservada'">
+                <input type="radio" name="modo" value="reservada" [(ngModel)]="form.modo">
+                <span><strong>Con reserva de identidad</strong><br><small>Nos dices quién eres para poder ayudarte, pero solo lo ve el equipo autorizado y queda registrado quién lo consulta.</small></span>
+            </label>
+
+            @if (form.modo === 'reservada') {
+            <div class="form-group">
+                <label for="nombre">Tu nombre *</label>
+                <input id="nombre" type="text" maxlength="150" [(ngModel)]="form.nombre" autocomplete="name">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="curso">Curso</label>
+                    <input id="curso" type="text" maxlength="60" [(ngModel)]="form.curso" placeholder="Ej: 2° medio B">
+                </div>
+                <div class="form-group">
+                    <label for="contacto">Correo o teléfono</label>
+                    <input id="contacto" type="text" maxlength="150" [(ngModel)]="form.contacto">
+                </div>
+            </div>
+            }
+        </div>
+
+        <div class="tarjeta">
+            <h2>¿Qué pasó?</h2>
+            <div class="form-group">
+                <label for="relato">Cuéntalo con tus palabras *</label>
+                <textarea id="relato" appAutoAjustar rows="5" maxlength="10000" [(ngModel)]="form.relato"
+                    placeholder="Qué pasó, quiénes estaban, si pasó más de una vez…"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="fecha">¿Cuándo? (si te acuerdas)</label>
+                    <input id="fecha" type="date" [(ngModel)]="form.fecha_hechos">
+                </div>
+                <div class="form-group">
+                    <label for="lugar">¿Dónde?</label>
+                    <input id="lugar" type="text" maxlength="200" [(ngModel)]="form.lugar" placeholder="Ej: patio, sala, baño, Instagram">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="personas">¿Quiénes estaban o participaron?</label>
+                <textarea id="personas" appAutoAjustar rows="2" maxlength="500" [(ngModel)]="form.personas_involucradas"
+                    placeholder="Nombres, apodos o cursos, si los sabes"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Fotos o capturas de pantalla (opcional, hasta 5)</label>
+                <label class="btn btn--outline adjuntar" [class.deshabilitado]="archivos().length >= 5 || procesandoArchivos()">
+                    <i class="ti" [class.ti-paperclip]="!procesandoArchivos()" [class.ti-loader-2]="procesandoArchivos()" [class.spin]="procesandoArchivos()"></i>
+                    {{ procesandoArchivos() ? 'Preparando...' : 'Adjuntar' }}
+                    <input type="file" accept="image/*,application/pdf" multiple hidden
+                        [disabled]="archivos().length >= 5 || procesandoArchivos()" (change)="alElegirArchivos($event)">
+                </label>
+                @for (f of archivos(); track $index) {
+                <div class="archivo">
+                    <i class="ti ti-photo"></i><span>{{ f.name }}</span>
+                    <button type="button" class="btn-icon" title="Quitar" (click)="quitarArchivo($index)"><i class="ti ti-x"></i></button>
+                </div>
+                }
+            </div>
+        </div>
+
+        <div class="tarjeta aviso">
+            <p><i class="ti ti-lock"></i> El colegio resguarda tu identidad y te protege de represalias. Si lo que cuentas
+                es un delito, el colegio está obligado por ley a informarlo a las autoridades; aun así, tu identidad se sigue cuidando.</p>
+        </div>
+
+        @if (error()) {
+        <div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
+        }
+
+        <button class="btn btn--primary enviar" [disabled]="enviando() || procesandoArchivos()" (click)="enviar()">
+            <i class="ti" [class.ti-send]="!enviando()" [class.ti-loader-2]="enviando()" [class.spin]="enviando()"></i>
+            {{ enviando() ? 'Enviando...' : 'Enviar denuncia' }}
+        </button>
+        }
+    </main>
+</div>

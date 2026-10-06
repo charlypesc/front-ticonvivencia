@@ -38,6 +38,12 @@ export class RegistroForm implements OnInit {
   @Output() cerrar = new EventEmitter<string | undefined>();
   @Input() registro: any | null;
   @Input() estudiantePreseleccionado: number | null = null;
+  /**
+   * Denuncia del canal desde la que se crea este registro. Precarga el relato
+   * y, al guardar, viaja como id_denuncia: el backend la marca "convertida" en
+   * la misma transacción que crea el registro.
+   */
+  @Input() denunciaOrigen: any | null = null;
   tiposFalta = signal<any[]>([]);
   estudiantes = signal<any[]>([]);
   loading = signal(false);
@@ -504,6 +510,24 @@ export class RegistroForm implements OnInit {
         },
       });
       this.cargarForm(this.registro);
+    } else if (this.denunciaOrigen) {
+      const d = this.denunciaOrigen;
+      const extra = [
+        d.lugar ? `Lugar: ${d.lugar}` : '',
+        d.personas_involucradas ? `Personas mencionadas: ${d.personas_involucradas}` : '',
+      ].filter(Boolean).join('\n');
+      this.form = {
+        ...this.form,
+        fecha_incidente: d.fecha_hechos || hoyIso(),
+        asunto: `Denuncia ${d.codigo} recibida por el canal del colegio`,
+        antecedentes: `${d.relato}${extra ? '\n\n' + extra : ''}`,
+        // Viene de un canal con reserva: parte confidencial si quien lo crea
+        // puede marcarlo, y se puede desmarcar si no corresponde.
+        es_confidencial: this.puedeEditarConfidencialidad(),
+        nota_confidencial: this.puedeEditarConfidencialidad()
+          ? `Originado en la denuncia ${d.codigo} del canal de denuncias`
+          : '',
+      };
     } else if (this.estudiantePreseleccionado) {
       this.toggleEstudiante(this.estudiantePreseleccionado);
     }
@@ -725,6 +749,7 @@ export class RegistroForm implements OnInit {
           ...this.form,
           estudiantes: this.estudiantesSeleccionados,
           involucrados_personal: this.involucradosPersonal,
+          id_denuncia: this.denunciaOrigen?.id_denuncia ?? null,
         })
         .subscribe({
           next: (res: any) => this.activarYCerrar(res?.id_registro, 'Registro creado'),

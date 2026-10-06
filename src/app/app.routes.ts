@@ -8,6 +8,13 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
   },
   {
+    // Formulario PÚBLICO del canal de denuncias: se llega por el QR del
+    // colegio, sin sesión. Va fuera del layout y del authGuard a propósito.
+    path: 'denuncia/:token',
+    loadComponent: () =>
+      import('./features/canal-denuncia/canal-denuncia').then((m) => m.CanalDenuncia),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () => import('./shared/components/layout/layout').then((m) => m.Layout),
@@ -26,6 +33,12 @@ export const routes: Routes = [
         path: 'registros',
         canActivate: [permissionGuard(Permiso.RegistroVer)],
         loadComponent: () => import('./features/registros/registros').then((m) => m.Registros),
+      },
+      {
+        // QR, link y bandeja del canal de denuncias.
+        path: 'denuncias',
+        canActivate: [permissionGuard(Permiso.DenunciaVer)],
+        loadComponent: () => import('./features/denuncias/denuncias').then((m) => m.Denuncias),
       },
       {
         path: 'estudiantes',

@@ -9,6 +9,37 @@ export class ApiService {
 
   constructor(private http: HttpClient) {}
 
+  // Canal de denuncias — público (sin sesión)
+  getCanalPublico(token: string) {
+    return this.http.get<{ nombre_establecimiento: string }>(`${this.base}/canal-denuncia/${token}`);
+  }
+  enviarDenuncia(token: string, data: FormData) {
+    return this.http.post<{ codigo: string; message: string }>(`${this.base}/canal-denuncia/${token}`, data);
+  }
+  // Canal de denuncias — bandeja
+  getCanalDenuncias() {
+    return this.http.get<{ token: string; nombre_establecimiento: string }>(`${this.base}/denuncias/canal`);
+  }
+  regenerarCanalDenuncias() {
+    return this.http.post<{ token: string; message: string }>(`${this.base}/denuncias/canal/regenerar`, {});
+  }
+  getDenuncias(estado = '') {
+    return this.http.get<any[]>(`${this.base}/denuncias`, { params: estado ? { estado } : {} });
+  }
+  getDenuncia(id: number) {
+    return this.http.get<any>(`${this.base}/denuncias/${id}`);
+  }
+  /** Queda registrado en el backend quién la consultó. */
+  getIdentidadDenuncia(id: number) {
+    return this.http.get<any>(`${this.base}/denuncias/${id}/identidad`);
+  }
+  getArchivoDenuncia(id: number, idArchivo: number) {
+    return this.http.get(`${this.base}/denuncias/${id}/archivos/${idArchivo}`, { responseType: 'blob' });
+  }
+  desestimarDenuncia(id: number, motivo: string) {
+    return this.http.post<{ message: string }>(`${this.base}/denuncias/${id}/desestimar`, { motivo });
+  }
+
   // Registros
   getRegistros() {
     return this.http.get<any[]>(`${this.base}/registros`);
