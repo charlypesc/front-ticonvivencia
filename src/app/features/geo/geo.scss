@@ -163,9 +163,27 @@ td.acciones {
   td:first-child { box-shadow: inset 3px 0 0 #f97316; }
 }
 
+// Está fuera de un .form-group, así que no hereda el estilo global de los
+// campos y quedaba como select nativo del navegador: se repite acá.
 .select-correo-respondido {
   width: auto;
-  font-size: 13px;
+  padding: 7px 10px;
+  border: 1px solid $gray-200;
+  border-radius: $radius;
+  font-size: 14px;
+  font-family: inherit;
+  color: $gray-900;
+  background: $white;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+
+  &:focus {
+    border-color: $primary-light;
+    box-shadow: 0 0 0 3px rgba($primary-light, .15);
+  }
+
+  &:disabled { cursor: default; opacity: .7; }
 
   &--si {
     border-color: #f97316;
