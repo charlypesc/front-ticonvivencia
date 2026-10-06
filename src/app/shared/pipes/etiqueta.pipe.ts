@@ -296,8 +296,19 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
   },
 
   // Los dos de abajo son el catálogo de permisos: cada fila de PERMISOS tiene
-  // un recurso y una acción, y la pantalla de roles los agrupa por recurso.
+  // un recurso y una acción. La grilla de permisos los agrupa por ítem del
+  // sidebar (core/constants/permisos-grupos.ts); esto es el subtítulo de cada
+  // recurso dentro de la tarjeta.
   recurso: {
+    constancia: 'Constancias de recepción',
+    denuncia: 'Denuncias',
+    documento_institucional: 'Reglamento y Plan',
+    expediente: 'Expediente',
+    feriado: 'Feriados',
+    informe_expulsion: 'Informe de expulsión',
+    medida_disciplinaria: 'Medidas disciplinarias',
+    medida_proteccion: 'Medidas de protección',
+    suspension_cautelar: 'Suspensión cautelar',
     comuna: 'Comunas',
     curso: 'Cursos',
     dashboard: 'Panel',
@@ -349,6 +360,7 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     ver: 'Ver',
     ver_bitacora: 'Ver bitácora',
     ver_confidencial: 'Ver confidenciales',
+    ver_resumen: 'Ver resumen del mes',
     ver_todos: 'Ver todos',
   },
 };

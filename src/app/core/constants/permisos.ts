@@ -166,8 +166,11 @@ export const Permiso = {
   DocumentoVer  : 63,
   DocumentoSubir: 64,
 
-  // dashboard
-  DashboardVer: 65,
+  // dashboard. Ver es entrar a Inicio con los pendientes propios; VerResumen
+  // agrega las cifras del establecimiento (resumen del mes, alertas,
+  // cumplimiento, estadísticas).
+  DashboardVer       : 65,
+  DashboardVerResumen: 121,
 
   // usuario
   UsuarioVer                : 66,
@@ -306,4 +309,9 @@ export const CODIGO_POR_ID: Record<number, string> = {
  114: 'usuario.asignar_permiso',
  115: 'protocolo_activado.ver_todos',
  116: 'registro.derivar',
+ 117: 'usuario.eliminar',
+ 118: 'denuncia.ver',
+ 119: 'denuncia.gestionar',
+ 120: 'denuncia.ver_identidad',
+ 121: 'dashboard.ver_resumen',
 };

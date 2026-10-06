@@ -6,6 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { Credenciales, Rol } from '../../core/models/usuario.model';
 import { Permiso } from '../../core/constants/permisos';
+import { agruparPermisos } from '../../core/constants/permisos-grupos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { CredencialesModal } from '../../shared/components/credenciales-modal/credenciales-modal';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
@@ -392,17 +393,8 @@ export class Usuarios implements OnInit {
   guardandoPermisos = signal(false);
   motivoPermisos = '';
 
-  /** El catálogo agrupado por recurso, igual que en la pantalla de Roles. */
-  permisosPorRecurso = computed(() => {
-    const grupos = new Map<string, any[]>();
-    for (const p of this.catalogoPermisos()) {
-      if (!grupos.has(p.recurso)) grupos.set(p.recurso, []);
-      grupos.get(p.recurso)!.push(p);
-    }
-    return [...grupos.entries()]
-      .map(([recurso, permisos]) => ({ recurso, permisos }))
-      .sort((a, b) => a.recurso.localeCompare(b.recurso));
-  });
+  /** El catálogo en tarjetas por ítem del sidebar, igual que en la pantalla de Roles. */
+  permisosPorRecurso = computed(() => agruparPermisos(this.catalogoPermisos()));
 
   /**
    * Las excepciones que quedarían al guardar. Se muestra el conteo antes de

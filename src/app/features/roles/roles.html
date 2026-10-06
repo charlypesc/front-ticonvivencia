@@ -94,25 +94,31 @@
               obligaba a scrollear todo el catálogo para encontrar un módulo.
             -->
             <div class="permisos-grid">
-                @for (g of porRecurso(); track g.recurso) {
-                <div class="permiso-card" [class.permiso-card--activa]="marcados(g.permisos) > 0">
+                @for (g of porRecurso(); track g.clave) {
+                <div class="permiso-card" [class.permiso-card--ancha]="g.secciones.length > 3" [class.permiso-card--activa]="marcados(g.permisos) > 0">
                     <label class="permiso-card__titulo">
                         <input type="checkbox" [checked]="todosMarcados(g.permisos)"
                             [appPuede]="Permiso.RolAsignarPermiso" [appPuedeSi]="editable"
                             [appPuedeMotivo]="motivoBloqueo()" (change)="alternarRecurso(g.permisos)" />
-                        <span>{{ g.recurso | etiqueta:'recurso' }}</span>
+                        <i class="ti {{ g.icono }}"></i>
+                        <span>{{ g.titulo }}</span>
                         <small class="permiso-card__contador">{{ marcados(g.permisos) }}/{{ g.permisos.length }}</small>
                     </label>
-                    <div class="permiso-card__items">
-                        @for (p of g.permisos; track p.permiso_id) {
-                        <label class="check-inline" [title]="p.descripcion ?? p.codigo">
-                            <input type="checkbox" [checked]="tiene(p.permiso_id)"
-                                [appPuede]="Permiso.RolAsignarPermiso" [appPuedeSi]="editable"
-                                [appPuedeMotivo]="motivoBloqueo()" (change)="alternar(p.permiso_id)" />
-                            {{ p.accion | etiqueta:'accion' }}
-                        </label>
-                        }
-                    </div>
+                    @for (s of g.secciones; track s.recurso) {
+                        <div class="permiso-card__items">
+                            @if (g.secciones.length > 1) {
+                            <small class="permiso-card__seccion">{{ s.recurso | etiqueta:'recurso' }}</small>
+                            }
+                            @for (p of s.permisos; track p.permiso_id) {
+                            <label class="check-inline" [title]="p.descripcion ?? p.codigo">
+                                <input type="checkbox" [checked]="tiene(p.permiso_id)"
+                                    [appPuede]="Permiso.RolAsignarPermiso" [appPuedeSi]="editable"
+                                    [appPuedeMotivo]="motivoBloqueo()" (change)="alternar(p.permiso_id)" />
+                                {{ p.accion | etiqueta:'accion' }}
+                            </label>
+                            }
+                        </div>
+                    }
                 </div>
                 }
             </div>

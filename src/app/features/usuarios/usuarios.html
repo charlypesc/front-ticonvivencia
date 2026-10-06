@@ -323,32 +323,38 @@
             </div>
 
             <div class="permisos-grid">
-                @for (g of permisosPorRecurso(); track g.recurso) {
-                <div class="permiso-card">
+                @for (g of permisosPorRecurso(); track g.clave) {
+                <div class="permiso-card" [class.permiso-card--ancha]="g.secciones.length > 3">
                     <div class="permiso-card__titulo">
-                        <span>{{ g.recurso | etiqueta:'recurso' }}</span>
+                        <i class="ti {{ g.icono }}"></i>
+                        <span>{{ g.titulo }}</span>
                     </div>
-                    <div class="permiso-card__items">
-                        @for (p of g.permisos; track p.permiso_id) {
-                        <label class="check-inline" [class.check-inline--excepcion]="esExcepcion(p.permiso_id)"
-                            [title]="(p.descripcion ?? p.codigo)
-                                     + (vieneDelRol(p.permiso_id) ? ' · lo trae el rol: ' + origenDe(p.permiso_id) : '')">
-                            <input type="checkbox" [checked]="tienePermiso(p.permiso_id)"
-                                [appPuede]="Permiso.UsuarioAsignarPermiso"
-                                (change)="alternarPermiso(p.permiso_id)" />
-                            <span>{{ p.accion | etiqueta:'accion' }}</span>
-                            <!-- La marca dice de un vistazo qué se está saliendo
-                                 de la plantilla del rol y en qué dirección. -->
-                            @if (esExcepcion(p.permiso_id)) {
-                            <i class="ti" [class.ti-plus]="tienePermiso(p.permiso_id)"
-                                [class.ti-minus]="!tienePermiso(p.permiso_id)"
-                                [title]="tienePermiso(p.permiso_id) ? 'Agregado a esta persona' : 'Quitado a esta persona'"></i>
-                            } @else if (vieneDelRol(p.permiso_id)) {
-                            <small class="muted">del rol</small>
+                    @for (s of g.secciones; track s.recurso) {
+                        <div class="permiso-card__items">
+                            @if (g.secciones.length > 1) {
+                            <small class="permiso-card__seccion">{{ s.recurso | etiqueta:'recurso' }}</small>
                             }
-                        </label>
-                        }
-                    </div>
+                            @for (p of s.permisos; track p.permiso_id) {
+                            <label class="check-inline" [class.check-inline--excepcion]="esExcepcion(p.permiso_id)"
+                                [title]="(p.descripcion ?? p.codigo)
+                                         + (vieneDelRol(p.permiso_id) ? ' · lo trae el rol: ' + origenDe(p.permiso_id) : '')">
+                                <input type="checkbox" [checked]="tienePermiso(p.permiso_id)"
+                                    [appPuede]="Permiso.UsuarioAsignarPermiso"
+                                    (change)="alternarPermiso(p.permiso_id)" />
+                                <span>{{ p.accion | etiqueta:'accion' }}</span>
+                                <!-- La marca dice de un vistazo qué se está saliendo
+                                     de la plantilla del rol y en qué dirección. -->
+                                @if (esExcepcion(p.permiso_id)) {
+                                <i class="ti" [class.ti-plus]="tienePermiso(p.permiso_id)"
+                                    [class.ti-minus]="!tienePermiso(p.permiso_id)"
+                                    [title]="tienePermiso(p.permiso_id) ? 'Agregado a esta persona' : 'Quitado a esta persona'"></i>
+                                } @else if (vieneDelRol(p.permiso_id)) {
+                                <small class="muted">del rol</small>
+                                }
+                            </label>
+                            }
+                        </div>
+                    }
                 </div>
                 } @empty {
                 <p class="muted">No hay permisos que puedas repartir.</p>
