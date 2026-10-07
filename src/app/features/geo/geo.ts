@@ -347,6 +347,10 @@ export class Geo implements OnInit {
     // destacado anterior. La comuna puede tener cientos de colegios, así que
     // sin esto habría que buscar a mano el que se acaba de elegir.
     this.destacadoId.set(est.id_establecimiento);
+
+    // El resultado del buscador ya trae la fila completa (mismo SELECT que la
+    // lista), así que la ficha se abre al tiro sin esperar a que cargue la comuna.
+    this.verDetalleEstablecimiento(est);
   }
 
   // Navegación jerárquica
@@ -383,6 +387,13 @@ export class Geo implements OnInit {
       next: (data) => {
         this.establecimientos.set(data);
         this.loadingEstablecimientos.set(false);
+        // Al llegar por el buscador, la página baja hasta la fila destacada para
+        // que al cerrar la ficha quede a la vista dónde está el colegio.
+        // setTimeout: la tabla se pinta recién en el siguiente ciclo.
+        if (this.destacadoId() !== null)
+          setTimeout(() =>
+            document.querySelector('.fila--destacada')?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+          );
       },
       error: () => this.loadingEstablecimientos.set(false),
     });
