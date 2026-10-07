@@ -164,43 +164,6 @@ td.acciones {
   td:first-child { box-shadow: inset 3px 0 0 #3b82f6; }
 }
 
-// Está fuera de un .form-group, así que no hereda el estilo global de los
-// campos y quedaba como select nativo del navegador: se repite acá.
-.select-correo {
-  width: auto;
-  padding: 5px 8px;
-  border: 1px solid $gray-200;
-  border-radius: $radius;
-  font-size: 14px;
-  font-family: inherit;
-  color: $gray-900;
-  background: $white;
-  cursor: pointer;
-  outline: none;
-  transition: border-color .2s, box-shadow .2s;
-
-  &:focus {
-    border-color: $primary-light;
-    box-shadow: 0 0 0 3px rgba($primary-light, .15);
-  }
-
-  &:disabled { cursor: default; opacity: .7; }
-
-  &--enviado {
-    border-color: #eab308;
-    background: #fefce8;
-    color: #854d0e;
-    font-weight: 500;
-  }
-
-  &--respondido {
-    border-color: #3b82f6;
-    background: #eff6ff;
-    color: #1e40af;
-    font-weight: 500;
-  }
-}
-
 // Mismo formato que `.badge-usuarios` pero en rojo: marca las filas cuyo acceso
 // está suspendido, que es lo contrario de "operando el sistema".
 .badge-bloqueado {

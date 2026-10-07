@@ -285,17 +285,10 @@
                     </td>
                     <td class="text-muted">{{ e.rbd }}</td>
                     <td class="text-muted">{{ e.tipo_dependencia ?? '—' }}</td>
-                    <!-- stopPropagation: abrir el select no debe abrir la ficha. -->
+                    <!-- stopPropagation: abrir el selector no debe abrir la ficha. -->
                     <td (click)="$event.stopPropagation()">
-                        <select class="select-correo" [class.select-correo--enviado]="estadoCorreo(e) === 1"
-                            [class.select-correo--respondido]="estadoCorreo(e) === 2"
-                            [ngModel]="'' + estadoCorreo(e)" (ngModelChange)="cambiarEstadoCorreo(e, $event)"
-                            [name]="'estado_correo_' + e.id_establecimiento"
-                            [disabled]="guardandoEstadoCorreo() === e.id_establecimiento || !auth.can(Permiso.EstablecimientoEditar)">
-                            <option value="0">Sin enviar</option>
-                            <option value="1">Correo enviado</option>
-                            <option value="2">Respondió</option>
-                        </select>
+                        <app-estado-correo [estado]="estadoCorreo(e)" (cambiar)="cambiarEstadoCorreo(e, $event)"
+                            [deshabilitado]="guardandoEstadoCorreo() === e.id_establecimiento || !auth.can(Permiso.EstablecimientoEditar)" />
                     </td>
                     <td class="acciones">
                         @if (puedeIngresar(e)) {
@@ -442,15 +435,8 @@
                      (sostenedor, director) aunque la ficha no tenga uno. -->
                 <div class="detalle-item">
                     <i class="ti ti-mail-check"></i>
-                    <select class="select-correo" [class.select-correo--enviado]="estadoCorreo(det) === 1"
-                        [class.select-correo--respondido]="estadoCorreo(det) === 2"
-                        [ngModel]="'' + estadoCorreo(det)" (ngModelChange)="cambiarEstadoCorreo(det, $event)"
-                        name="estado_correo"
-                        [disabled]="guardandoEstadoCorreo() === det.id_establecimiento || !auth.can(Permiso.EstablecimientoEditar)">
-                        <option value="0">Correo sin enviar</option>
-                        <option value="1">Correo enviado</option>
-                        <option value="2">Respondió el correo</option>
-                    </select>
+                    <app-estado-correo [estado]="estadoCorreo(det)" (cambiar)="cambiarEstadoCorreo(det, $event)"
+                        [deshabilitado]="guardandoEstadoCorreo() === det.id_establecimiento || !auth.can(Permiso.EstablecimientoEditar)" />
                 </div>
                 <!-- El directorio de RBD llega sin sostenedores: la fila se
                      muestra siempre, también cuando falta, porque es justo el
