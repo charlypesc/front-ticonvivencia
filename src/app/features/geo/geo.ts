@@ -9,6 +9,7 @@ import { Permiso } from '../../core/constants/permisos';
 import { Puede } from '../../shared/directives/permiso.directive';
 import { CredencialesModal } from '../../shared/components/credenciales-modal/credenciales-modal';
 import { Buscador } from '../../shared/components/buscador/buscador';
+import { EstadoCorreo } from './estado-correo';
 import { Credenciales } from '../../core/models/usuario.model';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
@@ -34,7 +35,7 @@ const SIN_TIPO = 'Sin tipo';
 @Component({
   selector: 'app-geo',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, CredencialesModal, Buscador, CerrarConEsc, GuardarConCmdEnter, AutoAjustarTextarea],
+  imports: [CommonModule, FormsModule, Puede, CredencialesModal, Buscador, EstadoCorreo, CerrarConEsc, GuardarConCmdEnter, AutoAjustarTextarea],
   templateUrl: './geo.html',
   styleUrl: './geo.scss',
 })
@@ -638,7 +639,7 @@ export class Geo implements OnInit {
     return +(est?.estado_correo ?? 0);
   }
 
-  cambiarEstadoCorreo(est: any, valor: string) {
+  cambiarEstadoCorreo(est: any, valor: number) {
     const id = est.id_establecimiento;
     this.error.set('');
     this.success.set('');
