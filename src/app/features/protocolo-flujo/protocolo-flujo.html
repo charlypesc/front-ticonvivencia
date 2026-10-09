@@ -489,6 +489,16 @@
                             @for (u of UNIDADES; track u) { <option [value]="u">{{ u | etiqueta:'plazo_unidad' }}</option> }
                         </select>
                     </div>
+                    <!-- Hay plazos que la ley cuenta desde que el colegio supo
+                         del hecho y no desde que le toca al paso: las 24 horas
+                         para denunciar (art. 176 del Código Procesal Penal). -->
+                    <div class="form-group">
+                        <label>Se cuenta</label>
+                        <select [(ngModel)]="formPaso.plazo_desde" name="plazo_desde"
+                            [disabled]="!formPaso.plazo_valor">
+                            @for (d of PLAZO_DESDE; track d) { <option [value]="d">{{ d | etiqueta:'plazo_desde' }}</option> }
+                        </select>
+                    </div>
                 </div>
                 <!-- Un caso con dos señalados se notifica dos veces, y cada
                      apoderado tiene su propio plazo. El paso sigue siendo uno

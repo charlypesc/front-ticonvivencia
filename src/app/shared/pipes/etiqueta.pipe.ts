@@ -41,6 +41,12 @@ export const ETIQUETAS: Record<string, Record<string, string>> = {
     dias_corridos: 'días corridos',
   },
 
+  // Se leen después del plazo: "24 horas desde que se supo del hecho".
+  plazo_desde: {
+    inicio_paso: 'desde que empieza el paso',
+    conocimiento: 'desde que se supo del hecho',
+  },
+
   accion_al_vencer: {
     notificar: 'notificar',
     escalar: 'escalar',
