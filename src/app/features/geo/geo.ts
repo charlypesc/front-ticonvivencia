@@ -661,15 +661,12 @@ export class Geo implements OnInit {
         next: (res) => {
           this.success.set(`${est.nombre}: ${res.message.toLowerCase()}`);
           // Mismo criterio que observaciones: actualizar la fila en memoria por id.
-          // Las observaciones vuelven porque "enviado" les agrega la fecha de seguimiento.
-          const cambios = { estado_correo: res.estado_correo, observaciones: res.observaciones };
+          const cambios = { estado_correo: res.estado_correo };
           this.establecimientos.update((lista) =>
             lista.map((e) => (e.id_establecimiento === id ? { ...e, ...cambios } : e)),
           );
-          if (this.detalleEstablecimiento()?.id_establecimiento === id) {
+          if (this.detalleEstablecimiento()?.id_establecimiento === id)
             this.detalleEstablecimiento.set({ ...this.detalleEstablecimiento(), ...cambios });
-            this.observacionesTexto = res.observaciones ?? '';
-          }
         },
         error: (err) => this.error.set(err.error?.message ?? 'Error al guardar el estado del correo'),
       })

@@ -449,7 +449,7 @@ export class ApiService {
   }
   /** Estado del correo de contacto: 0 sin enviar, 1 enviado, 2 respondió. */
   cambiarEstadoCorreoEstablecimientoGeo(id: number, estado_correo: number) {
-    return this.http.patch<{ estado_correo: number; observaciones: string | null; message: string }>(
+    return this.http.patch<{ estado_correo: number; message: string }>(
       `${this.base}/geo/establecimientos/${id}/estado-correo`,
       { estado_correo },
     );
