@@ -377,6 +377,7 @@ export class ProtocoloFlujo implements OnInit {
   readonly TIPOS_CAMPO = ['texto', 'numero', 'fecha', 'seleccion'];
   readonly UNIDADES = ['horas', 'dias_habiles', 'dias_corridos'];
   readonly ACCIONES = ['notificar', 'escalar', 'marcar_alerta'];
+  readonly PLAZO_DESDE = ['inicio_paso', 'conocimiento'];
   readonly PARTICIPACIONES = ['ejecutor', 'aprobador', 'notificado'];
   /** A quiénes alcanza el paso. Vacío = al caso, una sola vez. */
   readonly ROLES_PASO = ['afectado', 'senalado', 'todos', 'testigo', 'denunciante'];
@@ -618,6 +619,7 @@ export class ProtocoloFlujo implements OnInit {
           tipo_paso: 'informativo',
           plazo_valor: null,
           plazo_unidad: null,
+          plazo_desde: 'inicio_paso',
           accion_al_vencer: 'notificar',
           es_paso_inicial: false,
           es_paso_final: false,
@@ -1476,7 +1478,10 @@ export class ProtocoloFlujo implements OnInit {
 
   plazoTexto(p: any) {
     if (!p.plazo_valor) return 'sin plazo';
-    return `${p.plazo_valor} ${etiquetaDe(p.plazo_unidad, 'plazo_unidad')}`;
+    const plazo = `${p.plazo_valor} ${etiquetaDe(p.plazo_unidad, 'plazo_unidad')}`;
+    // Solo se aclara la excepción: que un plazo corre desde que empieza el
+    // paso es lo que cualquiera supone.
+    return p.plazo_desde === 'conocimiento' ? `${plazo} ${etiquetaDe('conocimiento', 'plazo_desde')}` : plazo;
   }
 
   rolesDe(paso: any, tipo: string) {
