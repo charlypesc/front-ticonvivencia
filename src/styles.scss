@@ -152,30 +152,7 @@ h3 { font-size: 1rem; font-weight: 600; }
     i { font-size: 14px; color: $gray-400; }
   }
 
-  input, select, textarea {
-    padding: 9px 12px;
-    border: 1px solid $gray-200;
-    border-radius: $radius;
-    font-size: 14px;
-    // Un <select> se dimensiona por su opción más larga. Sin este tope, un
-    // catálogo con nombres largos ensancha el campo más allá de su contenedor.
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    color: $gray-900;
-    background: $white;
-    transition: border-color .2s, box-shadow .2s;
-    outline: none;
-
-    &::placeholder { color: $gray-400; }
-
-    &:focus {
-      border-color: $primary-light;
-      box-shadow: 0 0 0 3px rgba($primary-light, .15);
-    }
-
-    &.error { border-color: $accent-danger; }
-  }
+  input, select, textarea { @include campo; }
 
   // Un checkbox/radio no es un campo de ancho completo: con width:100% la caja
   // se estira y la marca queda centrada, separada de su texto.

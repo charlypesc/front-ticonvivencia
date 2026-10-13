@@ -19,6 +19,7 @@ import {
 import { EtiquetaPipe, etiquetaDe, humanizar } from '../../shared/pipes/etiqueta.pipe';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
+import { AutoAjustarTextarea } from '../../shared/directives/auto-ajustar-textarea.directive';
 
 /** Una pregunta precargada por una plantilla de paso. */
 interface PlantillaCampo {
@@ -322,7 +323,10 @@ interface PrevioEdit {
 @Component({
   selector: 'app-protocolo-flujo',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Puede, GrafoProtocolo, EtiquetaPipe, CerrarConEsc, GuardarConCmdEnter],
+  imports: [
+    CommonModule, FormsModule, RouterLink, Puede, GrafoProtocolo, EtiquetaPipe, CerrarConEsc, GuardarConCmdEnter,
+    AutoAjustarTextarea,
+  ],
   templateUrl: './protocolo-flujo.html',
   styleUrl: './protocolo-flujo.scss',
 })
@@ -344,6 +348,7 @@ export class ProtocoloFlujo implements OnInit {
   mostrarDetalle = signal(false);
   /** El único modal de edición: el paso completo. */
   mostrarPaso = signal(false);
+  pestanaPaso = signal<'datos' | 'responsables' | 'preguntas' | 'flujo'>('datos');
   guardando = signal(false);
   editando: any = null;
 
@@ -710,7 +715,30 @@ export class ProtocoloFlujo implements OnInit {
         };
       });
 
+    this.pestanaPaso.set('datos');
     this.mostrarPaso.set(true);
+  }
+
+  /**
+   * El modal del paso va en pestañas: con datos, responsables, preguntas y
+   * conexiones en un solo scroll, editar una cosa obligaba a pasar por todas.
+   * Como lo que falta puede quedar en una pestaña que no está a la vista, cada
+   * una marca si algo impediría guardar o dejaría el flujo cortado.
+   */
+  avisoResponsables(): boolean {
+    return (
+      this.faltaAprobador() ||
+      !this.rolesSeleccionados.some((r) => r.rol_id && r.tipo_participacion === 'ejecutor')
+    );
+  }
+
+  avisoFlujo(): boolean {
+    const sinSalida =
+      !this.formPaso?.es_paso_final &&
+      this.salidasEdit.length === 0 &&
+      this.pasosSiguientesPregunta().length === 0;
+    const inalcanzable = !this.formPaso?.es_paso_inicial && this.previosEdit.length === 0;
+    return sinSalida || inalcanzable;
   }
 
   /** `' reviste_delito = si '` → `'reviste_delito=si'`, para poder comparar. */

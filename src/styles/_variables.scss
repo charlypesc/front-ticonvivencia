@@ -22,3 +22,40 @@ $navbar-h:      56px;
 $radius:        8px;
 $shadow-sm:     0 1px 3px rgba(0,0,0,.08);
 $shadow-md:     0 4px 12px rgba(0,0,0,.10);
+
+// ─── MIXINS ───────────────────────────────────────
+// El aspecto de un campo del proyecto (input, select, textarea). Vive acá y no
+// solo en .form-group porque hay campos que van en filas propias (un select de
+// destino junto a su botón de borrar, por ejemplo): fuera de un .form-group
+// quedaban con el estilo nativo del navegador.
+@mixin campo {
+  padding: 9px 12px;
+  border: 1px solid $gray-200;
+  border-radius: $radius;
+  font-size: 14px;
+  font-family: inherit;
+  // Un <select> se dimensiona por su opción más larga. Sin este tope, un
+  // catálogo con nombres largos ensancha el campo más allá de su contenedor.
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  color: $gray-900;
+  background: $white;
+  transition: border-color .2s, box-shadow .2s;
+  outline: none;
+
+  &::placeholder { color: $gray-400; }
+
+  &:focus {
+    border-color: $primary-light;
+    box-shadow: 0 0 0 3px rgba($primary-light, .15);
+  }
+
+  &:disabled {
+    background: $gray-50;
+    color: $gray-400;
+    cursor: not-allowed;
+  }
+
+  &.error { border-color: $accent-danger; }
+}
