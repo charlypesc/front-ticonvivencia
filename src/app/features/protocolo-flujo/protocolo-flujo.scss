@@ -145,6 +145,71 @@ code {
 // corriente: con dos selects y un input por fila, a 520 no entra nada.
 .modal--lg { max-width: 780px; }
 
+// Los campos del modal del paso que van en filas propias (destino de una
+// salida, rol + participación, opción de una pregunta, rama Sí/No) no están
+// dentro de un .form-group y salían con el estilo nativo del navegador.
+.modal--lg .modal__body {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea { @include campo; }
+}
+
+// Pestañas del modal del paso. Quedan fijas entre el título y el cuerpo, que
+// es lo que hace scroll.
+.pestanas {
+  display: flex;
+  gap: 2px;
+  padding: 0 24px;
+  border-bottom: 1px solid $gray-200;
+  overflow-x: auto;
+  flex-shrink: 0;
+
+  &__tab {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 14px;
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-size: 14px;
+    font-weight: 500;
+    color: $gray-600;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover { color: $primary; }
+
+    &.activa {
+      color: $primary;
+      border-bottom-color: $primary;
+      font-weight: 600;
+    }
+  }
+
+  &__n {
+    min-width: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: $gray-100;
+    color: $gray-600;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+  }
+
+  // Algo de esa pestaña impediría guardar o dejaría el flujo cortado.
+  &__aviso {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: $accent-danger;
+  }
+}
+
 // Cada bloque del modal del paso. Separados por una línea y con el título en
 // versalita para que se lean como cuatro cosas distintas dentro de un mismo
 // formulario y no como una lista larga de campos.

@@ -289,8 +289,35 @@
         <div class="alert alert--error" style="margin:16px 24px 0"><i class="ti ti-alert-circle"></i> {{ error() }}
         </div>
         }
+        <!-- Pestañas: el tipo y los datos primero (elegir el tipo precarga el
+             resto), el flujo al final, que es lo último que se decide al crear
+             un paso. El punto rojo marca una pestaña con algo pendiente que no
+             está a la vista. -->
+        <nav class="pestanas" role="tablist">
+            <button type="button" role="tab" class="pestanas__tab" [class.activa]="pestanaPaso() === 'datos'"
+                (click)="pestanaPaso.set('datos')">
+                <i class="ti ti-file-description"></i> Datos
+            </button>
+            <button type="button" role="tab" class="pestanas__tab" [class.activa]="pestanaPaso() === 'responsables'"
+                (click)="pestanaPaso.set('responsables')">
+                <i class="ti ti-users"></i> Responsables
+                <span class="pestanas__n">{{ rolesSeleccionados.length }}</span>
+                @if (avisoResponsables()) { <span class="pestanas__aviso" title="Falta un ejecutor o un aprobador"></span> }
+            </button>
+            <button type="button" role="tab" class="pestanas__tab" [class.activa]="pestanaPaso() === 'preguntas'"
+                (click)="pestanaPaso.set('preguntas')">
+                <i class="ti ti-forms"></i> Preguntas
+                <span class="pestanas__n">{{ camposEdit.length }}</span>
+            </button>
+            <button type="button" role="tab" class="pestanas__tab" [class.activa]="pestanaPaso() === 'flujo'"
+                (click)="pestanaPaso.set('flujo')">
+                <i class="ti ti-route"></i> Flujo
+                @if (avisoFlujo()) { <span class="pestanas__aviso" title="El paso queda sin salida o sin un paso que lleve hasta él"></span> }
+            </button>
+        </nav>
         <div class="modal__body">
 
+            @if (pestanaPaso() === 'flujo') {
             <!-- Ubicación del paso en el flujo: de dónde viene y a dónde va.
                  El paso en edición no se nombra acá ni se ofrece como origen o
                  destino: lo que importa es el tramo, no repetir dónde se está
@@ -435,37 +462,22 @@
                             name="es_paso_final" /> Es un paso final</label>
                 </div>
             </div>
+            }
 
-            <!-- 1. Datos del paso -->
+            @if (pestanaPaso() === 'datos') {
+            <!-- 1. Datos del paso. El tipo va primero: los que son un trámite
+                 concreto (Seguimiento, Notificación al apoderado, Medidas de
+                 protección…) precargan el paso entero —nombre, texto, plazo, a
+                 quién alcanza y preguntas—, así que escribir el nombre antes era
+                 escribirlo dos veces. No pisan lo ya escrito. -->
             <div class="seccion">
                 <h4 class="seccion__titulo"><i class="ti ti-file-description"></i> Datos del paso</h4>
 
                 <div class="form-group">
-                    <label>Nombre *</label>
-                    <input type="text" [(ngModel)]="formPaso.nombre" name="nombre" />
-                </div>
-                <div class="form-group">
-                    <label>Descripción</label>
-                    <textarea rows="2" [(ngModel)]="formPaso.descripcion" name="descripcion"></textarea>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Tipo de paso</label>
-                        <!-- Los tipos que son un trámite concreto (Seguimiento,
-                             Notificación al apoderado, Medidas de protección…)
-                             precargan el paso entero: texto, plazo, a quién
-                             alcanza y preguntas. No pisan lo ya escrito. -->
-                        <select [(ngModel)]="formPaso.tipo_paso" name="tipo_paso"
-                            (ngModelChange)="onTipoPaso()">
-                            @for (t of TIPOS_PASO; track t) { <option [value]="t">{{ t | etiqueta:'tipo_paso' }}</option> }
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Al vencer el plazo</label>
-                        <select [(ngModel)]="formPaso.accion_al_vencer" name="accion_al_vencer">
-                            @for (a of ACCIONES; track a) { <option [value]="a">{{ a | etiqueta:'accion_al_vencer' }}</option> }
-                        </select>
-                    </div>
+                    <label>Tipo de paso</label>
+                    <select [(ngModel)]="formPaso.tipo_paso" name="tipo_paso" (ngModelChange)="onTipoPaso()">
+                        @for (t of TIPOS_PASO; track t) { <option [value]="t">{{ t | etiqueta:'tipo_paso' }}</option> }
+                    </select>
                 </div>
                 <!-- Lo que trae la tarjeta y no se ve en ningún campo del modal:
                      el acta que emite, cómo se resuelve, dónde queda registrado
@@ -475,6 +487,20 @@
                     <i class="ti ti-info-circle"></i> {{ nota }}
                 </p>
                 }
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" [(ngModel)]="formPaso.nombre" name="nombre" />
+                </div>
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <textarea appAutoAjustar rows="2" [(ngModel)]="formPaso.descripcion" name="descripcion"></textarea>
+                </div>
+            </div>
+
+            <!-- El plazo en un solo bloque: "al vencer" iba junto al tipo de
+                 paso, lejos de la cifra a la que se refiere. -->
+            <div class="seccion">
+                <h4 class="seccion__titulo"><i class="ti ti-clock"></i> Plazo</h4>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Plazo</label>
@@ -489,6 +515,8 @@
                             @for (u of UNIDADES; track u) { <option [value]="u">{{ u | etiqueta:'plazo_unidad' }}</option> }
                         </select>
                     </div>
+                </div>
+                <div class="form-row">
                     <!-- Hay plazos que la ley cuenta desde que el colegio supo
                          del hecho y no desde que le toca al paso: las 24 horas
                          para denunciar (art. 176 del Código Procesal Penal). -->
@@ -499,7 +527,18 @@
                             @for (d of PLAZO_DESDE; track d) { <option [value]="d">{{ d | etiqueta:'plazo_desde' }}</option> }
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>Al vencer el plazo</label>
+                        <select [(ngModel)]="formPaso.accion_al_vencer" name="accion_al_vencer"
+                            [disabled]="!formPaso.plazo_valor">
+                            @for (a of ACCIONES; track a) { <option [value]="a">{{ a | etiqueta:'accion_al_vencer' }}</option> }
+                        </select>
+                    </div>
                 </div>
+            </div>
+
+            <div class="seccion">
+                <h4 class="seccion__titulo"><i class="ti ti-user-check"></i> Alcance y constancias</h4>
                 <!-- Un caso con dos señalados se notifica dos veces, y cada
                      apoderado tiene su propio plazo. El paso sigue siendo uno
                      solo en el diagrama: lo que se repite es su cumplimiento. -->
@@ -568,7 +607,9 @@
                 </div>
                 }
             </div>
+            }
 
+            @if (pestanaPaso() === 'responsables') {
             <!-- 2. Responsables -->
             <div class="seccion">
                 <h4 class="seccion__titulo"><i class="ti ti-users"></i> Responsables</h4>
@@ -607,7 +648,9 @@
                     creá los usuarios del colegio para poder poner responsables.</span>
                 }
             </div>
+            }
 
+            @if (pestanaPaso() === 'preguntas') {
             <!-- 3. Preguntas del paso, con la bifurcación Sí/No adentro -->
             <div class="seccion">
                 <h4 class="seccion__titulo"><i class="ti ti-forms"></i> Preguntas que se responden en este paso</h4>
@@ -745,6 +788,7 @@
                     </button>
                 </div>
             </div>
+            }
 
         </div>
         <div class="modal__footer">
