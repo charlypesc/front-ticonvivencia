@@ -144,6 +144,8 @@ export class ProtocolosActivados implements OnInit {
       return;
     }
     if (!(await this.confirmarSobreintervencion(this.form.id_registro))) return;
+    if (!(await this.confirmarFueraDePlazo(this.form.id_registro, this.form.id_protocolo_establecimiento)))
+      return;
 
     // Activar materializa el grafo del protocolo sobre el caso, así que la
     // respuesta trae el id: se entra directo a ejecutarlo en vez de dejar al
@@ -180,6 +182,25 @@ export class ProtocolosActivados implements OnInit {
       return this.confirmService.confirmarAccion(
         `Ya hay protocolos en curso sobre ${enCurso.length === 1 ? 'este estudiante' : 'estos estudiantes'}:\n\n` +
           `${detalle}\n\nActivar otro puede ser sobreintervenir al estudiante. ¿Activarlo de todos modos?`,
+      );
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * El plazo legal corre desde el registro, no desde la activación: un
+   * protocolo activado tarde puede nacer ya vencido. No se bloquea (investigar
+   * tarde es mejor que no investigar), pero quien activa tiene que saberlo.
+   */
+  private async confirmarFueraDePlazo(idRegistro: number, idProtocolo: number): Promise<boolean> {
+    try {
+      const p = await firstValueFrom(this.api.getPlazoInvestigacion(idRegistro, idProtocolo));
+      if (!p.vencido || !p.limite) return true;
+      return this.confirmService.confirmarAccion(
+        `El plazo legal de investigación de este registro venció el ${p.limite.split('-').reverse().join('-')} ` +
+          '(se cuenta desde el registro). El protocolo se activará fuera de plazo y quedará constancia en la bitácora. ' +
+          '¿Activarlo de todos modos?',
       );
     } catch {
       return true;

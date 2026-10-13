@@ -743,6 +743,10 @@ export class RegistroForm implements OnInit {
       this.loading.set(false);
       return;
     }
+    if (this.activarProtocolo && this.registro !== null && !(await this.confirmarFueraDePlazo())) {
+      this.loading.set(false);
+      return;
+    }
     if (this.registro === null) {
       this.api
         .createRegistro({
@@ -803,6 +807,28 @@ export class RegistroForm implements OnInit {
       `Ya hay protocolos en curso sobre ${enCurso.length === 1 ? 'este estudiante' : 'estos estudiantes'}:\n\n` +
         `${detalle}\n\nActivar otro puede ser sobreintervenir al estudiante. ¿Activarlo de todos modos?`,
     );
+  }
+
+  /**
+   * Solo al editar: el plazo legal corre desde el registro, así que activar el
+   * protocolo sobre uno antiguo puede hacerlo nacer vencido. Es un aviso, no un
+   * bloqueo; si la consulta falla, se sigue.
+   */
+  private async confirmarFueraDePlazo(): Promise<boolean> {
+    if (!this.registro?.id_registro || !this.idProtocoloEstablecimiento) return true;
+    try {
+      const p = await firstValueFrom(
+        this.api.getPlazoInvestigacion(this.registro.id_registro, this.idProtocoloEstablecimiento),
+      );
+      if (!p.vencido || !p.limite) return true;
+      return this.confirm.confirmarAccion(
+        `El plazo legal de investigación de este registro venció el ${p.limite.split('-').reverse().join('-')} ` +
+          '(se cuenta desde el registro). El protocolo se activará fuera de plazo y quedará constancia en la bitácora. ' +
+          '¿Activarlo de todos modos?',
+      );
+    } catch {
+      return true;
+    }
   }
 
   /** El registro ya está guardado: acá solo falta el protocolo, si lo pidieron. */
