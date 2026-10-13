@@ -134,6 +134,34 @@
 <!-- Alertas por estudiante: el patrón que registro por registro no se ve. -->
 @if (hayAlertasEstudiantes()) {
 <div class="alertas-grid">
+    <!-- Casos con el plazo legal de investigación vencido o a menos de un mes
+         (corre desde el registro). El contador de cumplimiento dice cuántos;
+         esta lista dice a qué estudiantes se está dejando esperando. -->
+    @if (resumen().alertas.plazos_investigacion?.length) {
+    <div class="card card--peligro">
+        <div class="card__header">
+            <span class="section-label"><i class="ti ti-gavel"></i> Plazo legal de investigación</span>
+        </div>
+        <div class="ultimos-list">
+            @for (c of resumen().alertas.plazos_investigacion; track c.id_protocolo_activado) {
+            <a class="ultimo-item" (click)="verCaso(c)">
+                <div class="ultimo-item__info">
+                    <i class="ti" [class.ti-gavel]="c.dias_restantes < 0" [class.ti-hourglass]="c.dias_restantes >= 0"></i>
+                    <span>
+                        {{ c.alumno_nombre ?? 'Sin estudiante' }}
+                        <br /><small class="texto-tenue">{{ c.codigo }} · {{ c.nombre_protocolo }}</small>
+                    </span>
+                </div>
+                @if (c.dias_restantes < 0) {
+                <span class="badge badge--gravísima">Vencido hace {{ -c.dias_restantes }} {{ c.dias_restantes === -1 ? 'día' : 'días' }}</span>
+                } @else {
+                <span class="badge badge--pendiente">Vence {{ c.fecha_limite_investigacion | fecha }}</span>
+                }
+            </a>
+            }
+        </div>
+    </div>
+    }
     @if (resumen().alertas.senalados_reiterados.length) {
     <div class="card card--peligro">
         <div class="card__header">

@@ -509,6 +509,13 @@ export class ApiService {
       params: { estudiantes: idsEstudiantes.join(',') },
     });
   }
+  /** Límite legal que tendría el caso (corre desde el registro): para avisar si se activa ya vencido. */
+  getPlazoInvestigacion(idRegistro: number, idProtocoloEstablecimiento: number) {
+    return this.http.get<{ ambito: string; limite: string | null; vencido: boolean }>(
+      `${this.base}/protocolos-activados/plazo-investigacion`,
+      { params: { id_registro: idRegistro, id_protocolo_establecimiento: idProtocoloEstablecimiento } },
+    );
+  }
   createProtocoloActivado(data: any) {
     return this.http.post(`${this.base}/protocolos-activados`, data);
   }

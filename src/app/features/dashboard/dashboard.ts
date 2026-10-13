@@ -75,8 +75,13 @@ export class Dashboard implements OnInit {
 
   hayAlertasEstudiantes = computed(() => {
     const a = this.resumen()?.alertas;
-    return !!a && (a.afectados_reiterados.length > 0 || a.senalados_reiterados.length > 0);
+    return !!a && (a.afectados_reiterados.length > 0 || a.senalados_reiterados.length > 0 ||
+      a.plazos_investigacion?.length > 0);
   });
+
+  verCaso(c: any) {
+    this.router.navigate(['/protocolos-activados', c.id_protocolo_activado]);
+  }
 
   atendiendo = signal<number | null>(null);
   errorAtender = signal('');

@@ -262,6 +262,7 @@ export class Estudiantes implements OnInit, AfterViewInit {
             ...res.estudiante,
             n_pendientes: fila?.n_pendientes ?? 0,
             senalado_bullying: fila?.senalado_bullying ?? 0,
+            n_fuera_de_plazo: fila?.n_fuera_de_plazo ?? 0,
           });
           this.registros.set(res.registros);
         } else {

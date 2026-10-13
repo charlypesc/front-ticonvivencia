@@ -85,10 +85,16 @@
                              tiene registros, pero ninguno pendiente. Amarillo:
                              registros pendientes (sin atender, derivados, con
                              protocolo en curso o por activar). Rojo, además:
-                             señalado en un registro de bullying. -->
+                             señalado en un registro de bullying, o con un caso
+                             que pasó el plazo legal de investigación. -->
                         @if (e.senalado_bullying) {
                         <span class="badge badge--gravísima" title="Señalado en un registro de acoso escolar / bullying">
                             <i class="ti ti-alert-triangle"></i> Señalado por bullying
+                        </span>
+                        }
+                        @if (e.n_fuera_de_plazo > 0) {
+                        <span class="badge badge--gravísima" title="Su caso pasó el plazo legal de investigación, contado desde el registro">
+                            <i class="ti ti-gavel"></i> Investigación fuera de plazo
                         </span>
                         }
                         @if (e.n_pendientes > 0) {
@@ -153,6 +159,9 @@
                 <i class="ti ti-circle"></i>
                 @if (est.senalado_bullying) {
                 <span class="badge badge--gravísima"><i class="ti ti-alert-triangle"></i> Señalado por bullying</span>
+                }
+                @if (est.n_fuera_de_plazo > 0) {
+                <span class="badge badge--gravísima"><i class="ti ti-gavel"></i> Investigación fuera de plazo</span>
                 }
                 @if (est.n_pendientes > 0) {
                 <span class="badge badge--pendiente">
