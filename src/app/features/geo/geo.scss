@@ -143,10 +143,10 @@ td.acciones {
   }
 }
 
-// En amarillo los que tienen observaciones, mismo formato que el verde de
-// .fila--activa. Si el colegio además tiene usuarios gana el verde (es cliente);
-// el ícono de nota sigue avisando que hay observaciones.
-.fila--observaciones {
+// En amarillo los que ya recibieron el correo de contacto, mismo formato que
+// el verde de .fila--activa. Si el colegio además tiene usuarios gana el verde
+// (es cliente). Las observaciones no colorean: se leen debajo del nombre.
+.fila--enviado {
   td { background: #fefce8; }
   &:hover td { background: #fef9c3; }
 
@@ -154,7 +154,7 @@ td.acciones {
 }
 
 // En azul los que ya respondieron el correo de contacto (los que solo tienen el
-// correo enviado usan el amarillo de .fila--observaciones). Gana sobre el
+// correo enviado usan el amarillo de .fila--enviado). Gana sobre el
 // amarillo, porque es un paso más avanzado de la gestión, y pierde contra el
 // verde (ya es cliente).
 .fila--respondido {
@@ -248,6 +248,17 @@ td.acciones {
 
   textarea { width: 100%; }
   .btn { margin-top: 8px; }
+}
+
+// Botones para copiar asunto y cuerpo del borrador de correo, sobre las
+// observaciones. Envuelven en el celular en vez de salirse del modal.
+.copiar-borrador {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+
+  .btn { width: auto; }
 }
 
 // Observación bajo el nombre del establecimiento. Se corta a dos líneas para
