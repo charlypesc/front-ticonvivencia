@@ -1,5 +1,8 @@
 <div class="page-header">
     <h2>Geo</h2>
+    <button class="btn btn--outline btn--sm" style="width:auto" (click)="abrirPlantillas()">
+        <i class="ti ti-mail-cog"></i> Plantillas de correo
+    </button>
 </div>
 
 @if (success()) {
@@ -252,13 +255,14 @@
                 @for (e of establecimientosOrdenados(); track e.id_establecimiento) {
                 <!-- En verde los que ya tienen usuarios: son los que operan el
                      sistema, un puñado entre las miles de filas del directorio.
-                     Si no: azul si respondió el correo, amarillo si se le envió.
+                     Si no: azul si respondió el correo, amarillo si se le envió
+                     alguno de los tres correos.
                      Tener observaciones no colorea la fila: ya se ven escritas
                      debajo del nombre, y muchos prospectos traen notas sin que
                      se les haya escrito todavía. -->
                 <tr class="fila-clickeable" [class.fila--activa]="tieneUsuarios(e)"
                     [class.fila--respondido]="estadoCorreo(e) === 2 && !tieneUsuarios(e)"
-                    [class.fila--enviado]="estadoCorreo(e) === 1 && !tieneUsuarios(e)"
+                    [class.fila--enviado]="esCorreoEnviado(estadoCorreo(e)) && !tieneUsuarios(e)"
                     [class.fila--destacada]="esDestacado(e)"
                     (click)="verDetalleEstablecimiento(e)">
                     <td>
@@ -291,6 +295,9 @@
                     <td (click)="$event.stopPropagation()">
                         <app-estado-correo [estado]="estadoCorreo(e)" (cambiar)="cambiarEstadoCorreo(e, $event)"
                             [deshabilitado]="guardandoEstadoCorreo() === e.id_establecimiento || !auth.can(Permiso.EstablecimientoEditar)" />
+                        @if (estadoCorreo(e) && e.fecha_estado_correo) {
+                        <span class="fecha-correo">{{ e.fecha_estado_correo | fecha:true }}</span>
+                        }
                     </td>
                     <td class="acciones">
                         @if (puedeIngresar(e)) {
@@ -431,9 +438,9 @@
                 <div class="detalle-item">
                     <i class="ti ti-mail"></i>
                     <a [href]="'mailto:' + det.correo">{{ det.correo }}</a>
-                    <button class="btn-icon" [title]="copiado() === 'correo' ? 'Copiado' : 'Copiar correo'"
-                        (click)="copiar('correo', det.correo)">
-                        <i class="ti" [class.ti-copy]="copiado() !== 'correo'" [class.ti-check]="copiado() === 'correo'"></i>
+                    <button class="btn-icon" [title]="copiado() === 'direccion' ? 'Copiado' : 'Copiar dirección de correo'"
+                        (click)="copiarDireccion(det)">
+                        <i class="ti" [class.ti-copy]="copiado() !== 'direccion'" [class.ti-check]="copiado() === 'direccion'"></i>
                     </button>
                 </div>
                 }
@@ -443,6 +450,9 @@
                     <i class="ti ti-mail-check"></i>
                     <app-estado-correo [estado]="estadoCorreo(det)" (cambiar)="cambiarEstadoCorreo(det, $event)"
                         [deshabilitado]="guardandoEstadoCorreo() === det.id_establecimiento || !auth.can(Permiso.EstablecimientoEditar)" />
+                    @if (estadoCorreo(det) && det.fecha_estado_correo) {
+                    <span class="fecha-correo">{{ det.fecha_estado_correo | fecha:true }}</span>
+                    }
                 </div>
                 <!-- El directorio de RBD llega sin sostenedores: la fila se
                      muestra siempre, también cuando falta, porque es justo el
@@ -464,23 +474,25 @@
                 </div>
             </div>
 
-            <!-- Borrador del correo de contacto guardado en las observaciones
-                 ("--- Correo ... ---" + Para/Asunto + cuerpo): se copia por
-                 partes para pegarlo en Zoho sin seleccionar a mano. -->
-            @if (borradorCorreo(); as b) {
+            <!-- Correo de contacto: se elige cuál de los tres mandar y se copia
+                 por partes, con el nombre del colegio puesto, para pegarlo en
+                 Zoho. Copiar el cuerpo lo marca como enviado (ver copiarCuerpo). -->
+            @if (plantillas().length) {
             <div class="copiar-borrador">
-                @if (b.asunto) {
-                <button class="btn btn--outline btn--sm" (click)="copiar('asunto', b.asunto)">
+                <select [ngModel]="correoElegido()" (ngModelChange)="correoElegido.set(+$event)" name="correo_elegido"
+                    aria-label="Correo a enviar">
+                    @for (p of plantillas(); track p.id_plantilla_correo) {
+                    <option [value]="p.id_plantilla_correo">{{ p.nombre }}</option>
+                    }
+                </select>
+                <button class="btn btn--outline btn--sm" (click)="copiarAsunto(det)">
                     <i class="ti" [class.ti-copy]="copiado() !== 'asunto'" [class.ti-check]="copiado() === 'asunto'"></i>
                     {{ copiado() === 'asunto' ? 'Asunto copiado' : 'Copiar asunto' }}
                 </button>
-                }
-                @if (b.cuerpo) {
-                <button class="btn btn--outline btn--sm" (click)="copiar('cuerpo', b.cuerpo)">
+                <button class="btn btn--outline btn--sm" (click)="copiarCuerpo(det)">
                     <i class="ti" [class.ti-copy]="copiado() !== 'cuerpo'" [class.ti-check]="copiado() === 'cuerpo'"></i>
-                    {{ copiado() === 'cuerpo' ? 'Correo copiado' : 'Copiar correo' }}
+                    {{ copiado() === 'cuerpo' ? 'Correo copiado' : 'Copiar cuerpo del correo' }}
                 </button>
-                }
             </div>
             }
 
@@ -980,4 +992,67 @@
 <app-credenciales-modal [credenciales]="cred" titulo="Usuario creado"
     [rol]="rolCredenciales()"
     (cerrar)="cerrarCredenciales()" />
+}
+
+<!-- Modal Plantillas de correo: los tres correos de contacto (presentación,
+     recordatorio, nueva promoción) que se copian desde la ficha de cada
+     establecimiento. Una pestaña por correo; se guarda de a uno. -->
+@if (mostrarPlantillas()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarPlantillas() : null">
+    <div class="modal modal--lg" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-mail-cog"></i> Plantillas de correo</h3>
+            <button class="modal__close" (click)="cerrarPlantillas()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+        <nav class="pestanas" role="tablist">
+            @for (p of plantillas(); track p.id_plantilla_correo) {
+            <button type="button" role="tab" class="pestanas__tab"
+                [class.activa]="plantillaEditando() === p.id_plantilla_correo"
+                (click)="plantillaEditando.set(p.id_plantilla_correo)">
+                {{ p.nombre }}
+                @if (plantillaCambiada(p.id_plantilla_correo)) {
+                <span class="pestanas__aviso" title="Cambios sin guardar"></span>
+                }
+            </button>
+            }
+        </nav>
+
+        @if (errorPlantillas()) {
+        <div class="alert alert--error" style="margin: 16px 24px 0">
+            <i class="ti ti-alert-circle"></i> {{ errorPlantillas() }}
+        </div>
+        }
+
+        <div class="modal__body">
+            @if (borradoresPlantilla[plantillaEditando()]; as b) {
+            <p class="text-muted text-sm" style="margin-top:0">
+                Escribe <code>{{ '{' }}colegio{{ '}' }}</code> donde vaya el nombre del establecimiento: se reemplaza
+                al copiar el asunto o el cuerpo desde la ficha.
+            </p>
+            <div class="form-group">
+                <label for="plantilla_asunto">Asunto</label>
+                <input id="plantilla_asunto" type="text" maxlength="255" [(ngModel)]="b.asunto" name="plantilla_asunto"
+                    [readonly]="!auth.can(Permiso.EstablecimientoEditar)" />
+            </div>
+            <div class="form-group">
+                <label for="plantilla_cuerpo">Cuerpo del correo</label>
+                <textarea id="plantilla_cuerpo" appAutoAjustar rows="12" [(ngModel)]="b.cuerpo" name="plantilla_cuerpo"
+                    [readonly]="!auth.can(Permiso.EstablecimientoEditar)"></textarea>
+            </div>
+            }
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="cerrarPlantillas()">Cerrar</button>
+            <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.EstablecimientoEditar"
+                [disabled]="guardandoPlantilla() || !plantillaCambiada(plantillaEditando())" (click)="guardarPlantilla()">
+                <i class="ti" [class.ti-device-floppy]="!guardandoPlantilla()"
+                    [class.ti-loader-2]="guardandoPlantilla()" [class.spin]="guardandoPlantilla()"></i>
+                Guardar
+            </button>
+        </div>
+    </div>
+</div>
 }

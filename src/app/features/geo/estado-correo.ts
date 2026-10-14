@@ -1,8 +1,10 @@
-import { Component, ElementRef, HostListener, input, output, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, input, output, signal } from '@angular/core';
+import { ESTADOS_CORREO } from '../../shared/utils/correo-contacto';
 
 /**
- * Selector del estado del correo de contacto (0 sin enviar, 1 enviado,
- * 2 respondió) para la lista y la ficha de Geo.
+ * Selector del estado del correo de contacto (sin enviar, 1er/2do/3er correo
+ * enviado, respondió) para la lista y la ficha de Geo. Los valores y su orden
+ * están en `shared/utils/correo-contacto.ts`.
  *
  * No es un <select> nativo: el nativo no se puede pintar por estado ni se ve
  * igual entre navegadores. El menú va con position: fixed porque la tabla está
@@ -14,8 +16,8 @@ import { Component, ElementRef, HostListener, input, output, signal } from '@ang
   template: `
     <button type="button" class="estado-correo__btn estado-correo__btn--{{ estado() }}"
       [disabled]="deshabilitado()" (click)="alternar($event)">
-      <i class="ti {{ opciones[estado()].icono }}"></i>
-      <span>{{ opciones[estado()].label }}</span>
+      <i class="ti {{ actual().icono }}"></i>
+      <span>{{ actual().label }}</span>
       <i class="ti ti-chevron-down estado-correo__chevron"></i>
     </button>
     @if (abierto()) {
@@ -45,11 +47,14 @@ import { Component, ElementRef, HostListener, input, output, signal } from '@ang
     }
     .estado-correo__chevron { color: #9ca3af; margin-left: 2px; }
 
-    .estado-correo__btn--1 { border-color: #eab308; background: #fefce8; color: #854d0e; }
+    /* 1, 3 y 4: algún correo enviado (amarillo); 2: respondió (azul). */
+    .estado-correo__btn--1, .estado-correo__btn--3, .estado-correo__btn--4 {
+      border-color: #eab308; background: #fefce8; color: #854d0e;
+    }
     .estado-correo__btn--2 { border-color: #3b82f6; background: #eff6ff; color: #1e40af; }
 
     .estado-correo__menu {
-      position: fixed; z-index: 1100; min-width: 180px; margin: 0; padding: 4px;
+      position: fixed; z-index: 1100; min-width: 200px; margin: 0; padding: 4px;
       list-style: none; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0,0,0,.10);
     }
@@ -60,7 +65,7 @@ import { Component, ElementRef, HostListener, input, output, signal } from '@ang
       &:hover { background: #f3f4f6; }
       i { font-size: 15px; color: #9ca3af; }
     }
-    .estado-correo__opcion--1 i { color: #ca8a04; }
+    .estado-correo__opcion--1 i, .estado-correo__opcion--3 i, .estado-correo__opcion--4 i { color: #ca8a04; }
     .estado-correo__opcion--2 i { color: #2563eb; }
     .estado-correo__opcion--actual { font-weight: 600; }
     .estado-correo__check { margin-left: auto; color: #1e3a6e !important; }
@@ -71,11 +76,9 @@ export class EstadoCorreo {
   deshabilitado = input(false);
   cambiar = output<number>();
 
-  readonly opciones = [
-    { valor: 0, label: 'Sin enviar', icono: 'ti-mail' },
-    { valor: 1, label: 'Correo enviado', icono: 'ti-mail-forward' },
-    { valor: 2, label: 'Respondió', icono: 'ti-mail-check' },
-  ];
+  readonly opciones = ESTADOS_CORREO;
+  /** Por valor y no por índice: el orden en pantalla no sigue al número. */
+  actual = computed(() => this.opciones.find((o) => o.valor === this.estado()) ?? this.opciones[0]);
 
   abierto = signal(false);
   pos = signal({ top: 0, left: 0 });
@@ -93,9 +96,9 @@ export class EstadoCorreo {
     EstadoCorreo.abiertoActual = this;
     const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
     // Si no cabe hacia abajo (fila al final de la pantalla) se abre hacia arriba.
-    const altoMenu = 130;
+    const altoMenu = 200;
     const top = r.bottom + 4 + altoMenu > window.innerHeight ? r.top - 4 - altoMenu : r.bottom + 4;
-    this.pos.set({ top, left: Math.min(r.left, window.innerWidth - 190) });
+    this.pos.set({ top, left: Math.min(r.left, window.innerWidth - 210) });
     this.abierto.set(true);
   }
 
