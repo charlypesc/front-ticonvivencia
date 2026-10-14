@@ -252,11 +252,13 @@
                 @for (e of establecimientosOrdenados(); track e.id_establecimiento) {
                 <!-- En verde los que ya tienen usuarios: son los que operan el
                      sistema, un puñado entre las miles de filas del directorio.
-                     Si no: azul si respondió el correo, amarillo si se le envió
-                     o tiene observaciones. -->
+                     Si no: azul si respondió el correo, amarillo si se le envió.
+                     Tener observaciones no colorea la fila: ya se ven escritas
+                     debajo del nombre, y muchos prospectos traen notas sin que
+                     se les haya escrito todavía. -->
                 <tr class="fila-clickeable" [class.fila--activa]="tieneUsuarios(e)"
                     [class.fila--respondido]="estadoCorreo(e) === 2 && !tieneUsuarios(e)"
-                    [class.fila--observaciones]="(e.observaciones || estadoCorreo(e) === 1) && !tieneUsuarios(e) && estadoCorreo(e) !== 2"
+                    [class.fila--enviado]="estadoCorreo(e) === 1 && !tieneUsuarios(e)"
                     [class.fila--destacada]="esDestacado(e)"
                     (click)="verDetalleEstablecimiento(e)">
                     <td>
@@ -429,6 +431,10 @@
                 <div class="detalle-item">
                     <i class="ti ti-mail"></i>
                     <a [href]="'mailto:' + det.correo">{{ det.correo }}</a>
+                    <button class="btn-icon" [title]="copiado() === 'correo' ? 'Copiado' : 'Copiar correo'"
+                        (click)="copiar('correo', det.correo)">
+                        <i class="ti" [class.ti-copy]="copiado() !== 'correo'" [class.ti-check]="copiado() === 'correo'"></i>
+                    </button>
                 </div>
                 }
                 <!-- Siempre visible: el contacto pudo hacerse a otro correo
@@ -457,6 +463,26 @@
                     }
                 </div>
             </div>
+
+            <!-- Borrador del correo de contacto guardado en las observaciones
+                 ("--- Correo ... ---" + Para/Asunto + cuerpo): se copia por
+                 partes para pegarlo en Zoho sin seleccionar a mano. -->
+            @if (borradorCorreo(); as b) {
+            <div class="copiar-borrador">
+                @if (b.asunto) {
+                <button class="btn btn--outline btn--sm" (click)="copiar('asunto', b.asunto)">
+                    <i class="ti" [class.ti-copy]="copiado() !== 'asunto'" [class.ti-check]="copiado() === 'asunto'"></i>
+                    {{ copiado() === 'asunto' ? 'Asunto copiado' : 'Copiar asunto' }}
+                </button>
+                }
+                @if (b.cuerpo) {
+                <button class="btn btn--outline btn--sm" (click)="copiar('cuerpo', b.cuerpo)">
+                    <i class="ti" [class.ti-copy]="copiado() !== 'cuerpo'" [class.ti-check]="copiado() === 'cuerpo'"></i>
+                    {{ copiado() === 'cuerpo' ? 'Correo copiado' : 'Copiar correo' }}
+                </button>
+                }
+            </div>
+            }
 
             <div class="form-group observaciones">
                 <label for="observaciones">Observaciones</label>

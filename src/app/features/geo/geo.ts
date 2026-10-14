@@ -14,6 +14,7 @@ import { Credenciales } from '../../core/models/usuario.model';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
 import { AutoAjustarTextarea } from '../../shared/directives/auto-ajustar-textarea.directive';
+import { extraerBorradorCorreo } from '../../shared/utils/borrador-correo';
 import {
   completarDominio,
   dominioDe,
@@ -609,6 +610,29 @@ export class Geo implements OnInit {
 
   observacionesTexto = '';
   guardandoObservaciones = signal(false);
+
+  // Copiar correo, asunto y cuerpo del borrador de contacto
+
+  /** Qué se copió recién ('correo' | 'asunto' | 'cuerpo'): cambia el ícono a ✓ por 2 s. */
+  copiado = signal('');
+
+  /**
+   * Se lee del texto del cuadro y no de lo guardado: si se retoca el borrador
+   * antes de enviarlo, se copia la versión retocada.
+   */
+  borradorCorreo() {
+    return extraerBorradorCorreo(this.observacionesTexto);
+  }
+
+  async copiar(que: string, texto: string) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      this.copiado.set(que);
+      setTimeout(() => this.copiado() === que && this.copiado.set(''), 2000);
+    } catch {
+      this.error.set('No se pudo copiar: selecciona el texto y cópialo a mano');
+    }
+  }
 
   /** Hay algo escrito que todavía no está guardado: habilita el botón. */
   observacionesCambiadas(det: any) {
