@@ -250,15 +250,73 @@ td.acciones {
   .btn { margin-top: 8px; }
 }
 
-// Botones para copiar asunto y cuerpo del borrador de correo, sobre las
+// Fecha y hora del último cambio de estado del correo, al lado del selector.
+.fecha-correo {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+// Correo a enviar (1, 2 o 3) y botones para copiar asunto y cuerpo, sobre las
 // observaciones. Envuelven en el celular en vez de salirse del modal.
 .copiar-borrador {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   margin-top: 16px;
 
+  select {
+    @include campo;
+    width: auto;
+    flex: 1 1 200px;
+  }
+
   .btn { width: auto; }
+}
+
+// Pestañas del modal de plantillas de correo: mismo formato que las del
+// editor de pasos de protocolo-flujo.
+.pestanas {
+  display: flex;
+  gap: 2px;
+  padding: 0 24px;
+  border-bottom: 1px solid $gray-200;
+  overflow-x: auto;
+  flex-shrink: 0;
+
+  &__tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 14px;
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-size: 14px;
+    font-weight: 500;
+    color: $gray-600;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover { color: $primary; }
+
+    &.activa {
+      color: $primary;
+      border-bottom-color: $primary;
+      font-weight: 600;
+    }
+  }
+
+  // Esa pestaña tiene cambios sin guardar.
+  &__aviso {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: $accent-danger;
+  }
 }
 
 // Observación bajo el nombre del establecimiento. Se corta a dos líneas para

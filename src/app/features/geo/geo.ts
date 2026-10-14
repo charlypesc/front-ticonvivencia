@@ -14,7 +14,15 @@ import { Credenciales } from '../../core/models/usuario.model';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 import { GuardarConCmdEnter } from '../../shared/directives/guardar-con-cmd-enter.directive';
 import { AutoAjustarTextarea } from '../../shared/directives/auto-ajustar-textarea.directive';
-import { extraerBorradorCorreo } from '../../shared/utils/borrador-correo';
+import {
+  ESTADO_POR_CORREO,
+  ESTADO_RESPONDIO,
+  aplicarPlantilla,
+  esCorreoEnviado,
+  siguienteCorreo,
+} from '../../shared/utils/correo-contacto';
+import { PlantillaCorreo } from '../../core/models/plantilla-correo.model';
+import { FechaPipe } from '../../shared/pipes/fecha.pipe';
 import {
   completarDominio,
   dominioDe,
@@ -36,7 +44,7 @@ const SIN_TIPO = 'Sin tipo';
 @Component({
   selector: 'app-geo',
   standalone: true,
-  imports: [CommonModule, FormsModule, Puede, CredencialesModal, Buscador, EstadoCorreo, CerrarConEsc, GuardarConCmdEnter, AutoAjustarTextarea],
+  imports: [CommonModule, FormsModule, Puede, CredencialesModal, Buscador, EstadoCorreo, CerrarConEsc, GuardarConCmdEnter, AutoAjustarTextarea, FechaPipe],
   templateUrl: './geo.html',
   styleUrl: './geo.scss',
 })
@@ -603,6 +611,8 @@ export class Geo implements OnInit {
   verDetalleEstablecimiento(item: any) {
     this.detalleEstablecimiento.set(item);
     this.observacionesTexto = item.observaciones ?? '';
+    this.correoElegido.set(siguienteCorreo(this.estadoCorreo(item)));
+    if (!this.plantillas().length) this.cargarPlantillasCorreo();
     this.mostrarDetalleEstablecimiento.set(true);
   }
 
@@ -611,27 +621,121 @@ export class Geo implements OnInit {
   observacionesTexto = '';
   guardandoObservaciones = signal(false);
 
-  // Copiar correo, asunto y cuerpo del borrador de contacto
+  // Correos de contacto: tres plantillas (presentación, recordatorio, nueva
+  // promoción) que se copian desde la ficha con el nombre del colegio puesto.
 
-  /** Qué se copió recién ('correo' | 'asunto' | 'cuerpo'): cambia el ícono a ✓ por 2 s. */
+  readonly esCorreoEnviado = esCorreoEnviado;
+  plantillas = signal<PlantillaCorreo[]>([]);
+  /** Correo (1, 2 o 3) elegido en la ficha; al abrirla se propone el siguiente al último enviado. */
+  correoElegido = signal(1);
+  plantillaElegida = computed(
+    () => this.plantillas().find((p) => p.id_plantilla_correo === this.correoElegido()) ?? null,
+  );
+  /** Qué se copió recién ('direccion' | 'asunto' | 'cuerpo'): cambia el ícono a ✓ por 2 s. */
   copiado = signal('');
 
-  /**
-   * Se lee del texto del cuadro y no de lo guardado: si se retoca el borrador
-   * antes de enviarlo, se copia la versión retocada.
-   */
-  borradorCorreo() {
-    return extraerBorradorCorreo(this.observacionesTexto);
+  cargarPlantillasCorreo(alTerminar?: () => void) {
+    this.api.getPlantillasCorreo().subscribe({
+      next: (lista) => {
+        this.plantillas.set(lista);
+        alTerminar?.();
+      },
+      error: (err) => this.error.set(err.error?.message ?? 'Error al cargar las plantillas de correo'),
+    });
   }
 
-  async copiar(que: string, texto: string) {
+  private async copiar(que: string, texto: string): Promise<boolean> {
     try {
       await navigator.clipboard.writeText(texto);
-      this.copiado.set(que);
-      setTimeout(() => this.copiado() === que && this.copiado.set(''), 2000);
     } catch {
       this.error.set('No se pudo copiar: selecciona el texto y cópialo a mano');
+      return false;
     }
+    this.copiado.set(que);
+    setTimeout(() => this.copiado() === que && this.copiado.set(''), 2000);
+    return true;
+  }
+
+  copiarDireccion(det: any) {
+    this.copiar('direccion', det.correo);
+  }
+
+  copiarAsunto(det: any) {
+    const p = this.plantillaElegida();
+    if (p) this.copiar('asunto', aplicarPlantilla(p.asunto, det.nombre));
+  }
+
+  /**
+   * Copiar el cuerpo es el paso previo a pegarlo en Zoho y enviarlo: deja
+   * marcado "Nº correo enviado" con fecha y hora. Si ya respondió no se
+   * retrocede; si ese correo ya estaba marcado, se renueva la fecha (reenvío).
+   */
+  async copiarCuerpo(det: any) {
+    const p = this.plantillaElegida();
+    if (!p || !(await this.copiar('cuerpo', aplicarPlantilla(p.cuerpo, det.nombre)))) return;
+    if (this.estadoCorreo(det) !== ESTADO_RESPONDIO && this.auth.can(Permiso.EstablecimientoEditar))
+      this.cambiarEstadoCorreo(det, ESTADO_POR_CORREO[this.correoElegido()]);
+  }
+
+  // Modal para editar las tres plantillas
+
+  mostrarPlantillas = signal(false);
+  plantillaEditando = signal(1);
+  guardandoPlantilla = signal(false);
+  errorPlantillas = signal('');
+  /** Lo escrito en cada pestaña sin guardar todavía, por id de plantilla. */
+  borradoresPlantilla: Record<number, { asunto: string; cuerpo: string }> = {};
+
+  abrirPlantillas() {
+    this.errorPlantillas.set('');
+    const abrir = () => {
+      this.borradoresPlantilla = Object.fromEntries(
+        this.plantillas().map((p) => [p.id_plantilla_correo, { asunto: p.asunto, cuerpo: p.cuerpo }]),
+      );
+      this.plantillaEditando.set(1);
+      this.mostrarPlantillas.set(true);
+    };
+    // Se recargan siempre: otra sesión pudo haberlas editado.
+    this.cargarPlantillasCorreo(abrir);
+  }
+
+  plantillaCambiada(id: number) {
+    const p = this.plantillas().find((x) => x.id_plantilla_correo === id);
+    const b = this.borradoresPlantilla[id];
+    return !!p && !!b && (b.asunto.trim() !== p.asunto || b.cuerpo.trim() !== p.cuerpo);
+  }
+
+  guardarPlantilla() {
+    const id = this.plantillaEditando();
+    const b = this.borradoresPlantilla[id];
+    if (!b?.asunto.trim() || !b?.cuerpo.trim()) {
+      this.errorPlantillas.set('El asunto y el cuerpo son obligatorios');
+      return;
+    }
+    this.errorPlantillas.set('');
+    this.guardandoPlantilla.set(true);
+    this.api
+      .actualizarPlantillaCorreo(id, { asunto: b.asunto, cuerpo: b.cuerpo })
+      .subscribe({
+        next: (res) => {
+          this.plantillas.update((lista) => lista.map((p) => (p.id_plantilla_correo === id ? res.plantilla : p)));
+          this.borradoresPlantilla[id] = { asunto: res.plantilla.asunto, cuerpo: res.plantilla.cuerpo };
+          this.success.set(`${res.plantilla.nombre}: plantilla guardada`);
+        },
+        error: (err) => this.errorPlantillas.set(err.error?.message ?? 'Error al guardar la plantilla'),
+      })
+      .add(() => this.guardandoPlantilla.set(false));
+  }
+
+  async cerrarPlantillas() {
+    const sinGuardar = this.plantillas().filter((p) => this.plantillaCambiada(p.id_plantilla_correo));
+    if (sinGuardar.length) {
+      const ok = await this.confirmService.confirmarAccion(
+        `Hay cambios sin guardar en: ${sinGuardar.map((p) => p.nombre).join(', ')}. ¿Cerrar y descartarlos?`,
+      );
+      if (!ok) return;
+    }
+    this.mostrarPlantillas.set(false);
   }
 
   /** Hay algo escrito que todavía no está guardado: habilita el botón. */
@@ -685,7 +789,7 @@ export class Geo implements OnInit {
         next: (res) => {
           this.success.set(`${est.nombre}: ${res.message.toLowerCase()}`);
           // Mismo criterio que observaciones: actualizar la fila en memoria por id.
-          const cambios = { estado_correo: res.estado_correo };
+          const cambios = { estado_correo: res.estado_correo, fecha_estado_correo: res.fecha_estado_correo };
           this.establecimientos.update((lista) =>
             lista.map((e) => (e.id_establecimiento === id ? { ...e, ...cambios } : e)),
           );

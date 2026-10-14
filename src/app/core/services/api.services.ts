@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Credenciales } from '../models/usuario.model';
+import { PlantillaCorreo } from '../models/plantilla-correo.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -447,9 +448,20 @@ export class ApiService {
       { observaciones },
     );
   }
-  /** Estado del correo de contacto: 0 sin enviar, 1 enviado, 2 respondió. */
+  /** Plantillas de los 3 correos de contacto de Geo (1 presentación, 2 recordatorio, 3 nueva promoción). */
+  getPlantillasCorreo() {
+    return this.http.get<PlantillaCorreo[]>(`${this.base}/geo/plantillas-correo`);
+  }
+  actualizarPlantillaCorreo(id: number, datos: { asunto: string; cuerpo: string }) {
+    return this.http.put<{ plantilla: PlantillaCorreo; message: string }>(
+      `${this.base}/geo/plantillas-correo/${id}`,
+      datos,
+    );
+  }
+
+  /** Estado del correo de contacto: 0 sin enviar, 1/3/4 1er/2do/3er correo enviado, 2 respondió. */
   cambiarEstadoCorreoEstablecimientoGeo(id: number, estado_correo: number) {
-    return this.http.patch<{ estado_correo: number; message: string }>(
+    return this.http.patch<{ estado_correo: number; fecha_estado_correo: string | null; message: string }>(
       `${this.base}/geo/establecimientos/${id}/estado-correo`,
       { estado_correo },
     );
