@@ -20,6 +20,8 @@ import {
   dominiosSugeridos,
 } from '../../shared/utils/correo';
 
+const ROL_VENTAS = 'VENTAS';
+
 @Component({
   selector: 'app-usuarios',
   standalone: true,
@@ -76,6 +78,33 @@ export class Usuarios implements OnInit {
   dominios = computed(() =>
     [...new Set([this.dominioEnUso(), ...this.dominiosDeducidos()].filter(Boolean))],
   );
+
+  // ─── Equipo de ventas ───────────────────────────────────────────────────
+  //
+  // El rol VENTAS existe solo en el Colegio MiConvivencia (ver
+  // docs/rol_ventas.sql del back), así que el catálogo lo trae únicamente con
+  // ese colegio activo. Las pestañas y el botón dependen de eso y no de un id
+  // fijo: en cualquier otro colegio la pantalla queda como siempre.
+
+  hayRolVentas = computed(() => this.roles().some((r) => r.codigo === ROL_VENTAS));
+
+  filtro = signal<'todos' | 'ventas' | 'otros'>('todos');
+
+  private esVendedor = (u: any) => (u.roles ?? []).includes(ROL_VENTAS);
+
+  cantidadVentas = computed(() => this.usuarios().filter(this.esVendedor).length);
+
+  usuariosVisibles = computed(() => {
+    const f = this.hayRolVentas() ? this.filtro() : 'todos';
+    if (f === 'todos') return this.usuarios();
+    return this.usuarios().filter((u) => this.esVendedor(u) === (f === 'ventas'));
+  });
+
+  /** El alta normal, con el rol VENTAS ya marcado. */
+  abrirFormVendedor() {
+    this.abrirForm();
+    this.form.roles = [ROL_VENTAS];
+  }
 
   constructor(
     private api: ApiService,

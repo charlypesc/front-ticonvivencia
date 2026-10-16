@@ -7,6 +7,12 @@ import { Usuario, AuthResponse } from '../models/usuario.model';
 import { CODIGO_POR_ID, PermisoId } from '../constants/permisos';
 import { environment } from '../../../environments/environment';
 
+/**
+ * El colegio propio de MiConvivencia. Se identifica por RBD y no por id: el RBD
+ * es el mismo en producción y en cualquier copia de la base.
+ */
+const RBD_COLEGIO_MICONVIVENCIA = '99001-9';
+
 const ID_POR_CODIGO = new Map(
   Object.entries(CODIGO_POR_ID).map(([id, codigo]) => [codigo, Number(id)])
 );
@@ -59,13 +65,15 @@ export class AuthService {
         // El ADMIN llega con id_establecimiento null y el backend le responde 400
         // en todos los módulos operativos hasta que elija uno. Si tuviera que
         // descubrir el selector del navbar por su cuenta, entraría a un sistema
-        // que parece roto: se le preselecciona el primer establecimiento y desde
-        // ahí puede cambiarlo.
+        // que parece roto: se le preselecciona el Colegio MiConvivencia (el
+        // propio, donde están la demo y el equipo de ventas) y desde ahí puede
+        // cambiarlo. Si no estuviera, el primero de la lista.
         switchMap((res) => {
           if (!res.usuario.es_admin || this.establecimientoActivo() !== null) return of(res);
           return this.http.get<any[]>(`${environment.apiUrl}/establecimientos`).pipe(
             tap((ests) => {
-              if (ests.length > 0) this.setEstablecimientoActivo(ests[0].id_establecimiento);
+              const inicial = ests.find((e) => e.rbd === RBD_COLEGIO_MICONVIVENCIA) ?? ests[0];
+              if (inicial) this.setEstablecimientoActivo(inicial.id_establecimiento);
             }),
             // Que falle la preselección no debe impedir iniciar sesión: el
             // selector del navbar sigue estando para elegir a mano.

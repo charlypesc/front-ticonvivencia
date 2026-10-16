@@ -396,7 +396,7 @@
                     [title]="!tieneUsuarios(det)
                         ? 'Sin usuarios: no hay a quién darle acceso'
                         : (accesoBloqueado(det) ? 'Restablecer el acceso de sus usuarios' : 'Suspender el acceso de sus usuarios')"
-                    [appPuede]="Permiso.EstablecimientoEditar"
+                    [appPuede]="Permiso.EstablecimientoCambiarAcceso"
                     (click)="alternarAcceso(det)">
                 </button>
                 @if (accesoBloqueado(det)) {
