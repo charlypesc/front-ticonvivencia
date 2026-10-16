@@ -55,6 +55,22 @@
     text-decoration: none;
     &:hover { text-decoration: underline; }
   }
+
+  // Botón y no link: en el celular se toca con el pulgar.
+  a.btn-llamar {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: $primary;
+    color: $white;
+    font-size: 13px;
+    font-weight: 600;
+
+    i { color: $white; width: auto; font-size: 15px; }
+    &:hover { text-decoration: none; opacity: .9; }
+  }
 }
 
 .fila-clickeable {
