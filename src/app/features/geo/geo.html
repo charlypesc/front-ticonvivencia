@@ -428,10 +428,22 @@
                     <span>{{ det.direccion }}</span>
                 </div>
                 }
-                @if (det.telefono) {
+                <!-- El back arma el número completo (+56 y código de área de la
+                     provincia): el directorio trae casi la mitad sin código.
+                     Si no se pudo reconstruir, se muestra tal cual, sin botón. -->
+                @if (det.telefono_marcable) {
                 <div class="detalle-item">
                     <i class="ti ti-phone"></i>
-                    <a [href]="'tel:' + det.telefono">{{ det.telefono }}</a>
+                    <span>{{ det.telefono_legible }}</span>
+                    <a class="btn-llamar" [href]="'tel:' + det.telefono_marcable"
+                        [title]="'Llamar al ' + det.telefono_legible">
+                        <i class="ti ti-phone-call"></i> Llamar
+                    </a>
+                </div>
+                } @else if (det.telefono) {
+                <div class="detalle-item">
+                    <i class="ti ti-phone"></i>
+                    <span>{{ det.telefono }}</span>
                 </div>
                 }
                 @if (det.correo) {
