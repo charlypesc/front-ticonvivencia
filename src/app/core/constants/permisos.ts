@@ -41,6 +41,8 @@ export const Permiso = {
   EstablecimientoEditar  : 19,
   EstablecimientoEliminar: 20,
   EstablecimientoImportar: 21,
+  // Interruptor de acceso del colegio en Geo; aparte de editar la ficha.
+  EstablecimientoCambiarAcceso: 123,
 
   // sostenedor
   SostenedorVer                   : 22,
@@ -308,4 +310,5 @@ export const CODIGO_POR_ID: Record<number, string> = {
  119: 'denuncia.gestionar',
  120: 'denuncia.ver_identidad',
  121: 'dashboard.ver_resumen',
+ 123: 'establecimiento.cambiar_acceso',
 };
