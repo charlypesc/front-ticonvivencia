@@ -127,7 +127,7 @@
     } @else {
     <p class="text-sm text-muted grafo-ayuda">Haz click en un paso para ver su detalle.</p>
     }
-    <app-grafo-protocolo [nodos]="nodosGrafo()" [aristas]="aristasGrafo()" [acciones]="puedeEditar()"
+    <app-grafo-protocolo [nodos]="nodosGrafo()" [aristas]="aristasGrafo()" [acciones]="puedeEditar()" [grande]="true"
         [seleccionado]="pasoSeleccionadoId()" (seleccionar)="seleccionarDelGrafo($event)"
         (accion)="accionDesdeGrafo($event)" />
 </div>
@@ -582,9 +582,18 @@
                 <div class="form-group">
                     <label class="check">
                         <input type="checkbox" [ngModel]="formPaso.requiere_medida" name="requiere_medida"
-                            (ngModelChange)="alCambiarRequiereMedida($event)" />
+                            [disabled]="!!medidaDelTipo()" (ngModelChange)="alCambiarRequiereMedida($event)" />
                         Este paso ordena una medida
                     </label>
+                    @if (medidaDelTipo()) {
+                    <!-- El tipo ya es la medida: se marca sola y no se puede
+                         desmarcar, porque un paso "Medida cautelar" que no pide
+                         ninguna dejaba la tarjeta de la persona sin formulario. -->
+                    <span class="text-sm text-muted">
+                        <strong>La define el tipo de paso.</strong> La medida se registra en la tarjeta de cada persona,
+                        dentro del mismo paso, sin ir a otra sección.
+                    </span>
+                    }
                     <span class="text-sm text-muted">
                         Igual que la notificación: no detiene el protocolo, se marca en rojo mientras la medida no
                         conste y al cerrar el caso se pide un motivo si todavía falta.
@@ -594,7 +603,8 @@
                 @if (formPaso.requiere_medida) {
                 <div class="form-group">
                     <label>¿Qué medida da por cumplido el paso?</label>
-                    <select [(ngModel)]="formPaso.tipo_medida_requerida" name="tipo_medida_requerida">
+                    <select [(ngModel)]="formPaso.tipo_medida_requerida" name="tipo_medida_requerida"
+                        [disabled]="!!medidaDelTipo()">
                         @for (t of TIPOS_MEDIDA; track t) {
                         <option [value]="t">{{ t | etiqueta:'tipo_medida_requerida' }}</option>
                         }
@@ -645,7 +655,7 @@
                 </button>
                 @if (esEstablecimiento && !rolesDisponibles().length) {
                 <span class="text-sm text-muted">Este establecimiento todavía no tiene usuarios con un rol asignado:
-                    creá los usuarios del colegio para poder poner responsables.</span>
+                    crea los usuarios del colegio para poder poner responsables.</span>
                 }
             </div>
             }

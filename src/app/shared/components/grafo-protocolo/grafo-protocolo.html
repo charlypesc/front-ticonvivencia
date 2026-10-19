@@ -7,6 +7,17 @@
 <!-- Cada punto va envuelto con su etiqueta: sueltos, el salto de línea de la
      leyenda se metía entre medio y dejaba el símbolo colgando al final de una
      línea con su texto en la siguiente. -->
+@if (enEjecucion()) {
+<p class="text-sm text-muted leyenda">
+    <span class="leyenda__item"><span class="punto punto--completado"></span> Completado</span>
+    <span class="leyenda__item"><span class="punto punto--actual"></span> Paso actual</span>
+    <span class="leyenda__item"><span class="punto punto--pendiente"></span> Pendiente</span>
+    <span class="leyenda__item"><span class="punto punto--duro"></span> Vencido</span>
+    <span class="leyenda__item"><span class="punto punto--omitido"></span> Omitido</span>
+    <span class="leyenda__item"><span class="punto punto--rama"></span> Con forma de hexágono, el paso decide
+        entre dos caminos</span>
+</p>
+} @else {
 <p class="text-sm text-muted leyenda">
     <span class="leyenda__item"><span class="punto punto--inicial"></span> Inicial</span>
     <span class="leyenda__item"><span class="punto punto--final"></span> Final</span>
@@ -15,11 +26,12 @@
     <span class="leyenda__item"><span class="punto punto--rama"></span> Con forma de hexágono, el paso decide
         entre dos caminos</span>
 </p>
+}
 <!-- Cómo se lee el diagrama no es una entrada de la leyenda: no le corresponde
      ningún símbolo y va aparte, como frase corrida. -->
 <p class="text-sm text-muted leyenda-nota">
-    El flujo se lee de arriba hacia abajo; las flechas grises punteadas que suben por el costado son
-    retrocesos (por ejemplo, volver a la investigación).
+    El flujo se lee de arriba hacia abajo; las flechas punteadas de color que suben por el costado son
+    retrocesos (por ejemplo, volver a la investigación): cada una tiene su color para seguirla hasta su paso.
 </p>
 
 <div class="lienzo">
@@ -42,6 +54,15 @@
             <!-- La de la guía del rótulo es la más chica de las tres: no señala
                  un paso del flujo, solo de qué carril habla el texto, y con el
                  tamaño de las otras competía con ellas. -->
+            <!-- Una punta por color de retroceso: un <marker> no hereda el color
+                 de la línea que lo usa (context-stroke no lo soportan todos los
+                 navegadores), así que se dibuja uno por color. -->
+            @for (c of COLORES_RETROCESO; track $index) {
+            <marker [attr.id]="'punta-atras-' + $index" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8"
+                markerHeight="8" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" [attr.fill]="c" />
+            </marker>
+            }
             <marker id="punta-guia" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4.5" markerHeight="4.5"
                 orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" class="punta" />
@@ -58,8 +79,8 @@
              zona. -->
         @for (a of dibujadas(); track $index) {
         <path [attr.d]="a.d" class="arista-halo" />
-        <path [attr.d]="a.d" class="arista" [class.arista--atras]="a.atras"
-            [attr.marker-end]="a.atras ? 'url(#punta-atras)' : 'url(#punta)'" />
+        <path [attr.d]="a.d" class="arista" [class.arista--atras]="a.atras" [style.stroke]="colorDe(a)"
+            [attr.marker-end]="a.atras ? (a.color !== undefined ? 'url(#punta-atras-' + a.color + ')' : 'url(#punta-atras)') : 'url(#punta)'" />
         }
 
         <!-- Los rótulos van en una capa aparte, después de TODAS las líneas: en
@@ -69,13 +90,13 @@
         <!-- Los rótulos de los carriles se escriben todos contra el mismo
              borde, así que un hilo fino los ata a la línea de la que hablan. -->
         @if (a.guiaX !== undefined) {
-        <circle [attr.cx]="a.guiaX" [attr.cy]="yGuia(a)" r="2.5" class="guia-punto" />
-        <path [attr.d]="guia(a)" class="guia" marker-end="url(#punta-guia)" />
+        <circle [attr.cx]="a.guiaX" [attr.cy]="yGuia(a)" r="2.5" class="guia-punto" [style.fill]="colorDe(a)" />
+        <path [attr.d]="guia(a)" class="guia" marker-end="url(#punta-guia)" [style.stroke]="colorDe(a)" />
         }
         @for (linea of a.lineas; track $index) {
         <text [attr.x]="a.lx" [attr.y]="yEtiqueta(a, $index)" class="etiqueta"
             [class.etiqueta--atras]="a.atras" [class.etiqueta--inicio]="a.anclaje === 'start'"
-            [class.etiqueta--fin]="a.anclaje === 'end'">{{ linea }}
+            [class.etiqueta--fin]="a.anclaje === 'end'" [style.fill]="colorDe(a)">{{ linea }}
             <title>{{ a.titulo }}</title>
         </text>
         }
@@ -89,21 +110,35 @@
             @if (ramifican().has(n.id)) {
             <polygon [attr.points]="n.puntos" />
             } @else {
-            <rect [attr.x]="n.x" [attr.y]="n.y" [attr.width]="ANCHO" [attr.height]="ALTO()" rx="8" />
+            <rect [attr.x]="n.x" [attr.y]="n.y" [attr.width]="ANCHO()" [attr.height]="ALTO()" rx="8" />
             }
             <title>{{ n.nombre }}</title>
+            @if (grande() && n.estado) {
+            <text [attr.x]="xTexto(n)" [attr.y]="yEstado(n)" class="nodo__estado">{{ textoEstado(n) }}</text>
+            }
             @for (linea of n.lineas; track $index) {
             <text [attr.x]="xTexto(n)" [attr.y]="yNombre(n, $index)" class="nodo__nombre">{{ linea }}</text>
+            }
+            <!-- Lo que pregunta el paso. En los que todavía no llegan se ve igual,
+                 apagado: se sabe qué se va a pedir, pero se responde recién
+                 cuando el paso es el actual. -->
+            @if (n.lineasPreguntas.length) {
+            <line [attr.x1]="xTexto(n)" [attr.x2]="n.x + ANCHO() - (xTexto(n) - n.x)" [attr.y1]="ySeparador(n)"
+                [attr.y2]="ySeparador(n)" class="nodo__raya" />
+            @for (p of n.lineasPreguntas; track $index) {
+            <text [attr.x]="xTexto(n)" [attr.y]="yPregunta(n, $index)" class="nodo__pregunta"
+                [class.nodo__pregunta--respondida]="p.respondida">{{ p.texto }}</text>
+            }
             }
             <text [attr.x]="xTexto(n)" [attr.y]="yMeta(n)" class="nodo__meta">{{ n.meta }}</text>
             @if (n.meta2) {
             <text [attr.x]="xTexto(n)" [attr.y]="yMeta2(n)" class="nodo__meta nodo__meta--alcance">{{ n.meta2 }}</text>
             }
             @if (n.es_paso_inicial) {
-            <circle [attr.cx]="n.x + ANCHO - 14" [attr.cy]="n.y + 16" r="5" class="marca marca--inicial" />
+            <circle [attr.cx]="n.x + ANCHO() - 14" [attr.cy]="n.y + 16" r="5" class="marca marca--inicial" />
             }
             @if (n.es_paso_final) {
-            <circle [attr.cx]="n.x + ANCHO - 14" [attr.cy]="n.y + 16" r="5" class="marca marca--final" />
+            <circle [attr.cx]="n.x + ANCHO() - 14" [attr.cy]="n.y + 16" r="5" class="marca marca--final" />
             }
         </g>
         }

@@ -27,9 +27,9 @@
     }
 
     @if (loading()) {
-    <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
+    <div class="empty-state empty-state--linea"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
     } @else if (medidas().length === 0) {
-    <div class="empty-state">
+    <div class="empty-state empty-state--linea">
         <i class="ti ti-shield-off"></i>
         <p>Sin medidas de protección registradas</p>
     </div>

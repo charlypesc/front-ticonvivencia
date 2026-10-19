@@ -185,8 +185,16 @@ export class AuthService {
     const u = this.usuario();
     if (!u) return false;
     if (u.es_admin) return true;
-    return (u.permisos ?? []).includes(permiso);
+    return (u.permisos ?? []).includes(permiso) || this.permisosDelCaso().includes(permiso);
   }
+
+  /**
+   * Los permisos que da el caso que se está mirando, además de los del rol:
+   * quien está en la lista de acceso de un caso lo trabaja aunque su rol no
+   * tenga esos permisos (ver utils/accesoCaso.js en el back). Los pone la
+   * pantalla del caso al cargarlo y los quita al salir: no valen fuera de él.
+   */
+  permisosDelCaso = signal<number[]>([]);
 
   canAny(...permisos: PermisoId[]): boolean {
     return permisos.some((p) => this.can(p));

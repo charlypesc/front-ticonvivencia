@@ -119,11 +119,11 @@ export class DocumentosInstitucionales implements OnInit {
   guardar() {
     this.error.set('');
     if (!this.form.titulo.trim()) {
-      this.error.set('Indicá el título del documento');
+      this.error.set('Indica el título del documento');
       return;
     }
     if (!this.archivo) {
-      this.error.set('Adjuntá el documento');
+      this.error.set('Adjunta el documento');
       return;
     }
 
@@ -220,7 +220,7 @@ export class DocumentosInstitucionales implements OnInit {
   guardarConstancia() {
     this.error.set('');
     if (!this.formConstancia.id_estudiante || !this.formConstancia.apoderado_nombre.trim()) {
-      this.error.set('Indicá el estudiante y el nombre del apoderado');
+      this.error.set('Indica el estudiante y el nombre del apoderado');
       return;
     }
 

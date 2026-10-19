@@ -145,7 +145,7 @@ export class InformeExpulsion implements OnInit {
   crear() {
     this.error.set('');
     if (!this.formAlta.id_estudiante) {
-      this.error.set('Indicá sobre qué estudiante recae la medida');
+      this.error.set('Indica sobre qué estudiante recae la medida');
       return;
     }
     this.api.createInformeExpulsion(this.idCaso, this.formAlta).subscribe({
@@ -225,7 +225,7 @@ export class InformeExpulsion implements OnInit {
   async decidir() {
     this.error.set('');
     if (!this.formDecision.decision) {
-      this.error.set('Indicá si la medida se aplica o no');
+      this.error.set('Indica si la medida se aplica o no');
       return;
     }
     if (this.contradiceRecomendacion && !this.formDecision.fundamento_director.trim()) {

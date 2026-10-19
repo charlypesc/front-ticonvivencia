@@ -328,7 +328,7 @@ export class MedidasDisciplinarias implements OnInit {
 
   guardarResultado() {
     if (!this.formResultado.resultado.trim()) {
-      this.error.set('Indicá el resultado obtenido');
+      this.error.set('Indica el resultado obtenido');
       return;
     }
     this.api.registrarResultadoMedida(this.resultadoDe().id_medida, this.formResultado).subscribe({
@@ -405,7 +405,7 @@ export class MedidasDisciplinarias implements OnInit {
     this.error.set('');
     if (!this.formCautelar.fundamento.trim()) {
       this.error.set(
-        'Escribí los fundamentos: la ley obliga a notificarlos junto con la decisión de suspender'
+        'Escribe los fundamentos: la ley obliga a notificarlos junto con la decisión de suspender'
       );
       return;
     }
@@ -496,7 +496,7 @@ export class MedidasDisciplinarias implements OnInit {
     this.error.set('');
     const c = this.resolverDe();
     if (c.fecha_reconsideracion && !this.formResolver.resultado_reconsideracion) {
-      this.error.set('Indicá si la reconsideración se acoge o se rechaza');
+      this.error.set('Indica si la reconsideración se acoge o se rechaza');
       return;
     }
     // El pronunciamiento escrito del Consejo puede constar transcrito o como

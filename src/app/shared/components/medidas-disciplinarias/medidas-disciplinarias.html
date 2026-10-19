@@ -49,14 +49,14 @@
     <div class="alert alert--error">
         <i class="ti ti-alert-octagon"></i>
         <span>{{ vencidasSinResolver }} medida(s) que llegaron a su plazo y siguen figurando
-            vigentes. Revisá si corresponde cerrarlas.</span>
+            vigentes. Revisa si corresponde cerrarlas.</span>
     </div>
     }
 
     @if (loading()) {
-    <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
+    <div class="empty-state empty-state--linea"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
     } @else if (medidas().length === 0) {
-    <div class="empty-state">
+    <div class="empty-state empty-state--linea">
         <i class="ti ti-gavel"></i>
         <p>Sin medidas disciplinarias registradas</p>
     </div>
@@ -147,9 +147,9 @@
     }
 
     @if (cargandoCautelares()) {
-    <div class="empty-state"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
+    <div class="empty-state empty-state--linea"><i class="ti ti-loader-2 spin"></i><p>Cargando...</p></div>
     } @else if (cautelares().length === 0) {
-    <div class="empty-state">
+    <div class="empty-state empty-state--linea">
         <i class="ti ti-hourglass-off"></i>
         <p>Sin suspensiones cautelares en este caso</p>
     </div>
@@ -366,7 +366,7 @@
             <div class="form-group">
                 <label>Tipo de medida</label>
                 <select [(ngModel)]="form.tipo_medida" name="tipo_medida">
-                    <option value="">Seleccioná...</option>
+                    <option value="">Selecciona...</option>
                     @for (t of TIPOS_MEDIDA; track t) {
                     <option [value]="t">{{ t | etiqueta:'tipo_medida_disciplinaria' }}</option>
                     }
@@ -407,7 +407,7 @@
                 </label>
                 @if (form.es_prorroga) {
                 <select [(ngModel)]="form.id_medida_prorrogada" name="id_medida_prorrogada">
-                    <option [ngValue]="null">Seleccioná la medida original...</option>
+                    <option [ngValue]="null">Selecciona la medida original...</option>
                     @for (m of medidasProrrogables; track m.id_medida) {
                     <option [ngValue]="m.id_medida">
                         {{ m.tipo_medida | etiqueta:'tipo_medida_disciplinaria' }} — {{ m.fecha_aplicacion | fecha }}
@@ -658,7 +658,7 @@
                 <label>Resultado de la reconsideración *</label>
                 <select [(ngModel)]="formResolver.resultado_reconsideracion"
                     name="resultado_reconsideracion">
-                    <option value="">Seleccioná...</option>
+                    <option value="">Selecciona...</option>
                     <option value="acogida">Acogida</option>
                     <option value="rechazada">Rechazada</option>
                 </select>

@@ -196,7 +196,7 @@ export class Cursos implements OnInit {
         if (r.estudiantes_con_registros > 0) {
           this.error.set(
             `No se puede eliminar: ${r.estudiantes_con_registros} estudiante(s) están asociados a ` +
-              `registros de convivencia. Eliminá primero esos registros.`,
+              `registros de convivencia. Elimina primero esos registros.`,
           );
           return;
         }

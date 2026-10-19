@@ -41,7 +41,7 @@ import { ImportacionService } from '../../../core/services/importacion.service';
               </div>
               <small>{{ i.procesadas }} de {{ i.total }} ({{ pct(i) }}%)</small>
               <small class="prog__nota">
-                Podés seguir navegando: el proceso continúa aunque cambies de página.
+                Puedes seguir navegando: el proceso continúa aunque cambies de página.
               </small>
             } @else {
               <small>{{ i.mensaje }}</small>

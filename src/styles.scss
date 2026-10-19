@@ -482,6 +482,19 @@ table {
   color: $gray-400;
   i { font-size: 2rem; display: block; margin-bottom: 8px; }
   p { font-size: 14px; }
+
+  // Una línea, para un vacío que es dato y no la pantalla entera ("sin medidas
+  // registradas" dentro de la tarjeta de un caso): el bloque grande empujaba lo
+  // importante fuera de la vista.
+  &--linea {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 6px 0 2px;
+    i { font-size: 1.1rem; display: inline; margin: 0; }
+    p { font-size: 13px; }
+  }
 }
 
 .form-row {

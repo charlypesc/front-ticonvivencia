@@ -14,12 +14,12 @@
     }
 </div>
 
-<!-- Casi todos estos avisos hablan del paso en curso ("no tenés el rol de
+<!-- Casi todos estos avisos hablan del paso en curso ("no tienes el rol de
      ejecutor", "falta el motivo para omitir"), y acá arriba quedaban a una
      pantalla de distancia del botón que los provoca. Cuando hay un paso en
      curso se dibujan dentro de su tarjeta; si no lo hay, este sigue siendo el
      único lugar donde mostrarlos. -->
-@if (!activo() || !pasoActual()) {
+@if (!activo() || !pasoActual() || (enDiagrama() && !mostrarPasoModal())) {
 <ng-container *ngTemplateOutlet="avisos" />
 }
 
@@ -33,29 +33,43 @@
 </div>
 } @else {
 
-<div class="card mb-4">
+<!-- Una franja y no una tarjeta con un dato por columna: son datos de consulta,
+     no lo que se viene a hacer, y no deberían empujar la tarjeta del paso. -->
+<div class="card card--compacta mb-4">
     <div class="resumen">
-        <div><span class="text-sm text-muted">N° Folio</span><strong>{{ caso().codigo }}</strong></div>
-        <div><span class="text-sm text-muted">Registro</span><strong>{{ caso().registro_codigo ?? caso().id_registro }}</strong></div>
-        <div><span class="text-sm text-muted">Activado</span><strong>{{ caso().fecha_activacion | fecha:true }}</strong></div>
+        <div><span>Folio</span><strong>{{ caso().codigo }}</strong></div>
+        <div><span>Registro</span><strong>{{ caso().registro_codigo ?? caso().id_registro }}</strong></div>
+        <div><span>Activado</span><strong>{{ caso().fecha_activacion | fecha:true }}</strong></div>
         @if (caso().fecha_cierre) {
-        <div><span class="text-sm text-muted">Cerrado</span><strong>{{ caso().fecha_cierre | fecha:true
-                }}</strong></div>
+        <div><span>Cerrado</span><strong>{{ caso().fecha_cierre | fecha:true }}</strong></div>
         }
-        <div><span class="text-sm text-muted">Avance</span><strong>{{ avance }}</strong></div>
+        <!-- Quien ve solo su tarjeta no tiene con qué contar el avance: se le
+             dice en qué paso va el caso, sin abrirle el contenido. -->
+        @if (verProcesos()) {
+        <div><span>Avance</span><strong>{{ avance }}</strong></div>
+        } @else if (activo() && caso().paso_en_curso; as en) {
+        <div><span>El caso va en</span><strong>Paso {{ en.numero }} de {{ totalPasos() }}</strong></div>
+        }
         @if (caso().version_protocolo) {
         <!-- La versión con la que se activó el caso: es lo que se cita en el
              expediente, y no cambia aunque después se edite el protocolo. -->
-        <div><span class="text-sm text-muted">Versión</span><strong>v{{ caso().version_protocolo }}</strong></div>
+        <div><span>Versión</span><strong>v{{ caso().version_protocolo }}</strong></div>
         }
         @if (caso().fecha_limite_investigacion) {
         <div>
-            <span class="text-sm text-muted" title="Plazo legal, contado desde el registro">Plazo de investigación</span>
+            <span title="Plazo legal, contado desde el registro">Plazo de investigación</span>
             <strong>{{ caso().fecha_limite_investigacion | fecha }}</strong>
         </div>
         }
         <div class="acciones">
+            <!-- Quién ve el caso completo es decisión de cada caso, no del rol. -->
+            @if (caso().puede_administrar_acceso) {
+            <button class="btn btn--outline btn--sm" style="width:auto" (click)="abrirAcceso()">
+                <i class="ti ti-eye-check"></i> ¿Quién puede ver este protocolo completo?
+            </button>
+            }
             <button class="btn btn--outline btn--sm" style="width:auto" [appPuede]="Permiso.ExpedienteExportar"
+                [appPuedeSi]="verProcesos()" appPuedeMotivo="Solo quien ve el caso completo exporta su expediente"
                 (click)="abrirExportar()">
                 <i class="ti ti-file-export"></i> Expediente
             </button>
@@ -75,7 +89,7 @@
 <!-- El hecho y contra quién se instruye. Van juntos y antes que los pasos: el
      caso se resuelve leyendo los antecedentes, no el número del registro, y son
      los involucrados los que deciden cuántas veces se cumple cada paso. -->
-<div class="card mb-4">
+<div class="card card--caso mb-4">
     @if (registro(); as r) {
     <div class="registro">
         <div class="registro__cabecera">
@@ -123,7 +137,7 @@
     </div>
     }
 
-    <div class="card__header">
+    <div class="card__header involucrados__header">
         <h3><i class="ti ti-users-group"></i> Involucrados</h3>
         <div class="flex gap-2 items-center">
             @if (notificacionesPendientes() > 0) {
@@ -167,149 +181,38 @@
     }
 </div>
 
-<!-- Con el caso cerrado o anulado no hay paso en curso ni nada que hacer en el
-     procedimiento: ahí las medidas son el contenido principal y van arriba. -->
-@if (!activo()) {
-<ng-container *ngTemplateOutlet="medidas" />
-}
-
 <!-- Paso en curso: lo primero que se ve, porque es lo único accionable -->
 @if (activo() && pasoActual(); as paso) {
+<!-- Con el diagrama a la vista, el paso actual se trabaja desde su caja (se
+     abre en un modal): la tarjeta suelta repetiría lo mismo arriba del dibujo. -->
+@if (!enDiagrama()) {
 <div id="paso-actual" class="card paso-actual mb-4" [class.paso-actual--vencido]="paso.estado === 'vencido'">
-    <div class="card__header">
-        <h3><i class="ti" [ngClass]="icono(paso)"></i> {{ paso.nombre }}</h3>
-        <div class="flex gap-2 items-center">
-            <span class="badge badge--leve">{{ paso.tipo_paso | etiqueta:'tipo_paso' }}</span>
-            @if (paso.fecha_limite) {
-            <span class="badge" [class.badge--gravísima]="paso.estado === 'vencido'"
-                [class.badge--pendiente]="paso.estado !== 'vencido'">
-                <i class="ti ti-clock"></i>
-                {{ paso.estado === 'vencido' ? 'Venció' : 'Vence' }} {{ paso.fecha_limite | fecha:true }}
-            </span>
-            }
-        </div>
-    </div>
-
-    @if (paso.descripcion) { <p class="text-muted">{{ paso.descripcion }}</p> }
-
-    <p class="text-sm text-muted">
-        <i class="ti ti-users"></i> Ejecuta: {{ rolesDe(paso, 'ejecutor') || '—' }}
-        @if (rolesDe(paso, 'aprobador')) { · Aprueba: {{ rolesDe(paso, 'aprobador') }} }
-        @if (paso.responsable_nombre || paso.responsable_correo) { · Responsable: {{ paso.responsable_nombre ?? paso.responsable_correo }} }
-    </p>
-
-    <!-- El paso ordena una medida y todavía no consta ninguna. No traba el
-         avance (misma decisión que la constancia de notificación): se dice acá
-         y el cierre lo vuelve a pedir. -->
-    @if (paso.medida_pendiente) {
-    <div class="alert alert--warning">
-        <i class="ti ti-shield-exclamation"></i>
-        <span>
-            @if (paso.tipo_medida_requerida === 'disciplinaria') {
-            Este paso resuelve el caso. En la tarjeta de cada señalado, más abajo, marca
-            <strong>Cumplida</strong> e indica la medida que se le aplicó.
-            } @else if (paso.tipo_medida_requerida === 'proteccion') {
-            Este paso ordena proteger a la persona afectada. En la tarjeta de cada afectado, más
-            abajo, marca <strong>Cumplida</strong> y elige la medida de protección que se le aplicó.
-            } @else if (paso.tipo_medida_requerida === 'cautelar') {
-            Este paso ordena suspender cautelarmente al señalado y todavía no hay ninguna
-            suspensión cautelar registrada.
-            } @else {
-            Este paso ordena una medida y todavía no hay ninguna registrada.
-            }
-        </span>
-        <!-- Protección y disciplinaria no tienen botón: se aplican en la
-             tarjeta de cada afectado / señalado, que es la vía oficial. -->
-        @if (activo() && paso.tipo_medida_requerida === 'cautelar') {
-        <button type="button" class="btn btn-sm btn-primary" (click)="registrarMedidaDe(paso)">
-            <i class="ti ti-plus"></i> Registrar medida
-        </button>
-        }
-    </div>
-    }
-
-    <ng-container *ngTemplateOutlet="gestiones; context: { $implicit: paso, editable: true }" />
-
-    @for (campo of camposEnPantalla(); track campo.codigo) {
-    <div class="form-group">
-        <label>{{ campo.etiqueta }} @if (campo.es_obligatorio) {<span class="req">*</span>}</label>
-        @if (campo.tipo_campo === 'seleccion') {
-        <select [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo">
-            <option value="" disabled>Seleccione...</option>
-            <!-- El value va crudo: es lo que evalúan las condiciones del flujo. -->
-            @for (o of opciones(campo); track o) { <option [value]="o">{{ o | etiqueta:'opcion_campo' }}</option> }
-        </select>
-        } @else if (campo.tipo_campo === 'fecha') {
-        <input type="date" [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo" />
-        } @else if (campo.tipo_campo === 'numero') {
-        <input type="number" [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo" />
-        } @else {
-        <input type="text" [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo" />
-        }
-    </div>
-    }
-
-    <!-- El motivo de omitir, aprobar, rechazar, cerrar o anular ya no vive acá:
-         lo pide el propio modal de confirmación de cada acción. Como campo fijo
-         se llenaba creyendo que se guardaba con el paso, y 'Completar paso'
-         nunca lo envió: lo escrito se perdía sin aviso. -->
-
-
-    <!-- Pegado a los botones: el aviso explica por qué la acción de abajo no va
-         a salir, así que tiene que leerse sin sacar la vista del botón. -->
-    <ng-container *ngTemplateOutlet="avisos" />
-
-    <!-- appPuedeSi con puede_ejecutar/puede_aprobar: hasta acá el botón salía
-         solo con el permiso, sin mirar de qué rol es el paso, así que a quien
-         no le tocaba lo apretaba y recibía un 403 seco. Ahora el botón queda
-         deshabilitado con el motivo a la vista, y sigue habilitado —con aviso
-         al apretarlo— para quien puede tomar pasos ajenos. -->
-    <div class="acciones-paso">
-        @if (esPasoDeAprobacion(paso.tipo_paso)) {
-        <button class="btn btn--primary" style="width:auto" [disabled]="guardando()"
-            [appPuede]="Permiso.ProtocoloActivadoAprobarPaso" [appPuedeSi]="!!paso.puede_aprobar"
-            [appPuedeMotivo]="motivoPasoAjeno(paso, 'aprobador')" (click)="aprobar(true)">
-            <i class="ti ti-check"></i> Aprobar
-        </button>
-        <button class="btn btn--outline" style="width:auto" [disabled]="guardando()"
-            [appPuede]="Permiso.ProtocoloActivadoAprobarPaso" [appPuedeSi]="!!paso.puede_aprobar"
-            [appPuedeMotivo]="motivoPasoAjeno(paso, 'aprobador')" (click)="aprobar(false)">
-            <i class="ti ti-x"></i> Rechazar
-        </button>
-        } @else {
-        <button class="btn btn--primary" style="width:auto" [disabled]="guardando()"
-            [appPuede]="Permiso.ProtocoloActivadoCompletarPaso" [appPuedeSi]="!!paso.puede_ejecutar"
-            [appPuedeMotivo]="motivoPasoAjeno(paso, 'ejecutor')" (click)="completar()">
-            <i class="ti ti-check"></i> Completar paso
-        </button>
-        }
-        <button class="btn btn--outline" style="width:auto" [disabled]="guardando()"
-            [appPuede]="Permiso.ProtocoloActivadoOmitirPaso" [appPuedeSi]="!!paso.puede_ejecutar"
-            [appPuedeMotivo]="motivoPasoAjeno(paso, 'ejecutor')" (click)="omitir()">
-            <i class="ti ti-player-skip-forward"></i> Omitir
-        </button>
-        <button class="btn btn--outline" style="width:auto" [appPuede]="Permiso.ProtocoloActivadoReasignarPaso"
-            (click)="mostrarReasignar.set(true)">
-            <i class="ti ti-user-share"></i> Reasignar
-        </button>
-    </div>
+    <ng-container *ngTemplateOutlet="cuerpoPaso; context: { $implicit: paso }" />
 </div>
+}
 } @else if (activo()) {
-<div class="card mb-4">
-    <div class="empty-state"><i class="ti ti-hourglass"></i>
-        <p>No hay ningún paso en curso.</p>
-    </div>
+<!-- Sin paso en curso a la vista. Para quien ve solo sus tarjetas casi siempre
+     es que el caso va en un paso ajeno: se le dice cuál, sin abrirlo. -->
+<div class="card card--compacta mb-4 sin-turno">
+    <i class="ti ti-hourglass"></i>
+    @if (!verProcesos() && caso().paso_en_curso; as en) {
+    <p>
+        El caso va en el <strong>paso {{ en.numero }} de {{ totalPasos() }}</strong>. Por ahora no tienes una
+        tarea pendiente aquí: te llegará una notificación cuando te asignen una.
+    </p>
+    } @else {
+    <p>No hay ningún paso en curso.</p>
+    }
 </div>
 }
 
-<!-- Línea de tiempo -->
+<!-- El recorrido completo: solo para quien tiene protocolo_activado.ver_procesos
+     (el coordinador). Al resto el backend ni siquiera le manda los pasos ajenos. -->
+@if (verProcesos()) {
 <div class="card mb-4">
-    <div class="card__header">
+    <div class="card__header recorrido__header">
         <h3>Pasos del protocolo</h3>
-        <div class="flex gap-2">
-            <button class="btn btn--outline btn--sm" style="width:auto" (click)="mostrarGrafo.set(!mostrarGrafo())">
-                <i class="ti ti-sitemap"></i> {{ mostrarGrafo() ? 'Ver lista' : 'Ver diagrama' }}
-            </button>
+        <div class="flex gap-2 recorrido__acciones">
             <button class="btn btn--outline btn--sm" style="width:auto"
                 [appPuede]="Permiso.ProtocoloActivadoVerBitacora" (click)="verBitacora()">
                 <i class="ti ti-history"></i> Bitácora
@@ -326,62 +229,70 @@
         </div>
     </div>
 
-    @if (mostrarGrafo()) {
+    <!-- Barra por pasos: un segmento por paso del recorrido, coloreado por
+         estado. Se lee de un vistazo dónde va el caso y cuánto falta, y sigue
+         entrando en un celular con 13 pasos, cosa que un stepper de círculos
+         numerados no logra. -->
+    <div class="stepper">
+        <div class="stepper__etiqueta">
+            @if (pasoActual(); as pa) {
+            <strong>{{ numeroDe(pa) }}</strong><span>{{ pa.nombre }}</span>
+            } @else {
+            <strong>{{ avance }}</strong>
+            }
+        </div>
+        <ol class="stepper__barra">
+            @for (p of pasosVisibles(); track p.id_activado_paso) {
+            <li>
+                <button type="button" class="stepper__seg" [attr.data-estado]="p.estado"
+                    [class.stepper__seg--actual]="p.id_activado_paso === pasoActual()?.id_activado_paso"
+                    [attr.aria-label]="numeroDe(p) + ': ' + p.nombre"
+                    [title]="p.numero + '. ' + p.nombre + ' — ' + (p.estado | etiqueta:'estado_paso')"
+                    (click)="abrirDetalle(p)"></button>
+            </li>
+            }
+        </ol>
+    </div>
+
     <!-- Encabeza el diagrama, junto a la leyenda del componente: se lee qué se
          puede hacer antes de mirarlo, no después de bajar hasta el último paso. -->
-    <p class="text-sm text-muted grafo-ayuda">Haz click en un paso para ver su detalle.</p>
-    <app-grafo-protocolo [nodos]="nodosGrafo()" [aristas]="aristasGrafo()"
-        [seleccionado]="pasoSeleccionadoId()" (seleccionar)="seleccionarDelGrafo($event)" />
-    } @else {
-    <ol class="timeline">
-        @for (p of pasosVisibles(); track p.id_activado_paso) {
-        <li class="timeline__item" [attr.data-estado]="p.estado">
-            <span class="timeline__icono"><i class="ti" [ngClass]="icono(p)"></i></span>
-            <div class="timeline__cuerpo">
-                <div class="flex gap-2 items-center justify-between">
-                    <strong>{{ p.nombre }}</strong>
-                    <span class="badge badge--{{ p.estado === 'completado' ? 'validado' : p.estado === 'vencido' ?
-                        'gravísima' : p.estado === 'omitido' ? 'confidencial' : 'pendiente' }}">
-                        {{ p.estado | etiqueta:'estado_paso' }}
-                    </span>
-                </div>
-                <p class="text-sm text-muted">
-                    {{ rolesDe(p, 'ejecutor') || '—' }}
-                    @if (p.fecha_completado) { · completado {{ p.fecha_completado | fecha:true }} }
-                    @else if (p.fecha_limite) { · vence {{ p.fecha_limite | fecha:true }} }
-                </p>
-                @if (p.medida_pendiente) {
-                <p class="text-sm" style="color:var(--color-alerta,#b91c1c)">
-                    <i class="ti ti-shield-exclamation"></i> Sin medida registrada
-                </p>
-                }
-                @if (respuestas(p).length) {
-                <ul class="respuestas">
-                    @for (r of respuestas(p); track r.etiqueta) {
-                    <li><span class="text-muted">{{ r.etiqueta }}:</span> <strong>{{ r.valor }}</strong></li>
-                    }
-                </ul>
-                }
-                <ng-container *ngTemplateOutlet="gestiones; context: { $implicit: p }" />
-            </div>
-        </li>
+    <div class="grafo-ayuda">
+        <p class="text-sm text-muted">
+            @if (activo() && pasoActual()) {
+            Haz click en el <strong>paso actual</strong> para responder sus preguntas y completarlo. Los demás
+            muestran lo que preguntan, pero se responden recién cuando les toca.
+            } @else {
+            Haz click en un paso para ver lo que se respondió.
+            }
+        </p>
+        @if (activo() && pasoActual()) {
+        <button class="btn btn--primary btn--sm" style="width:auto" (click)="abrirPasoActual()">
+            <i class="ti ti-player-play"></i> Trabajar el paso actual
+        </button>
         }
-    </ol>
-    }
+    </div>
+    <app-grafo-protocolo [nodos]="nodosGrafo()" [aristas]="aristasGrafo()" [grande]="true"
+        [seleccionado]="pasoSeleccionadoId()" (seleccionar)="seleccionarDelGrafo($event)" />
 </div>
-
-<!-- Con el proceso en curso las medidas van acá abajo: lo accionable es el paso
-     actual, y dejarlas arriba empujaba fuera de la pantalla justo lo que hay
-     que resolver. Siguen corriendo en paralelo al procedimiento, solo cambia
-     dónde se leen. -->
-@if (activo()) {
-<ng-container *ngTemplateOutlet="medidas" />
+} @else if (otrasTarjetas().length) {
+<!-- Sin el permiso: solo las tarjetas propias que no son la del paso en curso
+     (las ya hechas, o una que le asignaron y todavía no llega). -->
+<div class="card mb-4">
+    <div class="card__header">
+        <h3>Tus tareas en este caso</h3>
+    </div>
+    <div class="tarjetas">
+        @for (p of otrasTarjetas(); track p.id_activado_paso) {
+        <ng-container *ngTemplateOutlet="tarjeta; context: { $implicit: p }" />
+        }
+    </div>
+</div>
 }
 
 <div class="card">
     <div class="form-group">
         <label>Agregar una nota a la bitácora</label>
-        <textarea rows="2" [(ngModel)]="nota" name="nota"
+        <textarea appAutoAjustar rows="2" [(ngModel)]="nota" name="nota"
             placeholder="Queda registrada con tu nombre y la fecha"></textarea>
     </div>
     <button class="btn btn--outline btn--sm" style="width:auto" [appPuede]="Permiso.ProtocoloActivadoEditar"
@@ -395,15 +306,15 @@
 @if (mostrarDetalle()) {
 @if (pasoSeleccionado(); as p) {
 <div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarDetalle.set(false) : null">
-    <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal" [class.modal--lg]="!!p.relatos_personas || !!p.medidas_personas" (click)="$event.stopPropagation()">
         <div class="modal__header">
             <h3><i class="ti ti-git-branch"></i> {{ p.nombre }}</h3>
             <button class="modal__close" (click)="mostrarDetalle.set(false)"><i class="ti ti-x"></i></button>
         </div>
         <div class="modal__body detalle-paso">
             <div class="flex gap-2 items-center">
-                <span class="badge badge--{{ p.estado === 'completado' ? 'validado' : p.estado === 'vencido' ?
-                    'gravísima' : p.estado === 'omitido' ? 'confidencial' : 'pendiente' }}">
+                @if (p.numero) { <strong class="text-sm">{{ numeroDe(p) }}</strong> }
+                <span class="badge badge--{{ claseEstado(p.estado) }}">
                     {{ p.estado | etiqueta:'estado_paso' }}
                 </span>
                 <span class="badge badge--leve">{{ p.tipo_paso | etiqueta:'tipo_paso' }}</span>
@@ -411,6 +322,9 @@
             @if (p.descripcion) { <p class="text-sm">{{ p.descripcion }}</p> }
 
             <p class="text-sm">
+                @if (p.responsable_nombre || p.responsable_correo) {
+                <span class="text-muted">Asignado a:</span> {{ p.responsable_nombre ?? p.responsable_correo }}<br />
+                }
                 <span class="text-muted">Ejecuta:</span> {{ rolesDe(p, 'ejecutor') || '—' }}
                 @if (rolesDe(p, 'aprobador')) { <br /><span class="text-muted">Aprueba:</span> {{ rolesDe(p, 'aprobador') }} }
                 @if (rolesDe(p, 'notificado')) { <br /><span class="text-muted">Se notifica a:</span> {{ rolesDe(p, 'notificado') }} }
@@ -422,6 +336,17 @@
                 @else { <i class="ti ti-clock"></i> Sin plazo }
             </p>
 
+            <!-- Una acogida de relatos ya completada: se leen los relatos y el
+                 coordinador puede seguir agregando mientras el caso esté activo. -->
+            @if (p.relatos_personas && p.estado !== 'pendiente') {
+            <ng-container *ngTemplateOutlet="avisos" />
+            <ng-container *ngTemplateOutlet="relatos; context: { $implicit: p }" />
+            }
+            @if (p.medidas_personas && p.estado !== 'pendiente') {
+            <ng-container *ngTemplateOutlet="avisos" />
+            <ng-container *ngTemplateOutlet="medidasPaso; context: { $implicit: p }" />
+            }
+
             @if (respuestas(p).length) {
             <p class="text-sm text-muted mt-4">Lo que se respondió</p>
             <ul class="respuestas">
@@ -429,19 +354,170 @@
                 <li><span class="text-muted">{{ r.etiqueta }}:</span> <strong>{{ r.valor }}</strong></li>
                 }
             </ul>
-            } @else if ((p.campos ?? []).length) {
-            <p class="text-sm text-muted mt-4">Todavía sin responder:</p>
-            <ul class="respuestas">
-                @for (c of p.campos; track c.codigo) { <li>{{ c.etiqueta }}</li> }
-            </ul>
+            } @else if (camposDe(p).length) {
+            <!-- Las preguntas de un paso que todavía no llega se muestran como el
+                 formulario que van a ser, pero bloqueadas: se sabe qué se va a
+                 pedir sin poder responderlo antes de tiempo — el paso anterior
+                 todavía puede cambiar el camino. -->
+            <p class="text-sm text-muted mt-4">
+                <i class="ti ti-lock"></i>
+                {{ p.estado === 'pendiente' ? 'Se responde cuando este sea el paso actual.' : 'Sin respuestas registradas.' }}
+            </p>
+            <div class="preguntas-bloqueadas">
+                @for (c of camposDe(p); track c.codigo) {
+                <div class="form-group">
+                    <label>{{ c.etiqueta }} @if (c.es_obligatorio) {<span class="req">*</span>}</label>
+                    @if (c.tipo_campo === 'seleccion') {
+                    <select disabled>
+                        <option value="">Seleccione...</option>
+                        @for (o of opciones(c); track o) { <option [value]="o">{{ o | etiqueta:'opcion_campo' }}</option> }
+                    </select>
+                    } @else if (c.tipo_campo === 'fecha') {
+                    <input type="date" disabled />
+                    } @else if (c.tipo_campo === 'numero') {
+                    <input type="number" disabled />
+                    } @else {
+                    <input type="text" disabled />
+                    }
+                </div>
+                }
+            </div>
             }
         </div>
         <div class="modal__footer">
             <button class="btn btn--outline" (click)="mostrarDetalle.set(false)">Cerrar</button>
+            @if (asignable(p)) {
+            <button class="btn btn--primary" style="width:auto" [appPuede]="Permiso.ProtocoloActivadoReasignarPaso"
+                (click)="mostrarDetalle.set(false); abrirReasignar(p)">
+                <i class="ti ti-user-share"></i> Asignar
+            </button>
+            }
         </div>
     </div>
 </div>
 }
+}
+
+<!-- El paso actual abierto desde su caja del diagrama: el mismo formulario que la
+     tarjeta, con sus gestiones por persona y sus botones. -->
+@if (mostrarPasoModal() && activo()) {
+@if (pasoActual(); as paso) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarPasoModal.set(false) : null">
+    <div class="modal modal--lg paso-modal" [class.paso-actual--vencido]="paso.estado === 'vencido'"
+        (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-player-play"></i> Paso actual</h3>
+            <button class="modal__close" (click)="mostrarPasoModal.set(false)"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal__body paso-actual">
+            <ng-container *ngTemplateOutlet="cuerpoPaso; context: { $implicit: paso }" />
+        </div>
+    </div>
+</div>
+}
+}
+
+<!-- ¿Quién puede ver este protocolo completo? -->
+@if (mostrarAcceso()) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarAcceso.set(false) : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-eye-check"></i> ¿Quién puede ver este protocolo completo?</h3>
+            <button class="modal__close" (click)="mostrarAcceso.set(false)"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal__body">
+            <p class="text-sm text-muted">
+                Ven todos sus pasos, relatos y el expediente. Por la confidencialidad de la investigación (Ley 21.809,
+                art. 16 E letra g), cada caso lo ve solo quien lo necesita.
+                @if (acceso()?.roles_supervision?.length) {
+                Además lo ven siempre, sin estar en la lista: <strong>{{ acceso()!.roles_supervision.join(', ') }}</strong>.
+                }
+                A quien se le encarga una tarjeta o un relato ve solo eso.
+            </p>
+            @if (!acceso()) {
+            <div class="empty-state"><i class="ti ti-loader-2 spin"></i></div>
+            } @else {
+            <ul class="acceso">
+                @for (u of acceso()!.usuarios; track u.id_usuario) {
+                <li>
+                    <i class="ti ti-user"></i>
+                    <span class="acceso__nombre">
+                        <strong>{{ u.nombre || u.correo }}</strong>
+                        <span class="text-sm text-muted">
+                            {{ u.es_quien_activo ? 'Activó el caso' : 'Agregado' }} el {{ u.fecha | fecha:true }}
+                            @if (u.otorgado_por_nombre || u.otorgado_por_correo) { por {{ u.otorgado_por_nombre || u.otorgado_por_correo }} }
+                        </span>
+                    </span>
+                    <button class="btn-icon btn-icon--danger" title="Retirar el acceso" (click)="retirarAcceso(u)">
+                        <i class="ti ti-trash"></i>
+                    </button>
+                </li>
+                } @empty {
+                <li class="text-sm text-muted">Nadie más que los roles de supervisión.</li>
+                }
+            </ul>
+            <div class="form-group mt-4">
+                <label>Dar acceso a</label>
+                <div class="fila-acceso">
+                    <select [(ngModel)]="accesoNuevo" name="accesoNuevo">
+                        <option [ngValue]="null" disabled>Seleccione un funcionario...</option>
+                        @for (u of usuariosSinAcceso(); track u.id_usuario) {
+                        <option [ngValue]="u.id_usuario">{{ u.nombre ? u.nombre + ' — ' + u.correo : u.correo }}</option>
+                        }
+                    </select>
+                    <button class="btn btn--primary btn--sm" style="width:auto" [disabled]="!accesoNuevo || guardandoAcceso()"
+                        (click)="otorgarAcceso()">
+                        <i class="ti ti-plus"></i> Dar acceso
+                    </button>
+                </div>
+            </div>
+            }
+        </div>
+        <div class="modal__footer">
+            <button class="btn btn--outline" (click)="mostrarAcceso.set(false)">Cerrar</button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Encargar el relato de una persona -->
+@if (relatoAEncargar(); as e) {
+<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? relatoAEncargar.set(null) : null">
+    <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal__header">
+            <h3><i class="ti ti-user-share"></i> Encargar relato</h3>
+            <button class="modal__close" (click)="relatoAEncargar.set(null)"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal__body">
+            <p class="asignar__paso">
+                <span class="text-sm text-muted">{{ e.paso.nombre }}</span>
+                <strong>Relato de {{ e.persona.nombre }}</strong>
+            </p>
+            <p class="text-sm text-muted">
+                Le llega una notificación y en Protocolos activados ve <strong>solo este relato</strong>: no los demás
+                relatos ni los otros pasos del caso. Puede acogerlo y corregirlo.
+            </p>
+            <div class="form-group">
+                <label>Funcionario</label>
+                <select [(ngModel)]="encargarA" name="encargarA">
+                    <option [ngValue]="null" disabled>Seleccione un funcionario...</option>
+                    @for (u of usuarios(); track u.id_usuario) {
+                    <option [ngValue]="u.id_usuario">{{ u.nombre ? u.nombre + ' — ' + u.correo : u.correo }}</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="modal__footer">
+            @if (e.persona.id_usuario_responsable) {
+            <button class="btn btn--outline" style="margin-right:auto" (click)="encargarRelato(true)">Quitar encargo</button>
+            }
+            <button class="btn btn--outline" (click)="relatoAEncargar.set(null)">Cancelar</button>
+            <button class="btn btn--primary" style="width:auto" [disabled]="!encargarA" (click)="encargarRelato()">
+                <i class="ti ti-device-floppy"></i> Encargar
+            </button>
+        </div>
+    </div>
+</div>
 }
 
 <!-- Bitácora -->
@@ -486,19 +562,27 @@
 <div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? mostrarReasignar.set(false) : null">
     <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal__header">
-            <h3><i class="ti ti-user-share"></i> Asignar responsable del paso</h3>
+            <h3><i class="ti ti-user-share"></i> Asignar tarjeta</h3>
             <button class="modal__close" (click)="mostrarReasignar.set(false)"><i class="ti ti-x"></i></button>
         </div>
         <div class="modal__body">
+            @if (pasoAReasignar(); as pr) {
+            <p class="asignar__paso">
+                <span class="text-sm text-muted">{{ numeroDe(pr) }}</span>
+                <strong>{{ pr.nombre }}</strong>
+            </p>
+            }
             <p class="text-sm text-muted">
-                Quien tenga el rol del paso puede seguir actuando: esto solo indica quién lo está llevando.
+                Le llega una notificación y puede abrir y completar <strong>solo esta tarjeta</strong>: no ve los
+                demás pasos del caso, salvo que su rol tenga el permiso de ver todos los procesos. Quien tenga el
+                rol del paso puede seguir actuando.
             </p>
             <div class="form-group">
-                <label>Responsable</label>
+                <label>Funcionario</label>
                 <select [(ngModel)]="reasignarA" name="reasignarA">
-                    <option [ngValue]="null" disabled>Seleccione un usuario...</option>
+                    <option [ngValue]="null" disabled>Seleccione un funcionario...</option>
                     @for (u of usuarios(); track u.id_usuario) {
-                    <option [ngValue]="u.id_usuario">{{ u.correo }}</option>
+                    <option [ngValue]="u.id_usuario">{{ u.nombre ? u.nombre + ' — ' + u.correo : u.correo }}</option>
                     }
                 </select>
             </div>
@@ -564,74 +648,6 @@
 </div>
 }
 
-<!-- Acta de notificación: se emite en PDF y no se descarga de una, porque lo
-     que casi siempre se necesita es el papel para firmar, no el archivo. -->
-@if (actaAbierta(); as a) {
-<div class="modal-backdrop" (mousedown)="$event.target === $event.currentTarget ? cerrarActa() : null">
-    <div class="modal modal-box-sm" (click)="$event.stopPropagation()">
-        <div class="modal__header">
-            <h3><i class="ti ti-printer"></i> Acta de notificación</h3>
-            <button class="modal__close" (click)="cerrarActa()"><i class="ti ti-x"></i></button>
-        </div>
-
-        <div class="modal__body">
-            @if (error()) {
-            <div class="alert alert--error"><i class="ti ti-alert-circle"></i> {{ error() }}</div>
-            }
-            @if (avisoActa()) {
-            <div class="alert alert--warning"><i class="ti ti-info-circle"></i> {{ avisoActa() }}</div>
-            }
-            <p class="text-muted">
-                Se emite a nombre de <strong>{{ a.gestion.involucrado_nombre }}</strong> e incluye la
-                medida que se le notifica, el plazo para pedir reconsideración y las dos firmas.
-            </p>
-            <!-- El plazo se pregunta y no se deduce: en expulsión son los 15
-                 días hábiles de la ley (se precarga), pero en el resto de las
-                 medidas lo fija el reglamento interno de cada establecimiento y
-                 el sistema todavía no lo guarda. -->
-            <div class="form-group">
-                <label>Plazo para pedir reconsideración (días hábiles)</label>
-                <input type="number" min="1" max="60" [(ngModel)]="actaPlazoDias" name="acta_plazo" />
-                <p class="text-sm text-muted">
-                    Se imprime en el acta. Revisa qué plazo fija tu Reglamento Interno; en expulsión
-                    y cancelación de matrícula son 15 días hábiles por ley.
-                </p>
-            </div>
-            <div class="form-group">
-                <label>Qué se notifica (opcional)</label>
-                <!-- Queda impresa bajo "SE NOTIFICA" en el papel que se firma,
-                     después de las medidas cargadas. Si se deja vacía y no hay
-                     medidas, el acta sale con líneas para llenar a mano. -->
-                <textarea appAutoAjustar rows="2" [(ngModel)]="actaNota" name="acta_nota" maxlength="2000"
-                    placeholder="Ej: se notifica la citación del apoderado a entrevista el lunes a las 10:00..."></textarea>
-                <p class="text-sm text-muted">
-                    Se imprime en el acta bajo "SE NOTIFICA". Si lo dejas vacío y el caso no tiene
-                    medidas registradas, el acta sale con líneas en blanco para completar a mano.
-                </p>
-            </div>
-
-            <p class="text-muted formato-unico">
-                <i class="ti ti-file-type-pdf"></i>
-                Imprímela, hazla firmar y vuelve a subirla con "Subir firmada": esa copia es la
-                prueba de que la persona recibió la notificación.
-            </p>
-        </div>
-
-        <div class="modal__footer">
-            <button class="btn btn--outline" style="width:auto" [disabled]="generandoActa()"
-                (click)="descargarActa()">
-                <i class="ti ti-download"></i> Descargar PDF
-            </button>
-            <button class="btn btn--primary" style="width:auto" [disabled]="generandoActa()"
-                (click)="imprimirActa()">
-                <i class="ti" [class.ti-printer]="!generandoActa()" [class.ti-loader-2]="generandoActa()"></i>
-                {{ generandoActa() ? 'Generando…' : 'Imprimir' }}
-            </button>
-        </div>
-    </div>
-</div>
-}
-
 <!-- Avisos de la página. Cambian de lugar según haya o no un paso en curso, así
      que viven acá una sola vez en vez de estar duplicados en los dos lugares. -->
 <ng-template #avisos>
@@ -643,30 +659,78 @@
     }
 </ng-template>
 
-<!-- Las dos medidas viven en un template porque cambian de lugar según el estado
-     del caso (arriba si está cerrado, abajo si está en curso) y son el mismo
-     bloque en los dos casos: duplicar el markup dejaría dos copias que se van
-     desincronizando en cuanto una cambie. -->
-<ng-template #medidas>
-    <!-- Medidas de protección: corren en paralelo al procedimiento y tienen sus
-         propios plazos. -->
-    <app-medidas-proteccion [idCaso]="id" [estudiantes]="estudiantesDelCaso()" [casoActivo]="activo()"
-        [pasosConMedida]="pasosConMedida()" (medidaGuardada)="medidaGuardada($event)" />
+<!-- Una tarjeta por paso. La misma para el coordinador (todas) y para quien ve
+     solo las suyas. Las que registran gestión por persona ocupan el ancho
+     completo: sus controles no entran en media columna. -->
+<ng-template #tarjeta let-p>
+    <article class="tarjeta" [attr.data-estado]="p.estado"
+        [class.tarjeta--ancha]="(p.involucrados?.length || p.relatos_personas || p.medidas_personas) && p.estado !== 'pendiente'">
+        <header class="tarjeta__cabecera">
+            <span class="tarjeta__numero"><i class="ti" [ngClass]="icono(p)"></i></span>
+            <div class="tarjeta__titulo">
+                <span>{{ numeroDe(p) }}</span>
+                <strong>{{ p.nombre }}</strong>
+            </div>
+            <span class="badge badge--{{ claseEstado(p.estado) }}">{{ p.estado | etiqueta:'estado_paso' }}</span>
+        </header>
 
-    <!-- Medidas disciplinarias: cuelgan del registro, no del caso, porque es el
-         hecho el que las motiva. Son el insumo del informe de expulsión. -->
-    <!-- Las medidas disciplinarias cuelgan del registro y las suspensiones
-         cautelares del caso, por eso van los dos ids. -->
-    <app-medidas-disciplinarias [idRegistro]="caso().id_registro" [idCaso]="id"
-        [estudiantes]="estudiantesDelCaso()" [casoActivo]="activo()"
-        [pasosConMedida]="pasosConMedida()" (medidaGuardada)="medidaGuardada($event)" />
+        <p class="tarjeta__meta">
+            <span><i class="ti ti-users"></i> {{ rolesDe(p, 'ejecutor') || '—' }}</span>
+            @if (p.responsable_nombre || p.responsable_correo) {
+            <span><i class="ti ti-user-check"></i> {{ p.responsable_nombre ?? p.responsable_correo }}</span>
+            }
+            @if (p.fecha_completado) {
+            <span><i class="ti ti-circle-check"></i> {{ p.fecha_completado | fecha:true }}</span>
+            } @else if (p.fecha_limite) {
+            <span><i class="ti ti-clock"></i> vence {{ p.fecha_limite | fecha:true }}</span>
+            }
+        </p>
+
+        @if (p.medida_pendiente) {
+        <p class="text-sm" style="color:var(--color-alerta,#b91c1c)">
+            <i class="ti ti-shield-exclamation"></i> Sin medida registrada
+        </p>
+        }
+        @if (respuestas(p).length) {
+        <ul class="respuestas">
+            @for (r of respuestas(p); track r.etiqueta) {
+            <li><span class="text-muted">{{ r.etiqueta }}:</span> <strong>{{ r.valor }}</strong></li>
+            }
+        </ul>
+        }
+        <!-- Un paso que todavía no empieza no tiene gestiones que mostrar: la
+             lista de personas vacía solo alargaba la tarjeta. -->
+        @if (p.estado !== 'pendiente') {
+        <ng-container *ngTemplateOutlet="gestiones; context: { $implicit: p }" />
+        @if (p.relatos_personas) {
+        <ng-container *ngTemplateOutlet="relatos; context: { $implicit: p }" />
+        }
+        @if (p.medidas_personas) {
+        <ng-container *ngTemplateOutlet="medidasPaso; context: { $implicit: p }" />
+        }
+        }
+
+        <footer class="tarjeta__acciones">
+            <button type="button" class="btn btn--outline btn--sm" style="width:auto" (click)="abrirDetalle(p)">
+                <i class="ti ti-eye"></i> Detalle
+            </button>
+            @if (asignable(p)) {
+            <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                [appPuede]="Permiso.ProtocoloActivadoReasignarPaso" (click)="abrirReasignar(p)">
+                <i class="ti ti-user-share"></i> {{ p.id_usuario_responsable ? 'Cambiar asignación' : 'Asignar' }}
+            </button>
+            }
+        </footer>
+    </article>
 </ng-template>
 
 <!-- Un paso que alcanza a varias personas se cumple una vez por cada una: el
      paso avanza igual, pero acá se ve a quién ya se le cumplió y a quién falta.
      Se dibuja igual en el paso en curso y en la línea de tiempo. -->
 <ng-template #gestiones let-p let-editable="editable">
-    @if (p.involucrados?.length) {
+    @if (p.proteccion_partes) {
+    <ng-container *ngTemplateOutlet="proteccionPaso; context: { $implicit: p }" />
+    } @else if (p.involucrados?.length) {
     <div class="gestiones">
         <span class="gestiones__titulo">
             <i class="ti ti-user-check"></i>
@@ -738,6 +802,14 @@
                     @if (g.medida_disc_termino) { hasta el {{ g.medida_disc_termino | fecha }} }
                 </p>
                 }
+                @if (g.id_suspension_cautelar) {
+                <p class="gestion__medida">
+                    <i class="ti ti-hourglass"></i>
+                    Suspensión cautelar notificada el {{ g.cautelar_fecha | fecha }}
+                    · resolver hasta el {{ g.cautelar_limite_resolucion | fecha }}
+                    @if (g.cautelar_estado && g.cautelar_estado !== 'vigente') { · {{ g.cautelar_estado | etiqueta:'estado_suspension_cautelar' }} }
+                </p>
+                }
                 @if (g.medida_tipo) {
                 <p class="gestion__medida">
                     <i class="ti ti-shield-check"></i>
@@ -748,24 +820,28 @@
                 </p>
                 }
                 @if (editable && formsGestion[g.id_paso_involucrado]; as f) {
-                <div class="gestion__form" [appPuede]="Permiso.ProtocoloActivadoCompletarPaso" [appPuedeSi]="activo()"
+                <div class="gestion__form" [appPuede]="Permiso.ProtocoloActivadoCompletarPaso" [appPuedeAunSin]="esMio(p)" [appPuedeSi]="activo()"
                     appPuedeMotivo="El protocolo ya no está activo">
                     <label class="gestion__campo gestion__campo--estado">
-                        <span>Estado</span>
+                        <!-- En un paso de notificación la pregunta es esa, dicha
+                             así: "¿se notificó al apoderado?". -->
+                        <span>{{ p.requiere_notificacion ? (p.tipo_paso === 'notificacion_apoderado' ? '¿Se notificó al apoderado?' : '¿Se notificó?') : 'Estado' }}</span>
                         <select [(ngModel)]="f.estado_ui" [name]="'estado_' + g.id_paso_involucrado">
                             @if (p.requiere_notificacion) {
-                            <option value="cumplido_notificado">Cumplida y notificada</option>
+                            <option value="cumplido_notificado">Sí, se notificó</option>
                             <!-- Una notificación ya sellada no se puede deshacer
                                  desde acá (el backend nunca borra una
-                                 fecha_notificacion), así que tampoco se ofrece
-                                 la opción de sacarla. -->
-                            @if (!g.fecha_notificacion) {
+                                 fecha_notificacion). "Cumplida sin notificar" solo
+                                 se muestra si ya estaba así: en un paso de
+                                 notificación no es una respuesta que se ofrezca. -->
+                            @if (!g.fecha_notificacion && f.estado_ui === 'cumplido') {
                             <option value="cumplido">Cumplida, sin notificar</option>
                             }
+                            <option value="pendiente">Todavía no</option>
                             } @else {
                             <option value="cumplido">Cumplida</option>
-                            }
                             <option value="pendiente">Pendiente</option>
+                            }
                             <option value="no_aplica">No corresponde</option>
                         </select>
                     </label>
@@ -777,7 +853,7 @@
                          la vía. -->
                     @if (p.requiere_notificacion && f.estado_ui === 'cumplido_notificado') {
                     <label class="gestion__campo gestion__campo--medio">
-                        <span>Notificada por</span>
+                        <span>¿Por qué medio?</span>
                         <select [(ngModel)]="f.medio_notificacion" [name]="'medio_' + g.id_paso_involucrado">
                             @for (m of MEDIOS_NOTIFICACION; track m) {
                             <option [value]="m">{{ m | etiqueta:'medio_notificacion' }}</option>
@@ -789,24 +865,37 @@
                     <label class="gestion__campo gestion__campo--fecha">
                         <!-- La fecha real, no la de digitación: la entrevista
                              fue el martes y se registra el jueves. -->
-                        <span>Fecha</span>
+                        <span>{{ pideCautelar(p, g, f) ? 'Fecha de notificación' : 'Fecha' }}</span>
                         <input type="date" [(ngModel)]="f.fecha_gestion" [name]="'fecha_' + g.id_paso_involucrado" />
                     </label>
 
+                    @if (p.requiere_notificacion && f.estado_ui === 'cumplido_notificado') {
+                    <!-- Qué se le notificó: es también lo que sale en el acta bajo
+                         "SE NOTIFICA" si el medio es acta. -->
+                    <label class="gestion__campo gestion__campo--nota">
+                        <span>Observación: qué se le notificó @if (esActa(f.medio_notificacion)) { <em>(se imprime en el acta)</em> }</span>
+                        <textarea appAutoAjustar rows="2" [(ngModel)]="f.observacion" [name]="'obs_' + g.id_paso_involucrado"
+                            placeholder="Ej.: se le informó de los hechos y de la citación a entrevista del lunes 20/10 a las 10:00"></textarea>
+                    </label>
+                    } @else {
                     <label class="gestion__campo gestion__campo--obs">
                         <span>{{ pideMedida(p, g, f) || pideResolucion(p, g, f) ? 'Descripción de la medida' : 'Observación' }}</span>
                         <input type="text" [(ngModel)]="f.observacion" [name]="'obs_' + g.id_paso_involucrado"
                             [placeholder]="pideMedida(p, g, f) || pideResolucion(p, g, f) ? 'Cómo se aplicará (opcional)' : 'Opcional'" />
                     </label>
+                    }
 
                     <!-- Paso de resguardo: la medida de protección de esta
                          persona se aplica acá, junto con su gestión. -->
                     @if (pideMedida(p, g, f)) {
                     <label class="gestion__campo gestion__campo--medida">
-                        <span>Medida de protección <span class="req">*</span></span>
+                        <!-- La medida protege al afectado, pero se anota sobre quien
+                             recae: la suspensión o la separación de aula van en la
+                             tarjeta del señalado. -->
+                        <span>{{ g.involucrado_rol === 'senalado' ? 'Medida que recae sobre esta persona' : 'Medida de protección' }} <span class="req">*</span></span>
                         <select [(ngModel)]="f.medida_tipo" [name]="'medida_' + g.id_paso_involucrado">
                             <option value="" disabled>Seleccione...</option>
-                            @for (t of TIPOS_MEDIDA_PROTECCION; track t) {
+                            @for (t of tiposProteccionDe(g.involucrado_rol, g.involucrado_tipo_persona); track t) {
                             <option [value]="t">{{ t | etiqueta:'tipo_medida_proteccion' }}</option>
                             }
                         </select>
@@ -824,6 +913,25 @@
                             placeholder="Por qué no basta otra medida para resguardar a la persona" />
                     </label>
                     }
+                    }
+
+                    <!-- Paso de medida cautelar: la suspensión de este señalado
+                         se decreta acá mismo, con lo que la ley exige para
+                         notificarla — por escrito y con sus fundamentos. -->
+                    @if (pideCautelar(p, g, f)) {
+                    <label class="gestion__campo gestion__campo--medio">
+                        <span>Notificada por <span class="req">*</span></span>
+                        <select [(ngModel)]="f.cau_medio" [name]="'cau_medio_' + g.id_paso_involucrado">
+                            @for (m of MEDIOS_CAUTELAR; track m) {
+                            <option [value]="m">{{ m | etiqueta:'medio_notificacion' }}</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="gestion__campo gestion__campo--obs">
+                        <span>Fundamento de la suspensión <span class="req">*</span></span>
+                        <input type="text" [(ngModel)]="f.cau_fundamento" [name]="'cau_fund_' + g.id_paso_involucrado"
+                            placeholder="Por qué se suspende mientras dura el procedimiento" />
+                    </label>
                     }
 
                     <!-- Paso de resolución: lo que se resolvió para este
@@ -889,9 +997,9 @@
                      bitácora con quién y cuándo lo registró. -->
                 @if (faltaNotificacion(p, g) && formsGestion[g.id_paso_involucrado]; as f) {
                 <div class="gestion__form gestion__form--rezagada"
-                    [appPuede]="Permiso.ProtocoloActivadoCompletarPaso">
+                    [appPuede]="Permiso.ProtocoloActivadoCompletarPaso" [appPuedeAunSin]="esMio(p)">
                     <label class="gestion__campo gestion__campo--medio">
-                        <span>Notificada por</span>
+                        <span>¿Por qué medio?</span>
                         <select [(ngModel)]="f.medio_notificacion" [name]="'medio_tardio_' + g.id_paso_involucrado">
                             @for (m of MEDIOS_NOTIFICACION; track m) {
                             <option [value]="m">{{ m | etiqueta:'medio_notificacion' }}</option>
@@ -922,14 +1030,30 @@
                      siempre que el paso exija notificar, también con el paso ya
                      cerrado: la copia firmada suele llegar días después. -->
                 @if (requiereActaGestion(p, g) && g.estado !== 'no_aplica') {
+                <!-- Notificación por acta: se imprime acá mismo, sin modal. Lleva
+                     la observación de arriba bajo "SE NOTIFICA" y el plazo que se
+                     ajusta en esta línea. -->
                 <div class="gestion__acta">
+                    <span class="gestion__acta-titulo"><i class="ti ti-file-text"></i> Acta de notificación</span>
+                    <label class="gestion__acta-plazo" title="Salvo en expulsión (15 días hábiles por ley), lo fija el Reglamento Interno">
+                        Plazo para pedir reconsideración
+                        <input type="number" min="1" max="60" [ngModel]="plazoActa(g)"
+                            (ngModelChange)="actaPlazo[g.id_paso_involucrado] = $event"
+                            [name]="'plazo_acta_' + g.id_paso_involucrado" />
+                        días hábiles
+                    </label>
+                    <button type="button" class="btn btn--primary btn--sm" style="width:auto"
+                        [disabled]="generandoActa() === g.id_paso_involucrado" (click)="emitirActa(g, 'imprimir')">
+                        <i class="ti" [ngClass]="generandoActa() === g.id_paso_involucrado ? 'ti-loader-2 spin' : 'ti-printer'"></i>
+                        Imprimir
+                    </button>
                     <button type="button" class="btn btn--outline btn--sm" style="width:auto"
-                        (click)="abrirActa(p, g)">
-                        <i class="ti ti-printer"></i> Acta de notificación
+                        [disabled]="generandoActa() === g.id_paso_involucrado" (click)="emitirActa(g, 'descargar')">
+                        <i class="ti ti-download"></i> Descargar
                     </button>
 
                     <label class="btn btn--outline btn--sm" style="width:auto"
-                        [appPuede]="Permiso.ProtocoloActivadoCompletarPaso">
+                        [appPuede]="Permiso.ProtocoloActivadoCompletarPaso" [appPuedeAunSin]="esMio(p)">
                         @if (subiendoActa() === g.id_paso_involucrado) {
                         <i class="ti ti-loader-2 spin"></i>
                         } @else {
@@ -959,13 +1083,13 @@
                     Medida formativa: basta con dejar la constancia de la notificación. No se exige
                     acta firmada.
                 </p>
-                } @else if (requiereActa(p) && g.estado !== 'no_aplica' && medioDe(g) && medioDe(g) !== 'carta') {
-                <!-- Notificada por una vía que no es carta: la constancia de fecha
-                     y vía basta. No se pide carta firmada ni se traba el paso. -->
+                } @else if (requiereActa(p) && g.estado !== 'no_aplica' && medioDe(g) && !esActa(medioDe(g))) {
+                <!-- Notificada por una vía que no es acta: la constancia de fecha
+                     y vía basta. No se pide acta firmada ni se traba el paso. -->
                 <p class="text-sm text-muted">
                     <i class="ti ti-info-circle"></i>
                     Notificada por {{ medioDe(g) | etiqueta:'medio_notificacion' }}: basta la constancia
-                    de fecha y vía. La carta firmada se exige sólo cuando la notificación se hace por carta.
+                    de fecha y vía. El acta firmada se pide solo cuando se notifica por acta.
                 </p>
                 }
             </li>
@@ -1121,3 +1245,635 @@
     </div>
 </div>
 }
+
+
+<!-- Medidas de protección para las dos partes: una lista de acciones ya
+     redactadas con el nombre de cada persona. Se marcan las que corresponden y
+     se aplican juntas. Lo que va sobre el señalado protege a todos los
+     afectados; lo de un afectado es solo suyo. -->
+<ng-template #proteccionPaso let-paso>
+    @let editable = medidasEditables(paso);
+    @let partes = paso.proteccion_partes;
+    @let ocupado = guardandoProteccion() === paso.id_activado_paso;
+    <div class="relatos">
+        <div class="relatos__titulo">
+            <span><i class="ti ti-shield-heart"></i> ¿Qué medidas de protección se aplican?</span>
+        </div>
+
+        @if (partes.sin_medidas) {
+        <p class="text-sm relato-persona__motivo-guardado">
+            <span class="text-muted">No se aplican medidas de protección</span>: {{ partes.sin_medidas }}
+        </p>
+        } @else {
+        @for (g of partes.grupos; track g.id_involucrado) {
+        <div class="proteccion-grupo">
+            <span class="proteccion-grupo__titulo">
+                {{ g.rol === 'senalado' ? 'Sobre' : 'Para' }} {{ g.nombre }}
+                <span class="text-muted">({{ g.rol | etiqueta:'rol_involucrado' | lowercase }})</span>
+            </span>
+            @for (o of g.opciones; track o.tipo) {
+            @let m = marcaProteccion(paso, g, o);
+            @if (o.aplicada) {
+            <div class="proteccion-opcion proteccion-opcion--aplicada">
+                <i class="ti ti-circle-check"></i>
+                <span>
+                    <strong>{{ o.texto }}</strong>
+                    <span class="text-sm text-muted">
+                        · desde {{ o.aplicada.fecha | fecha }}@if (o.aplicada.fecha_termino) { hasta {{ o.aplicada.fecha_termino | fecha }} }
+                        @if (o.aplicada.dias_habiles) { · {{ o.aplicada.dias_habiles }} días hábiles }
+                        @if (o.aplicada.estado !== 'vigente') { · {{ o.aplicada.estado }} }
+                    </span>
+                    @if (o.aplicada.fundamento) { <span class="proteccion-opcion__fund">{{ o.aplicada.fundamento }}</span> }
+                </span>
+            </div>
+            } @else if (editable) {
+            <label class="proteccion-opcion">
+                <input type="checkbox" [(ngModel)]="m.marcada" [name]="'prot_' + g.id_involucrado + '_' + o.tipo" />
+                <span>{{ o.texto }}</span>
+            </label>
+            @if (m.marcada && o.tipo === 'suspension') {
+            <div class="proteccion-opcion__extra">
+                <label class="gestion__campo gestion__campo--fecha">
+                    <span>Días hábiles <span class="req">*</span></span>
+                    <input type="number" min="1" [max]="MAX_DIAS_SUSPENSION" [(ngModel)]="m.dias" [name]="'prot_dias_' + g.id_involucrado" />
+                </label>
+                <label class="gestion__campo gestion__campo--obs">
+                    <span>Fundamento <span class="req">*</span></span>
+                    <textarea appAutoAjustar rows="1" [(ngModel)]="m.fundamento" [name]="'prot_fund_' + g.id_involucrado"
+                        placeholder="Por qué no basta otra medida (art. 16 E letra j)"></textarea>
+                </label>
+            </div>
+            }
+            }
+            }
+        </div>
+        }
+
+        @if (editable) {
+        <div class="acciones-paso">
+            <button type="button" class="btn btn--primary btn--sm" style="width:auto"
+                [disabled]="ocupado || !hayMarcadasProteccion(paso) || !!faltaParaProteccion(paso)"
+                [title]="faltaParaProteccion(paso)" (click)="aplicarProteccion(paso)">
+                <i class="ti" [ngClass]="ocupado ? 'ti-loader-2 spin' : 'ti-shield-check'"></i> Aplicar medidas
+            </button>
+            @if (!hayAplicadasProteccion(paso)) {
+            <button type="button" class="btn btn--outline btn--sm" style="width:auto" (click)="sinMedidasProteccion(paso)">
+                No se aplican medidas
+            </button>
+            }
+        </div>
+        }
+        }
+    </div>
+</ng-template>
+
+<!-- Tarjeta "Medidas": todos los involucrados del caso. A cada uno se le elige
+     una medida del listado (agrupado como lo distingue la ley) o "Sin medidas".
+     Cada una se guarda con su botón, al momento. -->
+<ng-template #medidasPaso let-paso>
+    @let editable = medidasEditables(paso);
+    <div class="relatos">
+        <div class="relatos__titulo">
+            <span><i class="ti ti-shield-check"></i> ¿Qué medida se toma con cada involucrado?</span>
+            <span class="relatos__avance" [class.relatos__avance--listo]="medidasListas(paso) === paso.medidas_personas.length">
+                {{ medidasListas(paso) }} de {{ paso.medidas_personas.length }} listos
+            </span>
+        </div>
+
+        @if (paso.medidas_personas.length === 0) {
+        <p class="text-sm text-muted">El caso no tiene involucrados.</p>
+        }
+
+        @for (m of paso.medidas_personas; track m.id_involucrado) {
+        @let f = formMedida(paso, m);
+        @let ocupado = guardandoMedida() === paso.id_activado_paso + '-' + m.id_involucrado;
+        @let lista = personaMedidaLista(m);
+        <div class="relato-persona" [class.relato-persona--lista]="lista" [class.relato-persona--no]="!!m.sin_medida && !m.medidas.length">
+            <div class="relato-persona__cabecera">
+                <i class="ti relato-persona__marca" [ngClass]="lista ? 'ti-circle-check' : 'ti-circle-dashed'"></i>
+                <strong>{{ m.nombre }}</strong>
+                <span class="badge badge--{{ m.rol === 'afectado' ? 'validado' : m.rol === 'senalado' ? 'gravísima' : 'leve' }}">
+                    {{ m.rol | etiqueta:'rol_involucrado' }}
+                </span>
+                @if (m.curso) { <span class="text-sm text-muted">{{ m.curso | cursoNombre }}</span> }
+                @if (m.tipo_persona !== 'estudiante') { <span class="text-sm text-muted">· {{ m.tipo_persona }}</span> }
+            </div>
+
+            <!-- Medidas de protección adoptadas en un paso anterior: solo pueden
+                 extenderse hasta la conclusión del procedimiento (art. 16 E letra j),
+                 así que acá se decide si se mantienen o se concluyen. Mantener una
+                 cuenta como la medida de la persona. -->
+            @if (m.previas?.length) {
+            <div class="medidas-previas">
+                <span class="medidas-previas__titulo">
+                    <i class="ti ti-history"></i> Medidas de protección de pasos anteriores
+                </span>
+                @for (x of m.previas; track x.id) {
+                @let ocupadaPrevia = decidiendoPrevia() === x.id;
+                <div class="medidas-previas__item" [class.medidas-previas__item--mantenida]="x.mantenida && x.estado === 'vigente'">
+                    <div class="linea__meta">
+                        <strong>{{ x.etiqueta }}</strong>
+                        @if (x.dias_habiles) { <span>{{ x.dias_habiles }} días hábiles</span> }
+                        <span>desde {{ x.fecha | fecha }}@if (x.fecha_termino) { hasta {{ x.fecha_termino | fecha }} }</span>
+                        @if (x.paso_nombre) { <span>adoptada en «{{ x.paso_nombre }}»</span> }
+                        @if (x.vencida) { <span class="linea__dato--alerta">vencida</span> }
+                    </div>
+                    @if (x.descripcion && x.descripcion !== x.etiqueta) { <p class="linea__texto">{{ x.descripcion }}</p> }
+
+                    @if (x.estado !== 'vigente') {
+                    <p class="text-sm text-muted">Se mantuvo en este paso; después quedó {{ x.estado }}.</p>
+                    } @else if (x.mantenida) {
+                    <div class="medidas-previas__acciones">
+                        <span class="medidas-previas__estado"><i class="ti ti-circle-check"></i> Se mantiene</span>
+                        @if (editable) {
+                        <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                            [disabled]="ocupadaPrevia" (click)="decidirPrevia(paso, m, x, 'deshacer')">Deshacer</button>
+                        <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                            [disabled]="ocupadaPrevia" (click)="decidirPrevia(paso, m, x, 'concluir')">
+                            <i class="ti ti-flag-check"></i> Concluir
+                        </button>
+                        }
+                    </div>
+                    } @else if (editable) {
+                    <div class="medidas-previas__acciones">
+                        @if (!(x.vencida && x.tipo === 'suspension')) {
+                        <button type="button" class="btn btn--primary btn--sm" style="width:auto"
+                            [disabled]="ocupadaPrevia" (click)="decidirPrevia(paso, m, x, 'mantener')">
+                            <i class="ti" [ngClass]="ocupadaPrevia ? 'ti-loader-2 spin' : 'ti-player-play'"></i> Mantener
+                        </button>
+                        }
+                        <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                            [disabled]="ocupadaPrevia" (click)="decidirPrevia(paso, m, x, 'concluir')">
+                            <i class="ti ti-flag-check"></i> Concluir
+                        </button>
+                    </div>
+                    } @else {
+                    <p class="text-sm text-muted">Vigente, sin decidir en este paso.</p>
+                    }
+                </div>
+                }
+            </div>
+            }
+
+            <!-- Lo ya decidido para esta persona. -->
+            @if (m.medidas.length) {
+            <ol class="linea">
+                @for (x of m.medidas; track x.tabla + x.id; let i = $index) {
+                <li class="linea__item" [class.linea__item--ultimo]="i === m.medidas.length - 1">
+                    <div class="linea__meta">
+                        <strong>{{ x.etiqueta }}</strong>
+                        @if (x.dias_habiles) { <span>{{ x.dias_habiles }} días hábiles</span> }
+                        <span>desde {{ x.fecha | fecha }}@if (x.fecha_termino) { hasta {{ x.fecha_termino | fecha }} }</span>
+                        @if (x.registrado_por) { <span>{{ x.registrado_por }}</span> }
+                    </div>
+                    @if (x.descripcion && x.descripcion !== x.etiqueta) { <p class="linea__texto">{{ x.descripcion }}</p> }
+                    @if (x.fundamento) { <p class="linea__datos">Fundamento: {{ x.fundamento }}</p> }
+                    <!-- La resolución que firma el director (excepcionales y condicionalidad). -->
+                    @if (x.documento) {
+                    <div class="gestion__acta">
+                        <span class="gestion__acta-titulo">
+                            <i class="ti ti-signature"></i> Resolución para firma del director
+                        </span>
+                        <button type="button" class="btn btn--primary btn--sm" style="width:auto"
+                            [disabled]="generandoDocMedida() === x.id" (click)="emitirDocumentoMedida(x, 'imprimir')">
+                            <i class="ti" [ngClass]="generandoDocMedida() === x.id ? 'ti-loader-2 spin' : 'ti-printer'"></i> Imprimir
+                        </button>
+                        <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                            [disabled]="generandoDocMedida() === x.id" (click)="emitirDocumentoMedida(x, 'descargar')">
+                            <i class="ti ti-download"></i> Descargar
+                        </button>
+                        <label class="btn btn--outline btn--sm" style="width:auto"
+                            [appPuede]="Permiso.ProtocoloActivadoCompletarPaso" [appPuedeAunSin]="esMio(paso)">
+                            <i class="ti" [ngClass]="subiendoDocMedida() === x.id ? 'ti-loader-2 spin' : 'ti-upload'"></i>
+                            {{ x.documento.firmado ? 'Reemplazar firmado' : 'Subir firmado' }}
+                            <input type="file" hidden (change)="subirDocumentoMedida(x, m, $event)" />
+                        </label>
+                        @if (x.documento.firmado) {
+                        <button type="button" class="btn btn--sm" style="width:auto" (click)="verDocumentoMedida(x)">
+                            <i class="ti ti-file-check"></i> Ver firmado
+                        </button>
+                        } @else {
+                        <span class="text-sm linea__dato--alerta">Falta el documento firmado</span>
+                        }
+                    </div>
+                    }
+                </li>
+                }
+            </ol>
+            } @else if (m.sin_medida) {
+            <p class="text-sm relato-persona__motivo-guardado">
+                <span class="text-muted">Sin medidas</span>@if (m.sin_medida.motivo) { : {{ m.sin_medida.motivo }} }
+            </p>
+            }
+
+            @if (editable && lista && !f.abierto) {
+            <button type="button" class="btn btn--outline btn--sm relato-persona__agregar" style="width:auto"
+                (click)="f.abierto = true">
+                <i class="ti ti-plus"></i> {{ m.medidas.length || tieneMantenida(m) ? 'Agregar otra medida' : 'Cambiar a una medida' }}
+            </button>
+            } @else if (editable) {
+            <div class="relato-persona__comparecencia">
+                <label class="gestion__campo gestion__campo--medida">
+                    <span>Medida <span class="req">*</span></span>
+                    <select [(ngModel)]="f.opcion" [name]="'medida_paso_' + m.id_involucrado">
+                        <option value="" disabled>Seleccione...</option>
+                        @for (g of gruposMedida(m); track g.grupo) {
+                        <optgroup [label]="g.titulo">
+                            @for (t of tiposDelGrupo(g, m); track t) {
+                            <option [value]="g.tabla + ':' + t">{{ etiquetaOpcionMedida(g, t) }}</option>
+                            }
+                        </optgroup>
+                        }
+                        @if (!m.medidas.length && !tieneMantenida(m)) {
+                        <option value="sin_medida">Sin medidas</option>
+                        }
+                    </select>
+                </label>
+                @if (medidaConPlazo(f.opcion)) {
+                <label class="gestion__campo gestion__campo--fecha">
+                    <span>Días hábiles <span class="req">*</span></span>
+                    <input type="number" min="1" [max]="f.opcion === 'p:suspension' ? MAX_DIAS_SUSPENSION : 60"
+                        [(ngModel)]="f.dias" [name]="'medida_paso_dias_' + m.id_involucrado" />
+                </label>
+                }
+            </div>
+            @if (f.opcion === 'sin_medida') {
+            <div class="form-group relato-persona__nuevo">
+                <label>Motivo (opcional)</label>
+                <textarea appAutoAjustar rows="2" [(ngModel)]="f.motivo" [name]="'medida_paso_motivo_' + m.id_involucrado"
+                    placeholder="Por qué no corresponde aplicarle una medida"></textarea>
+            </div>
+            } @else if (f.opcion) {
+            <div class="form-group relato-persona__nuevo">
+                <label>Fundamento @if (medidaConPlazo(f.opcion)) {<span class="req">*</span>}</label>
+                <textarea appAutoAjustar rows="2" [(ngModel)]="f.fundamento" [name]="'medida_paso_fund_' + m.id_involucrado"
+                    [placeholder]="f.opcion === 'p:suspension' ? 'Por qué no basta otra medida para resguardar a la persona afectada (art. 16 E letra j)' : medidaConPlazo(f.opcion) ? 'Por qué esta medida excepcional es necesaria y proporcional (Circular 482, p. 47)' : 'Por qué corresponde esta medida'"></textarea>
+            </div>
+            }
+            <div class="acciones-paso">
+                <button type="button" class="btn btn--primary btn--sm" style="width:auto"
+                    [disabled]="ocupado || !!faltaParaMedida(f)" [title]="faltaParaMedida(f)"
+                    (click)="registrarMedida(paso, m)">
+                    <i class="ti" [ngClass]="ocupado ? 'ti-loader-2 spin' : 'ti-device-floppy'"></i>
+                    {{ f.opcion === 'sin_medida' ? 'Registrar sin medidas' : 'Registrar medida' }}
+                </button>
+                @if (lista) {
+                <button type="button" class="btn btn--outline btn--sm" style="width:auto" (click)="f.abierto = false">Cancelar</button>
+                }
+            </div>
+            }
+        </div>
+        }
+    </div>
+</ng-template>
+
+<!-- Acogida de relatos: la lista de todos los involucrados del caso. Por cada
+     uno se marca si se le acoge el relato; si no, se escribe por qué; si sí, se
+     escriben sus relatos y cada uno se guarda con "Acoger relato", con la fecha
+     y hora en que se ingresó. Se dibuja igual en el paso actual y en el detalle
+     de un paso ya completado (donde el coordinador puede seguir agregando). -->
+<ng-template #relatos let-paso>
+    @let editablePaso = relatosEditables(paso);
+    <div class="relatos">
+        <div class="relatos__titulo">
+            <span><i class="ti ti-messages"></i>
+                {{ verProcesos() ? '¿A quién se le acogerá el relato?' : 'Relatos que te encargaron' }}</span>
+            <span class="relatos__avance" [class.relatos__avance--listo]="relatosListos(paso) === paso.relatos_personas.length">
+                {{ relatosListos(paso) }} de {{ paso.relatos_personas.length }} listos
+            </span>
+        </div>
+
+        @if (paso.relatos_personas.length === 0) {
+        <p class="text-sm text-muted">
+            El caso no tiene involucrados. Agrégalos con <strong>Administrar</strong> en Involucrados para acoger
+            sus relatos.
+        </p>
+        }
+
+        @for (r of paso.relatos_personas; track r.id_involucrado) {
+        @let f = formRelato(paso, r);
+        @let eleccion = eleccionRelato(paso, r);
+        @let ocupado = guardandoRelato() === paso.id_activado_paso + '-' + r.id_involucrado;
+        <!-- Cada persona por separado: a quien le encargaron un relato trabaja
+             solo ese, aunque vea el paso. -->
+        @let editable = editablePaso && r.puede_trabajar;
+        <div class="relato-persona" [class.relato-persona--lista]="personaDeRelatoLista(r)"
+            [class.relato-persona--no]="eleccion === false">
+            <div class="relato-persona__cabecera">
+                <i class="ti relato-persona__marca"
+                    [ngClass]="personaDeRelatoLista(r) ? 'ti-circle-check' : 'ti-circle-dashed'"></i>
+                <strong>{{ r.nombre }}</strong>
+                <span class="badge badge--{{ r.rol === 'afectado' ? 'validado' : r.rol === 'senalado' ? 'gravísima' : 'leve' }}">
+                    {{ r.rol | etiqueta:'rol_involucrado' }}
+                </span>
+                @if (r.curso) { <span class="text-sm text-muted">{{ r.curso | cursoNombre }}</span> }
+                <!-- El encargo: a quién le toca tomar este relato. Lo asigna quien
+                     ve el caso completo; el encargado ve solo este relato. -->
+                @if (r.responsable_nombre) {
+                <span class="relato-persona__encargo" title="Encargado de tomar este relato">
+                    <i class="ti ti-user-check"></i> {{ r.responsable_nombre }}
+                </span>
+                }
+                @if (verProcesos() && editablePaso) {
+                <button type="button" class="btn-link" (click)="abrirEncargarRelato(paso, r)">
+                    {{ r.id_usuario_responsable ? 'Cambiar encargado' : 'Encargar a otro funcionario' }}
+                </button>
+                }
+
+                <!-- La lista de verificación: sí o no, a la vista, sin abrir nada. -->
+                <div class="relato-persona__eleccion" role="radiogroup" [attr.aria-label]="'Relato de ' + r.nombre">
+                    <button type="button" class="chip" [class.chip--si]="eleccion === true"
+                        [disabled]="!editable || ocupado" (click)="elegirRelato(paso, r, true)">
+                        <i class="ti ti-check"></i> Se acoge
+                    </button>
+                    <button type="button" class="chip" [class.chip--no]="eleccion === false"
+                        [disabled]="!editable || ocupado || r.relatos.length > 0"
+                        [title]="r.relatos.length ? 'Ya tiene relatos acogidos en este paso' : ''"
+                        (click)="elegirRelato(paso, r, false)">
+                        <i class="ti ti-x"></i> No se acoge
+                    </button>
+                </div>
+            </div>
+
+            @if (eleccion === false) {
+            <!-- A quien no se le acoge, se le pide el porqué: es lo primero que se
+                 objeta de un procedimiento. -->
+            @if (editable && (f.eleccion === false || !r.motivo)) {
+            <div class="form-group relato-persona__motivo">
+                <label>¿Por qué no se le acoge el relato? <span class="req">*</span></label>
+                <textarea appAutoAjustar rows="2" [(ngModel)]="f.motivo" [name]="'motivo' + r.id_involucrado"
+                    placeholder="Ej.: no asistió a la citación, el apoderado no autorizó la entrevista…"></textarea>
+                <div class="acciones-paso">
+                    <button type="button" class="btn btn--primary btn--sm" style="width:auto"
+                        [disabled]="ocupado || f.motivo.trim().length < 5" (click)="guardarMotivoRelato(paso, r)">
+                        <i class="ti" [ngClass]="ocupado ? 'ti-loader-2 spin' : 'ti-device-floppy'"></i> Guardar motivo
+                    </button>
+                    @if (r.se_acoge !== false) {
+                    <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                        (click)="f.eleccion = null">Cancelar</button>
+                    }
+                </div>
+            </div>
+            } @else {
+            <p class="text-sm relato-persona__motivo-guardado">
+                <span class="text-muted">No se acoge su relato:</span> {{ r.motivo }}
+                @if (editable) {
+                <button type="button" class="btn-link" (click)="f.eleccion = false; f.motivo = r.motivo">
+                    Cambiar motivo
+                </button>
+                }
+            </p>
+            }
+            }
+
+            @if (eleccion === true) {
+            <!-- Sus relatos como línea de tiempo, del más antiguo al más nuevo:
+                 un punto por relato, sin cajas dentro de la caja de la persona.
+                 Con más de dos, los anteriores quedan plegados: lo que se mira
+                 primero es lo último que relató. -->
+            @if (r.relatos.length) {
+            @let plegados = relatosPlegados(paso, r);
+            <ol class="linea">
+                @if (plegados > 0) {
+                <li class="linea__mas">
+                    <button type="button" class="btn-link" (click)="desplegarRelatos(paso, r)">
+                        Ver {{ plegados === 1 ? 'el relato anterior' : 'los ' + plegados + ' relatos anteriores' }}
+                    </button>
+                </li>
+                }
+                @for (x of r.relatos; track x.id_relato; let i = $index) {
+                @if (i >= plegados) {
+                <li class="linea__item" [class.linea__item--ultimo]="i === r.relatos.length - 1">
+                    <div class="linea__meta">
+                        <strong>Relato {{ i + 1 }}</strong>
+                        <span>{{ x.fecha_registro | fecha:true }}</span>
+                        @if (x.registrado_por) { <span>{{ x.registrado_por }}</span> }
+                        @if (x.fecha_modificacion) {
+                        <span class="linea__corregido"
+                            [title]="'Corregido el ' + (x.fecha_modificacion | fecha:true) + (x.modificado_por ? ' por ' + x.modificado_por : '') + '. ' + x.versiones + (x.versiones === 1 ? ' versión anterior' : ' versiones anteriores') + ' en el expediente'">
+                            <i class="ti ti-pencil"></i> corregido
+                        </span>
+                        }
+                        @if (editable && !x.oculto && editandoRelato[x.id_relato] === undefined) {
+                        <button type="button" class="linea__editar" title="Corregir el relato"
+                            (click)="editandoRelato[x.id_relato] = x.relato">
+                            <i class="ti ti-pencil"></i> Corregir
+                        </button>
+                        }
+                    </div>
+                    @if (editandoRelato[x.id_relato] !== undefined) {
+                    <textarea appAutoAjustar rows="3" [(ngModel)]="editandoRelato[x.id_relato]"
+                        [name]="'editar' + x.id_relato"></textarea>
+                    <div class="acciones-paso">
+                        <button type="button" class="btn btn--primary btn--sm" style="width:auto"
+                            [disabled]="guardandoRelato() === 'relato-' + x.id_relato"
+                            (click)="guardarCorreccionRelato(paso, x)">
+                            <i class="ti ti-device-floppy"></i> Guardar corrección
+                        </button>
+                        <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                            (click)="cancelarCorreccionRelato(x)">Cancelar</button>
+                    </div>
+                    } @else if (x.oculto) {
+                    <!-- Confidencialidad (Ley 21.809, art. 16 E g; Ley 21.719): el
+                         texto no viaja a quien no ve el recorrido del caso. -->
+                    <p class="linea__texto linea__texto--oculto">
+                        <i class="ti ti-lock"></i> Contenido reservado
+                    </p>
+                    } @else {
+                    <p class="linea__texto">{{ x.relato }}</p>
+                    }
+                </li>
+                }
+                }
+            </ol>
+            }
+
+            @if (editable && r.relatos.length && !f.abierto) {
+            <!-- Con relatos ya registrados, el formulario se abre a pedido: abierto
+                 siempre era un cuadro grande vacío al final de cada persona. -->
+            <button type="button" class="btn btn--outline btn--sm relato-persona__agregar" style="width:auto"
+                (click)="f.abierto = true">
+                <i class="ti ti-plus"></i> Agregar otro relato
+            </button>
+            } @else if (editable) {
+            <div class="form-group relato-persona__nuevo">
+                <label>{{ r.relatos.length ? 'Otro relato' : 'Relato' }}</label>
+                <textarea appAutoAjustar rows="3" [(ngModel)]="f.nuevo" [name]="'nuevo' + r.id_involucrado"
+                    [placeholder]="'Lo que relata ' + r.nombre + ', con sus palabras. Si lo acompañó su apoderado u otro adulto, indícalo aquí.'"></textarea>
+
+                @if (r.tipo_persona === 'funcionario') {
+                <!-- Solo un aviso: no se marca ni se guarda nada. El efecto lo da
+                     la ley por sí sola, y el sistema no sabe si esta persona es
+                     profesional de la educación. -->
+                <div class="relato-persona__ley">
+                    <i class="ti ti-scale"></i>
+                    <span>
+                        <strong>Si quien relata es profesional de la educación</strong> y fue afectado o intervino en
+                        los hechos, su relato escrito y documentado es antecedente suficiente para fundar medidas
+                        inmediatas de resguardo y para iniciar el procedimiento del reglamento interno, sin perjuicio
+                        de ponderar los demás antecedentes del caso y de respetar el debido proceso.
+                        <span class="relato-persona__ley-fuente">
+                            Art. 8 bis, inciso décimo, del Estatuto de los Profesionales de la Educación (Ley 19.070),
+                            agregado por el art. 3 de la Ley 21.827. La norma habla de profesionales de la educación:
+                            no menciona a asistentes de la educación ni a otros funcionarios.
+                        </span>
+                    </span>
+                </div>
+                }
+
+                <div class="acciones-paso">
+                    <button type="button" class="btn btn--primary btn--sm" style="width:auto"
+                        [disabled]="ocupado || !f.nuevo.trim()"
+                        (click)="acogerRelato(paso, r)">
+                        <i class="ti" [ngClass]="ocupado ? 'ti-loader-2 spin' : 'ti-message-check'"></i> Acoger relato
+                    </button>
+                    @if (r.relatos.length) {
+                    <button type="button" class="btn btn--outline btn--sm" style="width:auto"
+                        (click)="f.abierto = false">Cancelar</button>
+                    }
+                    <span class="text-sm text-muted">Se guarda con la fecha y hora de ahora.</span>
+                </div>
+            </div>
+            } @else if (!r.relatos.length) {
+            <p class="text-sm text-muted">Sin relato registrado.</p>
+            }
+            }
+
+            @if (eleccion === null && !editable) {
+            <p class="text-sm text-muted">Sin decisión registrada.</p>
+            }
+        </div>
+        }
+    </div>
+</ng-template>
+
+<!-- El paso en curso: lo que se responde y los botones para cerrarlo. Se dibuja
+     en la tarjeta del paso actual y en el modal que abre su caja del diagrama;
+     es el mismo formulario sobre los mismos datos, así que vive una sola vez. -->
+<ng-template #cuerpoPaso let-paso>
+    <div class="card__header paso-actual__header">
+        <div class="paso-actual__titulo">
+            @if (paso.numero) {
+            <span class="paso-actual__numero">{{ numeroDe(paso) }}</span>
+            }
+            <h3><i class="ti" [ngClass]="icono(paso)"></i> {{ paso.nombre }}</h3>
+        </div>
+        <div class="flex gap-2 items-center paso-actual__badges">
+            <span class="badge badge--leve">{{ paso.tipo_paso | etiqueta:'tipo_paso' }}</span>
+            @if (paso.fecha_limite) {
+            <span class="badge" [class.badge--gravísima]="paso.estado === 'vencido'"
+                [class.badge--pendiente]="paso.estado !== 'vencido'">
+                <i class="ti ti-clock"></i>
+                {{ paso.estado === 'vencido' ? 'Venció' : 'Vence' }} {{ paso.fecha_limite | fecha:true }}
+            </span>
+            }
+        </div>
+    </div>
+
+    @if (paso.descripcion) { <p class="text-muted">{{ paso.descripcion }}</p> }
+
+    <p class="text-sm text-muted">
+        <i class="ti ti-users"></i> Ejecuta: {{ rolesDe(paso, 'ejecutor') || '—' }}
+        @if (rolesDe(paso, 'aprobador')) { · Aprueba: {{ rolesDe(paso, 'aprobador') }} }
+        @if (paso.responsable_nombre || paso.responsable_correo) { · Responsable: {{ paso.responsable_nombre ?? paso.responsable_correo }} }
+    </p>
+
+    <!-- El paso ordena una medida y todavía no consta ninguna. No traba el
+         avance (misma decisión que la constancia de notificación): se dice acá
+         y el cierre lo vuelve a pedir. -->
+    @if (paso.medida_pendiente) {
+    <div class="alert alert--warning">
+        <i class="ti ti-shield-exclamation"></i>
+        <span>
+            @if (paso.tipo_medida_requerida === 'disciplinaria') {
+            Este paso resuelve el caso. En la tarjeta de cada señalado, más abajo, marca
+            <strong>Cumplida</strong> e indica la medida que se le aplicó.
+            } @else if (paso.tipo_medida_requerida === 'proteccion') {
+            Este paso ordena proteger a la persona afectada. En la tarjeta de cada afectado, más
+            abajo, marca <strong>Cumplida</strong> y elige la medida de protección que se le aplicó.
+            } @else if (paso.tipo_medida_requerida === 'cautelar') {
+            Este paso ordena suspender cautelarmente al señalado. En la tarjeta de cada señalado, más
+            abajo, marca <strong>Cumplida</strong> e indica el fundamento y cómo se le notificó por escrito.
+            } @else {
+            Este paso ordena una medida y todavía no hay ninguna registrada.
+            }
+        </span>
+        <!-- Sin botón: las tres medidas (protección, disciplinaria y cautelar)
+             se aplican en la tarjeta de cada persona, dentro del paso. Mandar a
+             otra sección a cargarla era el desvío que este paso evita. -->
+    </div>
+    }
+
+    <ng-container *ngTemplateOutlet="gestiones; context: { $implicit: paso, editable: true }" />
+
+    @if (paso.relatos_personas) {
+    <ng-container *ngTemplateOutlet="relatos; context: { $implicit: paso }" />
+    }
+    @if (paso.medidas_personas) {
+    <ng-container *ngTemplateOutlet="medidasPaso; context: { $implicit: paso }" />
+    }
+
+    @for (campo of camposEnPantalla(); track campo.codigo) {
+    <div class="form-group">
+        <label>{{ campo.etiqueta }} @if (campo.es_obligatorio) {<span class="req">*</span>}</label>
+        @if (campo.tipo_campo === 'seleccion') {
+        <select [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo">
+            <option value="" disabled>Seleccione...</option>
+            <!-- El value va crudo: es lo que evalúan las condiciones del flujo. -->
+            @for (o of opciones(campo); track o) { <option [value]="o">{{ o | etiqueta:'opcion_campo' }}</option> }
+        </select>
+        } @else if (campo.tipo_campo === 'fecha') {
+        <input type="date" [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo" />
+        } @else if (campo.tipo_campo === 'numero') {
+        <input type="number" [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo" />
+        } @else {
+        <input type="text" [(ngModel)]="datos[campo.codigo]" [name]="campo.codigo" />
+        }
+    </div>
+    }
+
+    <!-- El motivo de omitir, aprobar, rechazar, cerrar o anular ya no vive acá:
+         lo pide el propio modal de confirmación de cada acción. Como campo fijo
+         se llenaba creyendo que se guardaba con el paso, y 'Completar paso'
+         nunca lo envió: lo escrito se perdía sin aviso. -->
+
+
+    <!-- Pegado a los botones: el aviso explica por qué la acción de abajo no va
+         a salir, así que tiene que leerse sin sacar la vista del botón. -->
+    <ng-container *ngTemplateOutlet="avisos" />
+
+    <!-- appPuedeSi con puede_ejecutar/puede_aprobar: hasta acá el botón salía
+         solo con el permiso, sin mirar de qué rol es el paso, así que a quien
+         no le tocaba lo apretaba y recibía un 403 seco. Ahora el botón queda
+         deshabilitado con el motivo a la vista, y sigue habilitado —con aviso
+         al apretarlo— para quien puede tomar pasos ajenos. -->
+    <div class="acciones-paso">
+        @if (esPasoDeAprobacion(paso.tipo_paso)) {
+        <button class="btn btn--primary" style="width:auto" [disabled]="guardando()"
+            [appPuede]="Permiso.ProtocoloActivadoAprobarPaso" [appPuedeAunSin]="esMio(paso)" [appPuedeSi]="!!paso.puede_aprobar"
+            [appPuedeMotivo]="motivoPasoAjeno(paso, 'aprobador')" (click)="aprobar(true)">
+            <i class="ti ti-check"></i> Aprobar
+        </button>
+        <button class="btn btn--outline" style="width:auto" [disabled]="guardando()"
+            [appPuede]="Permiso.ProtocoloActivadoAprobarPaso" [appPuedeAunSin]="esMio(paso)" [appPuedeSi]="!!paso.puede_aprobar"
+            [appPuedeMotivo]="motivoPasoAjeno(paso, 'aprobador')" (click)="aprobar(false)">
+            <i class="ti ti-x"></i> Rechazar
+        </button>
+        } @else {
+        <button class="btn btn--primary" style="width:auto" [disabled]="guardando()"
+            [appPuede]="Permiso.ProtocoloActivadoCompletarPaso" [appPuedeAunSin]="esMio(paso)" [appPuedeSi]="!!paso.puede_ejecutar"
+            [appPuedeMotivo]="motivoPasoAjeno(paso, 'ejecutor')" (click)="completar()">
+            <i class="ti ti-check"></i> Completar paso
+        </button>
+        }
+        <button class="btn btn--outline" style="width:auto" [disabled]="guardando()"
+            [appPuede]="Permiso.ProtocoloActivadoOmitirPaso" [appPuedeSi]="!!paso.puede_ejecutar"
+            [appPuedeMotivo]="motivoPasoAjeno(paso, 'ejecutor')" (click)="omitir()">
+            <i class="ti ti-player-skip-forward"></i> Omitir
+        </button>
+        <button class="btn btn--outline" style="width:auto" [appPuede]="Permiso.ProtocoloActivadoReasignarPaso"
+            (click)="abrirReasignar(paso)">
+            <i class="ti ti-user-share"></i> Asignar a otro funcionario
+        </button>
+    </div>
+</ng-template>
