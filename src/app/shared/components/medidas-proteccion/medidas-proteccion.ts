@@ -214,17 +214,17 @@ export class MedidasProteccion implements OnInit {
   guardar() {
     this.error.set('');
     if (!this.form.tipo || !this.form.fecha_inicio) {
-      this.error.set('Indicá el tipo de medida y la fecha de inicio');
+      this.error.set('Indica el tipo de medida y la fecha de inicio');
       return;
     }
     if (this.esSuspension && !this.form.fundamento.trim()) {
       this.error.set(
-        'La suspensión solo procede cuando no es posible resguardar con otra medida: indicá por qué.',
+        'La suspensión solo procede cuando no es posible resguardar con otra medida: indica por qué.',
       );
       return;
     }
     if (this.esSuspension && !this.form.dias_habiles) {
-      this.error.set('Indicá los días hábiles de la suspensión');
+      this.error.set('Indica los días hábiles de la suspensión');
       return;
     }
     if (this.esSuspension && this.form.dias_habiles! > this.MAX_DIAS_SUSPENSION) {
@@ -257,7 +257,7 @@ export class MedidasProteccion implements OnInit {
 
     if (debeSustituir && sustitutas.length === 0) {
       this.error.set(
-        'La suspensión venció y el procedimiento sigue abierto: registrá primero la medida que la ' +
+        'La suspensión venció y el procedimiento sigue abierto: registra primero la medida que la ' +
           'sustituye. La ley no permite extender la suspensión.',
       );
       return;

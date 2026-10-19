@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, computed, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { hoyIso, ahoraIso, formatearFecha } from '../../shared/utils/fecha';
 import { FechaPipe, FechasEnTextoPipe } from '../../shared/pipes/fecha.pipe';
@@ -17,8 +17,6 @@ import {
   AristaGrafo,
 } from '../../shared/components/grafo-protocolo/grafo-protocolo';
 import { EtiquetaPipe, etiquetaDe, humanizar } from '../../shared/pipes/etiqueta.pipe';
-import { MedidasProteccion } from '../../shared/components/medidas-proteccion/medidas-proteccion';
-import { MedidasDisciplinarias } from '../../shared/components/medidas-disciplinarias/medidas-disciplinarias';
 import { descargarPdf, imprimirPdf, mensajeDeErrorPdf, nombreDelPdf } from '../../shared/utils/pdf-salida';
 import { CerrarConEsc } from '../../shared/directives/cerrar-con-esc.directive';
 import { AutoAjustarTextarea } from '../../shared/directives/auto-ajustar-textarea.directive';
@@ -40,18 +38,28 @@ import { ordenarPorCoincidencia } from '../../shared/utils/coincidencia';
  * mismos que alimentan las condiciones de las transiciones, y duplicarlos en el
  * front significaría que un protocolo nuevo no se puede ejecutar sin desplegar.
  */
+/** Lo que se está escribiendo para una persona en la acogida de relatos. */
+interface FormRelato {
+  /** La elección en pantalla mientras no se guarde; null = la guardada. */
+  eleccion: boolean | null;
+  motivo: string;
+  nuevo: string;
+  /** El formulario de otro relato, abierto a pedido cuando ya hay relatos. */
+  abierto: boolean;
+}
+
 @Component({
   selector: 'app-protocolo-caso',
   standalone: true,
   imports: [
     FechaPipe, FechasEnTextoPipe, CommonModule, FormsModule, RouterLink, Puede, GrafoProtocolo, EtiquetaPipe,
-    MedidasProteccion, MedidasDisciplinarias, CerrarConEsc, GuardarConCmdEnter, Buscador, CursoNombrePipe,
+    CerrarConEsc, GuardarConCmdEnter, Buscador, CursoNombrePipe,
     AutoAjustarTextarea,
   ],
   templateUrl: './protocolo-caso.html',
   styleUrl: './protocolo-caso.scss',
 })
-export class ProtocoloCaso implements OnInit {
+export class ProtocoloCaso implements OnInit, OnDestroy {
   protected readonly Permiso = Permiso;
   /** Un paso de aprobación se aprueba o se rechaza; el resto se completa. */
   protected readonly esPasoDeAprobacion = esPasoDeAprobacion;
@@ -137,7 +145,25 @@ export class ProtocoloCaso implements OnInit {
 
   activo = computed(() => this.caso()?.estado === 'activo');
 
-  mostrarGrafo = signal(false);
+  /** Quien ve el recorrido completo lo ve como diagrama —es como se piensan
+   *  los protocolos—, y el paso actual se trabaja desde su caja y no desde una
+   *  tarjeta suelta arriba. La vista de lista se sacó: repetía lo mismo peor. */
+  enDiagrama = computed(() => this.verProcesos());
+
+  /** El formulario del paso actual, abierto desde el diagrama. */
+  mostrarPasoModal = signal(false);
+
+  abrirPasoActual() {
+    const paso = this.pasoActual();
+    if (!paso) return;
+    this.pasoSeleccionadoId.set(paso.id_activado_paso);
+    this.mostrarPasoModal.set(true);
+  }
+
+  /** Lo que pregunta un paso. `aprobado` no va: lo decide el botón de aprobar. */
+  camposDe(paso: any) {
+    return (paso?.campos ?? []).filter((c: any) => c.codigo !== 'aprobado');
+  }
 
   mostrarDetalle = signal(false);
   /** Paso que muestra el modal de detalle. Se guarda el id: tras completar un
@@ -151,7 +177,13 @@ export class ProtocoloCaso implements OnInit {
       ) ?? null,
   );
 
+  /** La caja del paso actual abre su formulario; las demás, su detalle con las
+   *  preguntas bloqueadas (o lo que se respondió, si ya pasó). */
   seleccionarDelGrafo(nodo: NodoGrafo) {
+    if (this.activo() && nodo.id === this.pasoActual()?.id_activado_paso) {
+      this.abrirPasoActual();
+      return;
+    }
     this.pasoSeleccionadoId.set(nodo.id);
     this.mostrarDetalle.set(true);
   }
@@ -170,6 +202,25 @@ export class ProtocoloCaso implements OnInit {
       por_involucrado_rol: p.por_involucrado_rol,
       requiere_notificacion: p.requiere_notificacion,
       accion_al_vencer: p.accion_al_vencer,
+      // En la acogida de relatos la caja lista a las personas: ✓ cuando ya está
+      // resuelta (su relato acogido, o el motivo de por qué no).
+      preguntas: p.relatos_personas
+        ? p.relatos_personas.map((r: any) => ({
+            etiqueta: r.se_acoge === false ? `${r.nombre} (no se acoge)` : r.nombre,
+            respondida: this.personaDeRelatoLista(r),
+          }))
+        : p.medidas_personas
+        ? p.medidas_personas.map((m: any) => ({
+            etiqueta: m.sin_medida ? `${m.nombre} (sin medidas)` : m.nombre,
+            respondida: this.personaMedidaLista(m),
+          }))
+        : this.camposDe(p).map((c: any) => {
+            const v = p.datos_salida?.[c.codigo];
+            return {
+              etiqueta: c.etiqueta || humanizar(c.codigo),
+              respondida: v !== null && v !== undefined && String(v).trim() !== '',
+            };
+          }),
     })),
   );
 
@@ -231,6 +282,67 @@ export class ProtocoloCaso implements OnInit {
     return `${hechos} de ${pasos.length} pasos`;
   }
 
+  /**
+   * ¿Ve el recorrido completo? Lo decide el backend (permiso
+   * protocolo_activado.ver_procesos): sin él, `pasos` ya viene recortado a las
+   * tarjetas que le tocan o que le asignaron, y acá solo se ajusta qué se dibuja.
+   */
+  verProcesos = computed(() => !!this.caso()?.ver_procesos);
+
+  /** Total del recorrido, contado en el backend antes de recortar. */
+  totalPasos = computed(() => this.caso()?.total_pasos ?? this.pasosVisibles().length);
+
+  /** "Paso 3 de 7": el mismo número para el coordinador y para quien ve una sola tarjeta. */
+  numeroDe(paso: any) {
+    return paso?.numero ? `Paso ${paso.numero} de ${this.totalPasos()}` : '';
+  }
+
+  /** Las tarjetas que no son el paso en curso (ese va destacado arriba). */
+  otrasTarjetas = computed(() => {
+    const actual = this.pasoActual()?.id_activado_paso;
+    return this.pasosVisibles().filter((p: any) => p.id_activado_paso !== actual);
+  });
+
+  /** Clase del badge según el estado del paso, la misma en barra, tarjetas y modal. */
+  claseEstado(estado: string) {
+    return estado === 'completado' ? 'validado'
+      : estado === 'vencido' ? 'gravísima'
+      : estado === 'omitido' ? 'confidencial'
+      : 'pendiente';
+  }
+
+  /** Una tarjeta todavía se puede encargar a otro mientras no esté cerrada. */
+  asignable(paso: any) {
+    return this.activo() && !['completado', 'omitido'].includes(paso.estado) && !paso.descartado;
+  }
+
+  /** La tarjeta está asignada a quien mira: eso lo habilita a completarla y a
+   *  registrar sus gestiones aunque su rol no tenga el permiso general. */
+  esMio(paso: any) {
+    const yo = this.auth.usuario()?.id;
+    return !!yo && paso?.id_usuario_responsable === yo;
+  }
+
+  /** Paso que se está encargando en el modal de asignar (puede no ser el en curso). */
+  pasoAReasignar = signal<any | null>(null);
+
+  abrirReasignar(paso: any) {
+    this.pasoAReasignar.set(paso);
+    this.reasignarA = paso.id_usuario_responsable ?? null;
+    this.mostrarReasignar.set(true);
+  }
+
+  abrirDetalle(paso: any) {
+    // Con la tarjeta del paso actual oculta (vista de diagrama), su segmento de
+    // la barra lleva al formulario: es lo único que se puede hacer con él.
+    if (this.enDiagrama() && this.activo() && paso.id_activado_paso === this.pasoActual()?.id_activado_paso) {
+      this.abrirPasoActual();
+      return;
+    }
+    this.pasoSeleccionadoId.set(paso.id_activado_paso);
+    this.mostrarDetalle.set(true);
+  }
+
   constructor(
     private api: ApiService,
     private route: ActivatedRoute,
@@ -239,9 +351,16 @@ export class ProtocoloCaso implements OnInit {
     private auth: AuthService,
   ) {}
 
+  ngOnDestroy() {
+    this.auth.permisosDelCaso.set([]);
+  }
+
   ngOnInit() {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
-    this.cargar();
+    // Al abrir un caso se va directo al paso en que está: es lo que se viene a
+    // hacer, y en un protocolo largo queda varias pantallas más abajo.
+    this.cargar(true);
+    this.cargarPlazoActa();
     // Solo alimenta el selector de "reasignar". Quien no tenga usuario.ver
     // recibe 403 acá y no pasa nada: el botón ya está bloqueado por su permiso.
     this.api.getUsuarios().subscribe({ next: (data) => this.usuarios.set(data), error: () => {} });
@@ -254,6 +373,9 @@ export class ProtocoloCaso implements OnInit {
     this.api.getProtocoloActivado(this.id).subscribe({
       next: (data) => {
         this.caso.set(data);
+        // Lo que este caso le habilita a quien mira (su lista de acceso), para
+        // los botones de la pantalla. Se quita en ngOnDestroy.
+        this.auth.permisosDelCaso.set(data?.permisos_caso ?? []);
         this.prepararFormulario();
         this.prepararGestiones();
         this.loading.set(false);
@@ -271,9 +393,17 @@ export class ProtocoloCaso implements OnInit {
    *  no hay tarjeta y no pasa nada. */
   private irAlPasoActual() {
     setTimeout(() => {
+      const tarjeta = document.getElementById('paso-actual');
+      if (tarjeta) {
+        tarjeta.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      // En el diagrama no hay tarjeta: se centra la caja del paso actual, en
+      // vertical y también en horizontal, porque un protocolo con ramas puede
+      // dejarla fuera del ancho visible del lienzo.
       document
-        .getElementById('paso-actual')
-        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        .querySelector('app-grafo-protocolo .nodo--actual')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
     });
   }
 
@@ -405,6 +535,22 @@ export class ProtocoloCaso implements OnInit {
       }
     }
 
+    for (const g of pendientes) {
+      const f = this.formsGestion[g.id_paso_involucrado];
+      if (!this.pideCautelar(paso, g, f)) continue;
+      if (!f.cau_fundamento?.trim()) {
+        this.error.set(
+          `La suspensión cautelar de ${g.involucrado_nombre} requiere su fundamento por escrito ` +
+            '(art. 6 letra d: se notifica junto con la decisión).',
+        );
+        return false;
+      }
+      if (f.fecha_gestion > hoyIso()) {
+        this.error.set(`La fecha de notificación de ${g.involucrado_nombre} no puede ser futura.`);
+        return false;
+      }
+    }
+
     this.error.set('');
     this.guardando.set(true);
     try {
@@ -493,12 +639,13 @@ export class ProtocoloCaso implements OnInit {
   }
 
   reasignar() {
-    const paso = this.pasoActual();
+    const paso = this.pasoAReasignar() ?? this.pasoActual();
     if (!paso || !this.reasignarA) return;
     this.api.reasignarPaso(this.id, paso.id_activado_paso, this.reasignarA).subscribe({
       next: () => {
         this.mostrarReasignar.set(false);
-        this.success.set('Responsable asignado');
+        const u = this.usuarios().find((x: any) => x.id_usuario === this.reasignarA);
+        this.success.set(`${paso.nombre} quedó asignado a ${u?.nombre || u?.correo || 'el funcionario'}`);
         this.cargar();
       },
       error: (err) => this.error.set(err.error?.message ?? 'No se pudo reasignar'),
@@ -578,7 +725,16 @@ export class ProtocoloCaso implements OnInit {
   // le cumplió y a quién falta.
 
   readonly ROLES_INVOLUCRADO = ['afectado', 'senalado', 'testigo', 'denunciante'];
-  readonly MEDIOS_NOTIFICACION = ['presencial', 'correo', 'telefono', 'plataforma', 'carta'];
+  // Mismos valores que MEDIOS_NOTIFICACION en flujoProtocolo.js. 'acta' es la
+  // notificación por escrito que la persona firma: al elegirla, el acta se
+  // imprime desde la misma tarjeta.
+  readonly MEDIOS_NOTIFICACION = ['presencial', 'videollamada', 'whatsapp', 'telefono', 'acta'];
+
+  /** Notificación por escrito y firmada. 'carta' es el nombre antiguo (filas
+   *  viejas y la suspensión cautelar, que guarda su vía en la misma columna). */
+  esActa(medio: string | null | undefined) {
+    return medio === 'acta' || medio === 'carta';
+  }
   /** Mismo catálogo y orden que la tarjeta de medidas de protección (de menos a
    *  más gravosa): en un paso de resguardo, cada afectado elige acá la suya. */
   readonly TIPOS_MEDIDA_PROTECCION = [
@@ -588,6 +744,110 @@ export class ProtocoloCaso implements OnInit {
     'suspension', 'otra',
   ];
   readonly MAX_DIAS_SUSPENSION = 15;
+
+  /**
+   * Las medidas de protección que pueden recaer sobre esta persona. Misma regla
+   * que tiposProteccionPara en constants/medidasProteccion.js del back (que es
+   * quien la hace cumplir): la suspensión recae sobre el estudiante señalado,
+   * no sobre la víctima; las de apoyo son para el afectado; las que separan a
+   * las partes, para cualquiera de los dos.
+   */
+  tiposProteccionDe(rol: string, tipoPersona: string) {
+    const soloAfectado = ['acompanamiento', 'derivacion_red', 'resguardo_confidencialidad'];
+    return this.TIPOS_MEDIDA_PROTECCION.filter((t) => {
+      if (soloAfectado.includes(t)) return rol === 'afectado';
+      if (t === 'suspension') return rol === 'senalado' && tipoPersona === 'estudiante';
+      if (['separacion_funciones', 'teletrabajo'].includes(t)) return rol === 'senalado' && tipoPersona === 'funcionario';
+      return rol === 'afectado' || rol === 'senalado';
+    });
+  }
+
+  // ── Medidas de protección para las dos partes ─────────────────────────────
+  //
+  // Una lista de acciones ya redactadas con el nombre de cada persona
+  // ("Suspender a Lucas", "Acompañamiento psicosocial para Renata"): se marcan
+  // las que corresponden y se aplican todas juntas. Las frases las arma el back
+  // (proteccionPaso.controller.js); lo que va sobre el señalado protege a todos
+  // los afectados, y lo de un afectado es solo suyo.
+
+  /** Lo marcado en cada paso: `${id_involucrado}:${tipo}` → datos de la medida. */
+  marcasProteccion: Record<number, Record<string, { marcada: boolean; dias: number | null; fundamento: string }>> = {};
+  guardandoProteccion = signal<number | null>(null);
+
+  marcaProteccion(paso: any, g: any, o: any) {
+    const delPaso = (this.marcasProteccion[paso.id_activado_paso] ??= {});
+    return (delPaso[`${g.id_involucrado}:${o.tipo}`] ??= { marcada: false, dias: null, fundamento: '' });
+  }
+
+  /** Lo marcado y todavía no aplicado, listo para enviar. */
+  private marcadasProteccion(paso: any) {
+    const marcadas: { id_involucrado: number; tipo: string; dias_habiles: number | null; fundamento: string }[] = [];
+    for (const g of paso.proteccion_partes.grupos)
+      for (const o of g.opciones) {
+        const m = this.marcaProteccion(paso, g, o);
+        if (!o.aplicada && m.marcada)
+          marcadas.push({ id_involucrado: g.id_involucrado, tipo: o.tipo, dias_habiles: m.dias, fundamento: m.fundamento });
+      }
+    return marcadas;
+  }
+
+  hayMarcadasProteccion(paso: any) {
+    return this.marcadasProteccion(paso).length > 0;
+  }
+
+  faltaParaProteccion(paso: any): string {
+    for (const m of this.marcadasProteccion(paso))
+      if (m.tipo === 'suspension') {
+        if (!m.dias_habiles) return 'Indica los días hábiles de la suspensión';
+        if (m.dias_habiles > this.MAX_DIAS_SUSPENSION) return `La suspensión no puede pasar de ${this.MAX_DIAS_SUSPENSION} días hábiles`;
+        if (!m.fundamento.trim()) return 'Indica por qué no basta otra medida que la suspensión';
+      }
+    return '';
+  }
+
+  aplicarProteccion(paso: any) {
+    const falta = this.faltaParaProteccion(paso);
+    if (falta) { this.error.set(`${falta}.`); return; }
+    this.error.set('');
+    this.guardandoProteccion.set(paso.id_activado_paso);
+    this.api.registrarProteccionPaso(this.id, paso.id_activado_paso, { medidas: this.marcadasProteccion(paso) }).subscribe({
+      next: (r) => {
+        this.guardandoProteccion.set(null);
+        delete this.marcasProteccion[paso.id_activado_paso];
+        this.success.set(r?.message ?? 'Medidas aplicadas');
+        this.cargar();
+      },
+      error: (err: any) => {
+        this.guardandoProteccion.set(null);
+        this.error.set(err.error?.message ?? 'No se pudieron aplicar las medidas');
+      },
+    });
+  }
+
+  hayAplicadasProteccion(paso: any) {
+    return paso.proteccion_partes.grupos.some((g: any) => g.opciones.some((o: any) => o.aplicada));
+  }
+
+  async sinMedidasProteccion(paso: any) {
+    const motivo = await this.confirmService.pedirTexto(
+      '¿No se aplica ninguna medida de protección en este caso? Queda registrado en la bitácora.',
+      { etiqueta: 'Motivo', placeholder: 'Por qué no corresponde aplicar medidas de protección', obligatorio: true },
+    );
+    if (motivo === null) return;
+    this.error.set('');
+    this.api.sinMedidasProteccionPaso(this.id, paso.id_activado_paso, { motivo }).subscribe({
+      next: (r) => { this.success.set(r?.message ?? 'Registrado'); this.cargar(); },
+      error: (err: any) => this.error.set(err.error?.message ?? 'No se pudo registrar'),
+    });
+  }
+
+  /** Las opciones de un grupo de la tarjeta "Medidas" para esta persona: en el
+   *  de protección, solo las que pueden recaer sobre ella. */
+  tiposDelGrupo(g: any, m: any) {
+    return g.grupo === 'proteccion' && m.tipos_proteccion
+      ? g.tipos.filter((t: string) => m.tipos_proteccion.includes(t))
+      : g.tipos;
+  }
 
   /** La tarjeta de esta persona tiene que pedir la medida: paso de resguardo,
    *  marcada como cumplida y todavía sin medida aplicada en este paso. */
@@ -621,6 +881,16 @@ export class ProtocoloCaso implements OnInit {
     const campo = (p?.campos ?? []).find((c: any) => c.codigo === 'tipo_medida');
     const op = campo?.opciones;
     return Array.isArray(op) ? op : typeof op === 'string' ? JSON.parse(op) : [];
+  }
+
+  /** Solo vías escritas: la ley exige notificar la cautelar por escrito. */
+  readonly MEDIOS_CAUTELAR = ['presencial', 'correo', 'plataforma', 'carta'];
+
+  /** La tarjeta de este señalado decreta su suspensión cautelar: paso de
+   *  medida cautelar, marcada como cumplida y todavía sin cautelar en este paso. */
+  pideCautelar(p: any, g: any, f: any) {
+    return p?.tipo_medida_requerida === 'cautelar' && !g.id_suspension_cautelar
+      && (f?.estado_ui === 'cumplido' || f?.estado_ui === 'cumplido_notificado');
   }
 
   /** La tarjeta de este señalado tiene que pedir su resolución. */
@@ -769,33 +1039,6 @@ export class ProtocoloCaso implements OnInit {
       .sort((a: PasoQueOrdenaMedida, b: PasoQueOrdenaMedida) =>
         Number(b.pendiente) - Number(a.pendiente)),
   );
-
-  // Las tarjetas de medidas, para poder abrirles el formulario desde el aviso
-  // del paso. Es lo que convierte "cargala más abajo" en un botón: el paso sabe
-  // qué medida espera, así que la pantalla puede abrir la correcta con el paso
-  // ya elegido en vez de dejar al usuario buscando.
-  @ViewChild(MedidasProteccion) tarjetaProteccion?: MedidasProteccion;
-  @ViewChild(MedidasDisciplinarias) tarjetaDisciplinarias?: MedidasDisciplinarias;
-
-  /**
-   * Abre el formulario que corresponde al paso, con el paso ya puesto.
-   *
-   * Cada clase tiene el suyo y no hay elección que hacer: el paso ya dice qué
-   * medida espera. El paso sin clase declarada abre el de protección, que es la
-   * medida ordinaria y la única que se puede adoptar desde que se toma
-   * conocimiento de los hechos; las otras dos quedan a un clic en su tarjeta.
-   *
-   * Los @ViewChild no existen hasta que la tarjeta está en pantalla, y las dos
-   * viven dentro de un @if: sin la guarda, un caso recién abierto rompía el
-   * botón.
-   */
-  registrarMedidaDe(paso: any) {
-    const clase = paso?.tipo_medida_requerida;
-    if (clase === 'disciplinaria') this.tarjetaDisciplinarias?.abrirParaPaso(paso.id_activado_paso);
-    else if (clase === 'cautelar')
-      this.tarjetaDisciplinarias?.abrirCautelarParaPaso(paso.id_activado_paso);
-    else this.tarjetaProteccion?.abrirParaPaso(paso.id_activado_paso);
-  }
 
   /**
    * Una tarjeta guardó una medida. Sin esto el aviso amarillo del paso seguía
@@ -999,6 +1242,10 @@ export class ProtocoloCaso implements OnInit {
           md_sel: '',
           md_dias: null as number | null,
           md_fundamento: '',
+          // Paso de medida cautelar: cómo se le notificó por escrito y con qué
+          // fundamento. La fecha de la notificación es la de la gestión.
+          cau_medio: 'presencial',
+          cau_fundamento: '',
         };
         const previo = this.formsGestion[id];
         const sinTocar = !previo || this.gestionesOriginales[id] === JSON.stringify(previo);
@@ -1036,6 +1283,11 @@ export class ProtocoloCaso implements OnInit {
             dias_habiles: this.TIPOS_CON_PLAZO.includes(f.md_sel) ? f.md_dias : null,
             fundamento: f.md_fundamento?.trim() || null,
           };
+    if (this.pideCautelar(paso, g, f))
+      data.medida_cautelar = {
+        medio_notificacion: f.cau_medio,
+        fundamento: f.cau_fundamento?.trim() || null,
+      };
     if (this.pideMedida(paso, g, f))
       data.medida_proteccion = {
         tipo: f.medida_tipo,
@@ -1075,17 +1327,10 @@ export class ProtocoloCaso implements OnInit {
   // que la persona reconoce haber recibido se prueba con su firma, y para eso
   // hace falta un papel: el acta se imprime, se firma y vuelve escaneada.
 
-  /** Gestión cuya acta se está por imprimir: `{ paso, gestion }`. */
-  actaAbierta = signal<{ paso: any; gestion: any } | null>(null);
   /** Qué gestión está subiendo su acta, para bloquear su botón. */
   subiendoActa = signal<number | null>(null);
-  /**
-   * Medidas disciplinarias del registro. Solo para avisar en el modal si esta
-   * persona todavía no tiene ninguna: el acta la arma el backend con las suyas.
-   */
-  private medidas = signal<any[]>([]);
-  /** Se está generando el acta en el backend: bloquea los botones del modal. */
-  generandoActa = signal(false);
+  /** Qué gestión está generando su acta en el backend: bloquea sus botones. */
+  generandoActa = signal<number | null>(null);
 
   /**
    * Qué resolvió el caso: 'formativa' | 'disciplinaria' | 'ambas', o null si el
@@ -1141,109 +1386,61 @@ export class ProtocoloCaso implements OnInit {
    * es papeleo inventado y no puede trabar completar o aprobar el paso.
    */
   requiereActaGestion(paso: any, g: any) {
-    return this.requiereActa(paso) && this.medioDe(g) === 'carta';
+    return this.requiereActa(paso) && this.esActa(this.medioDe(g));
   }
 
-  /**
-   * Días hábiles que se imprimen en el acta. Editable porque el plazo de las
-   * medidas que no son expulsión lo fija el reglamento interno de cada
-   * establecimiento, y el sistema todavía no lo guarda.
-   */
-  actaPlazoDias = 5;
-  /** Observación opcional que se imprime en el acta (citación, condiciones, lo conversado). */
-  actaNota = '';
+  // ── El acta, en la misma tarjeta ──────────────────────────────────────────
+  //
+  // Antes se abría un modal que pedía otra vez el plazo y una nota. Ahora el
+  // acta se arma con lo que ya está en la tarjeta: la observación de la
+  // notificación va impresa bajo "SE NOTIFICA", y el plazo se ajusta ahí mismo.
 
-  abrirActa(paso: any, g: any) {
-    this.error.set('');
-    this.avisoActa.set('');
-    // La nota es de esta persona: no se arrastra al acta de la siguiente.
-    this.actaNota = '';
-    this.actaAbierta.set({ paso, gestion: g });
-    // Se recargan cada vez: entre una impresión y otra pudo agregarse la medida
-    // que justamente hay que notificar, o haberse emitido el informe de
-    // expulsión que cambia el plazo legal.
-    const idRegistro = this.caso()?.id_registro;
-    if (idRegistro)
-      this.api.getMedidasDisciplinarias(idRegistro).subscribe({
-        next: (m) => this.medidas.set(m ?? []),
-        error: () => this.medidas.set([]),
-      });
-    // Si el caso tiene informe de expulsión o cancelación de matrícula, el
-    // plazo lo fija la ley (15 días hábiles, art. 6 letra d) del DFL 2); si
-    // no, se precarga en 5 y el usuario lo ajusta a su reglamento interno. Se
-    // consulta a la fuente: el ENUM de MEDIDA_DISCIPLINARIA excluye a
-    // propósito la expulsión, así que no se puede deducir de las medidas.
+  /**
+   * Días hábiles para pedir reconsideración que se imprimen en el acta, por
+   * gestión. Editable porque, salvo en expulsión (15 por ley, art. 6 letra d)
+   * del DFL 2), lo fija el reglamento interno de cada establecimiento.
+   */
+  actaPlazo: Record<number, number> = {};
+  /** 15 si el caso tiene informe de expulsión, 5 si no (ver cargarPlazoActa). */
+  private plazoActaPorDefecto = 5;
+
+  /** Se consulta a la fuente: el ENUM de MEDIDA_DISCIPLINARIA excluye a
+   *  propósito la expulsión, así que no se puede deducir de las medidas. */
+  private cargarPlazoActa() {
     this.api.getInformeExpulsion(this.id).subscribe({
-      next: () => (this.actaPlazoDias = 15),
+      next: () => (this.plazoActaPorDefecto = 15),
       // 404 es la respuesta normal cuando el caso no tiene informe.
-      error: () => (this.actaPlazoDias = 5),
+      error: () => (this.plazoActaPorDefecto = 5),
     });
   }
 
-  cerrarActa() {
-    this.actaAbierta.set(null);
-    this.avisoActa.set('');
+  plazoActa(g: any): number {
+    return (this.actaPlazo[g.id_paso_involucrado] ??= this.plazoActaPorDefecto);
   }
 
-  /** Las medidas que le corresponden a esta persona (mismo criterio que usa el
-   *  backend para escribirlas en el acta). Por id cuando la medida lo trae; si
-   *  no, por nombre. */
-  private medidasDe(g: any) {
-    const nombre = (g.involucrado_nombre ?? '').trim().toLowerCase();
-    return this.medidas().filter((m: any) =>
-      m.id_involucrado
-        ? m.id_involucrado === g.id_involucrado
-        : `${m.estudiante_nombre ?? ''} ${m.estudiante_apellido ?? ''}`.trim().toLowerCase() === nombre,
-    );
+  /** Lo que se imprime bajo "SE NOTIFICA": la observación de la tarjeta, la
+   *  que se está escribiendo o la ya guardada. */
+  private notaActa(g: any): string {
+    return (this.formsGestion[g.id_paso_involucrado]?.observacion ?? g.observacion ?? '').trim();
   }
 
-  /**
-   * Aviso dentro del modal del acta. No bloquea la emisión: un acta sin medidas
-   * cargadas sale con esos renglones en blanco y se completan a mano antes de
-   * firmar — que es lo que hace `ActaNotificacionService` a propósito. Antes se
-   * cortaba acá la impresión/descarga y, como el modal no mostraba el error, el
-   * botón "no hacía nada".
-   */
-  avisoActa = signal('');
-
-  private revisarMedidasActa() {
-    const abierta = this.actaAbierta();
-    const sinMedidas = !abierta || this.medidasDe(abierta.gestion).length === 0;
-    this.avisoActa.set(
-      sinMedidas
-        ? 'Todavía no hay medidas registradas para esta persona: el acta sale con esos renglones ' +
-            'en blanco para completarlos a mano antes de firmar.'
-        : '',
-    );
-  }
-
-  imprimirActa() {
-    this.emitirActa('imprimir');
-  }
-
-  descargarActa() {
-    this.emitirActa('descargar');
-  }
-
-  /** El acta la arma el backend; acá solo se le da salida. */
-  private emitirActa(accion: 'imprimir' | 'descargar') {
-    const abierta = this.actaAbierta();
-    if (!abierta || this.generandoActa()) return;
+  /** El acta la arma el backend; acá solo se le da salida (imprimir o descargar). */
+  emitirActa(g: any, accion: 'imprimir' | 'descargar') {
+    if (this.generandoActa() !== null) return;
     this.error.set('');
-    this.revisarMedidasActa();
-    this.generandoActa.set(true);
+    this.generandoActa.set(g.id_paso_involucrado);
     this.api
-      .getActaNotificacionPdf(this.id, abierta.gestion.id_paso_involucrado, this.actaPlazoDias, this.actaNota)
+      .getActaNotificacionPdf(this.id, g.id_paso_involucrado, this.plazoActa(g), this.notaActa(g))
       .subscribe({
         next: (resp) => {
           const pdf = resp.body!;
           if (accion === 'imprimir') imprimirPdf(pdf);
           else descargarPdf(pdf, nombreDelPdf(resp, 'Notificacion.pdf'));
-          this.generandoActa.set(false);
+          this.generandoActa.set(null);
         },
         error: async (err) => {
           this.error.set(await mensajeDeErrorPdf(err, 'No se pudo generar el acta'));
-          this.generandoActa.set(false);
+          this.generandoActa.set(null);
         },
       });
   }
@@ -1266,12 +1463,12 @@ export class ProtocoloCaso implements OnInit {
     // Sólo traba a quien se notificó por carta: en las demás vías la constancia
     // de fecha y vía basta y exigir el acta firmada sería inventar un requisito.
     const faltan = (paso.involucrados ?? []).filter(
-      (g: any) => g.estado !== 'no_aplica' && this.medioDe(g) === 'carta' && !g.tiene_acta_firmada,
+      (g: any) => g.estado !== 'no_aplica' && this.esActa(this.medioDe(g)) && !g.tiene_acta_firmada,
     );
     if (faltan.length === 0) return true;
 
     this.error.set(
-      `Falta subir la carta firmada de ${faltan.map((g: any) => g.involucrado_nombre).join(', ')}. ` +
+      `Falta subir el acta firmada de ${faltan.map((g: any) => g.involucrado_nombre).join(', ')}. ` +
         'Imprímela, hazla firmar y súbela antes de dar el paso por cumplido.',
     );
     return false;
@@ -1388,6 +1585,9 @@ export class ProtocoloCaso implements OnInit {
     request.subscribe({
       next: (r: any) => {
         this.guardando.set(false);
+        // El paso abierto desde el diagrama ya se cerró: el modal mostraría el
+        // siguiente sin que nadie lo haya pedido. El aviso queda arriba.
+        this.mostrarPasoModal.set(false);
         this.success.set(
           mensajeOk ??
             (r?.cerrado
@@ -1403,6 +1603,402 @@ export class ProtocoloCaso implements OnInit {
         this.error.set(err.error?.message ?? 'No se pudo completar la acción');
       },
     });
+  }
+
+  // ── Acogida de relatos ───────────────────────────────────────────────────
+  //
+  // La lista es la de todos los involucrados del caso (la arma el back en
+  // `relatos_personas`). Por persona: se marca si se le acoge el relato; si
+  // no, se pide el motivo; si sí, se escriben sus relatos, cada uno con su
+  // botón "Acoger relato". Todo se guarda al momento —no espera a "Completar
+  // paso"— porque cada relato vale por sí solo y lleva su propia fecha y hora.
+
+  /** Lo que se está escribiendo por persona, que sobrevive a cada recarga. */
+  formsRelato: Record<string, FormRelato> = {};
+  /** Relato en corrección: id → texto en edición. */
+  editandoRelato: Record<number, string> = {};
+  guardandoRelato = signal<string | null>(null);
+
+  formRelato(paso: any, r: any) {
+    const k = `${paso.id_activado_paso}-${r.id_involucrado}`;
+    return (this.formsRelato[k] ??= {
+      eleccion: null, motivo: r.motivo ?? '', nuevo: '',
+      abierto: false,
+    });
+  }
+
+  /** La elección en pantalla: la guardada, salvo que se esté cambiando. */
+  eleccionRelato(paso: any, r: any): boolean | null {
+    return this.formRelato(paso, r).eleccion ?? r.se_acoge;
+  }
+
+  personaDeRelatoLista(r: any) {
+    return r.se_acoge === false ? !!r.motivo : r.se_acoge === true && r.relatos.length > 0;
+  }
+
+  relatosListos(paso: any) {
+    const personas = paso?.relatos_personas ?? [];
+    return personas.filter((r: any) => this.personaDeRelatoLista(r)).length;
+  }
+
+  /** Se puede escribir mientras el caso siga activo y el paso esté abierto o ya
+   *  completado (el coordinador agrega relatos después). */
+  relatosEditables(paso: any) {
+    return this.activo() && ['en_curso', 'vencido', 'completado'].includes(paso?.estado);
+  }
+
+  async elegirRelato(paso: any, r: any, seAcoge: boolean) {
+    const f = this.formRelato(paso, r);
+    // Marcar "no" solo abre el motivo: se guarda recién con el motivo escrito.
+    if (!seAcoge) {
+      f.eleccion = false;
+      return;
+    }
+    f.eleccion = true;
+    if (r.se_acoge === true) return;
+    await this.llamarRelato(`${paso.id_activado_paso}-${r.id_involucrado}`,
+      this.api.decidirRelato(this.id, paso.id_activado_paso, r.id_involucrado, { se_acoge: true }));
+  }
+
+  guardarMotivoRelato(paso: any, r: any) {
+    const f = this.formRelato(paso, r);
+    if ((f.motivo ?? '').trim().length < 5) {
+      this.error.set(`Explica por qué no se le acoge el relato a ${r.nombre}.`);
+      return;
+    }
+    this.llamarRelato(`${paso.id_activado_paso}-${r.id_involucrado}`,
+      this.api.decidirRelato(this.id, paso.id_activado_paso, r.id_involucrado, {
+        se_acoge: false, motivo: f.motivo.trim(),
+      }));
+  }
+
+  acogerRelato(paso: any, r: any) {
+    const f = this.formRelato(paso, r);
+    if (!f.nuevo.trim()) return;
+    this.llamarRelato(`${paso.id_activado_paso}-${r.id_involucrado}`,
+      this.api.acogerRelato(this.id, paso.id_activado_paso, {
+        id_involucrado: r.id_involucrado,
+        relato: f.nuevo,
+      }),
+      () => Object.assign(f, { nuevo: '', abierto: false }));
+  }
+
+  // ── Tarjeta "Medidas" ─────────────────────────────────────────────────────
+  //
+  // Todos los involucrados del caso; a cada uno se le elige una medida del
+  // listado que arma el back (catalogo_medidas, agrupado como lo distingue la
+  // ley) o "Sin medidas". Cada una se guarda al momento, con su botón.
+
+  formsMedida: Record<string, { opcion: string; descripcion: string; fundamento: string; dias: number | null; motivo: string; abierto: boolean }> = {};
+  guardandoMedida = signal<string | null>(null);
+
+  formMedida(paso: any, m: any) {
+    return (this.formsMedida[`${paso.id_activado_paso}-${m.id_involucrado}`] ??= {
+      opcion: '', descripcion: '', fundamento: '', dias: null, motivo: '', abierto: false,
+    });
+  }
+
+  /** Los grupos que se le ofrecen a esta persona: a quien no es estudiante,
+   *  solo los de protección (las demás medidas son sobre estudiantes). */
+  gruposMedida(m: any) {
+    const catalogo = this.caso()?.catalogo_medidas ?? [];
+    return catalogo.filter((g: any) => !g.soloEstudiantes || m.tipo_persona === 'estudiante');
+  }
+
+  etiquetaOpcionMedida(g: any, tipo: string) {
+    return g.tabla === 'p' ? etiquetaDe(tipo, 'tipo_medida_proteccion') : etiquetaDe(tipo, 'tipo_medida_disciplinaria');
+  }
+
+  /** Las que piden días hábiles y fundamento: la suspensión de protección (máx.
+   *  15) y las excepcionales (Circular 482, p. 47). */
+  medidaConPlazo(opcion: string) {
+    return opcion === 'p:suspension' ||
+      ['d:suspension', 'd:reduccion_jornada', 'd:separacion_temporal', 'd:asistencia_solo_evaluaciones'].includes(opcion);
+  }
+
+  faltaParaMedida(f: any): string {
+    if (!f.opcion) return 'Elige la medida';
+    if (this.medidaConPlazo(f.opcion)) {
+      if (!f.dias) return 'Indica los días hábiles';
+      if (f.opcion === 'p:suspension' && f.dias > this.MAX_DIAS_SUSPENSION)
+        return `La suspensión no puede pasar de ${this.MAX_DIAS_SUSPENSION} días hábiles`;
+      if (!f.fundamento.trim()) return 'Indica el fundamento';
+    }
+    return '';
+  }
+
+  medidasEditables(paso: any) {
+    return this.activo() && ['en_curso', 'vencido', 'completado'].includes(paso?.estado);
+  }
+
+  /** Una medida de protección de un paso anterior mantenida y todavía vigente
+   *  cuenta como la medida de la persona. */
+  tieneMantenida(m: any) {
+    return (m?.previas ?? []).some((x: any) => x.mantenida && x.estado === 'vigente');
+  }
+
+  personaMedidaLista(m: any) {
+    return m.medidas.length > 0 || !!m.sin_medida || this.tieneMantenida(m);
+  }
+
+  medidasListas(paso: any) {
+    return (paso?.medidas_personas ?? []).filter((m: any) => this.personaMedidaLista(m)).length;
+  }
+
+  /** Las previas sobre las que todavía hay algo que decidir (vigentes). */
+  previasVigentes(m: any) {
+    return (m?.previas ?? []).filter((x: any) => x.estado === 'vigente');
+  }
+
+  decidiendoPrevia = signal<number | null>(null);
+
+  async decidirPrevia(paso: any, m: any, x: any, accion: 'mantener' | 'deshacer' | 'concluir') {
+    if (this.decidiendoPrevia() !== null) return;
+    if (accion === 'concluir') {
+      const ok = await this.confirmService.confirmarAccion(
+        `¿Concluir "${x.etiqueta}" de ${m.nombre}? La medida deja de estar vigente y ${m.nombre} ` +
+          'queda pendiente hasta que se le elija otra medida o "Sin medidas".',
+      );
+      if (!ok) return;
+    }
+    this.error.set('');
+    this.decidiendoPrevia.set(x.id);
+    this.api.decidirMedidaPrevia(this.id, paso.id_activado_paso, x.id, accion).subscribe({
+      next: (r) => {
+        this.decidiendoPrevia.set(null);
+        this.success.set(r?.message ?? 'Guardado');
+        this.cargar();
+      },
+      error: (err: any) => {
+        this.decidiendoPrevia.set(null);
+        this.error.set(err.error?.message ?? 'No se pudo guardar la decisión');
+      },
+    });
+  }
+
+  registrarMedida(paso: any, m: any) {
+    const f = this.formMedida(paso, m);
+    const falta = this.faltaParaMedida(f);
+    if (falta) {
+      this.error.set(`${m.nombre}: ${falta.toLowerCase()}.`);
+      return;
+    }
+    const clave = `${paso.id_activado_paso}-${m.id_involucrado}`;
+    this.error.set('');
+    this.guardandoMedida.set(clave);
+    this.api.registrarMedidaPaso(this.id, paso.id_activado_paso, {
+      id_involucrado: m.id_involucrado,
+      opcion: f.opcion,
+      descripcion: f.descripcion,
+      fundamento: f.fundamento,
+      dias_habiles: this.medidaConPlazo(f.opcion) ? f.dias : null,
+      motivo: f.motivo,
+    }).subscribe({
+      next: (r: any) => {
+        this.guardandoMedida.set(null);
+        Object.assign(f, { opcion: '', descripcion: '', fundamento: '', dias: null, motivo: '', abierto: false });
+        this.success.set(r?.message ?? 'Medida registrada');
+        this.cargar();
+      },
+      error: (err: any) => {
+        this.guardandoMedida.set(null);
+        this.error.set(err.error?.message ?? 'No se pudo registrar la medida');
+      },
+    });
+  }
+
+  // ── Documento firmado de una medida ──────────────────────────────────────
+  //
+  // Las excepcionales y la condicionalidad piden la resolución con la firma del
+  // director. Se imprime o descarga, se firma y se vuelve a subir escaneada, en
+  // la misma tarjeta.
+
+  generandoDocMedida = signal<number | null>(null);
+  subiendoDocMedida = signal<number | null>(null);
+
+  emitirDocumentoMedida(x: any, accion: 'imprimir' | 'descargar') {
+    if (this.generandoDocMedida() !== null) return;
+    this.error.set('');
+    this.generandoDocMedida.set(x.id);
+    this.api.getDocumentoMedidaPdf(this.id, x.id).subscribe({
+      next: (resp) => {
+        const pdf = resp.body!;
+        if (accion === 'imprimir') imprimirPdf(pdf);
+        else descargarPdf(pdf, nombreDelPdf(resp, 'Documento medida.pdf'));
+        this.generandoDocMedida.set(null);
+      },
+      error: async (err) => {
+        this.error.set(await mensajeDeErrorPdf(err, 'No se pudo generar el documento'));
+        this.generandoDocMedida.set(null);
+      },
+    });
+  }
+
+  subirDocumentoMedida(x: any, m: any, evento: Event) {
+    const input = evento.target as HTMLInputElement;
+    const file = input.files?.[0];
+    // Se limpia al capturar el archivo y se traba mientras sube: en Android el
+    // evento de selección puede dispararse dos veces.
+    input.value = '';
+    if (!file || this.subiendoDocMedida() === x.id) return;
+    this.subiendoDocMedida.set(x.id);
+    this.error.set('');
+    const fd = new FormData();
+    fd.append('archivo', file);
+    this.api.subirDocumentoMedida(this.id, x.id, fd).subscribe({
+      next: () => {
+        this.subiendoDocMedida.set(null);
+        this.success.set(`Documento firmado de ${m.nombre} subido`);
+        this.cargar();
+      },
+      error: (err) => {
+        this.subiendoDocMedida.set(null);
+        this.error.set(err.error?.message ?? 'No se pudo subir el documento');
+      },
+    });
+  }
+
+  verDocumentoMedida(x: any) {
+    this.api.getDocumentoMedida(this.id, x.id).subscribe({
+      next: (blob) => window.open(URL.createObjectURL(blob), '_blank'),
+      error: () => this.error.set('No se pudo abrir el documento firmado'),
+    });
+  }
+
+  // ── Encargar un relato a un funcionario ──────────────────────────────────
+
+  relatoAEncargar = signal<{ paso: any; persona: any } | null>(null);
+  encargarA: number | null = null;
+
+  abrirEncargarRelato(paso: any, persona: any) {
+    this.relatoAEncargar.set({ paso, persona });
+    this.encargarA = persona.id_usuario_responsable ?? null;
+  }
+
+  encargarRelato(quitar = false) {
+    const e = this.relatoAEncargar();
+    if (!e) return;
+    this.llamarRelato(`${e.paso.id_activado_paso}-${e.persona.id_involucrado}`,
+      this.api.asignarRelato(this.id, e.paso.id_activado_paso, e.persona.id_involucrado, quitar ? null : this.encargarA),
+      () => this.relatoAEncargar.set(null));
+  }
+
+  // ── Acceso al caso completo ──────────────────────────────────────────────
+  //
+  // La lista de quienes ven el caso completo es de cada caso, no del rol. La
+  // administran Dirección, Convivencia y el administrador, que además lo ven
+  // siempre (ver utils/accesoCaso.js en el back).
+
+  mostrarAcceso = signal(false);
+  acceso = signal<{ usuarios: any[]; roles_supervision: string[] } | null>(null);
+  accesoNuevo: number | null = null;
+  guardandoAcceso = signal(false);
+
+  abrirAcceso() {
+    this.mostrarAcceso.set(true);
+    this.accesoNuevo = null;
+    this.cargarAcceso();
+  }
+
+  private cargarAcceso() {
+    this.api.getAccesoCaso(this.id).subscribe({
+      next: (a) => this.acceso.set(a),
+      error: (err) => this.error.set(err.error?.message ?? 'No se pudo cargar el acceso'),
+    });
+  }
+
+  /** Funcionarios que todavía no están en la lista. */
+  usuariosSinAcceso() {
+    const ya = new Set((this.acceso()?.usuarios ?? []).map((u: any) => u.id_usuario));
+    return this.usuarios().filter((u: any) => !ya.has(u.id_usuario));
+  }
+
+  otorgarAcceso() {
+    if (!this.accesoNuevo) return;
+    this.guardandoAcceso.set(true);
+    this.api.otorgarAccesoCaso(this.id, this.accesoNuevo).subscribe({
+      next: () => {
+        this.guardandoAcceso.set(false);
+        this.accesoNuevo = null;
+        this.cargarAcceso();
+      },
+      error: (err) => {
+        this.guardandoAcceso.set(false);
+        this.error.set(err.error?.message ?? 'No se pudo dar acceso');
+      },
+    });
+  }
+
+  async retirarAcceso(u: any) {
+    const ok = await this.confirmService.confirmarAccion(
+      `${u.nombre || u.correo} dejará de ver este caso completo. Si tiene una tarjeta o un relato ` +
+        'encargado, seguirá viendo solo eso. ¿Retirar el acceso?',
+    );
+    if (!ok) return;
+    this.api.retirarAccesoCaso(this.id, u.id_usuario).subscribe({
+      next: () => this.cargarAcceso(),
+      error: (err) => this.error.set(err.error?.message ?? 'No se pudo retirar el acceso'),
+    });
+  }
+
+  /** Personas cuyos relatos anteriores se desplegaron, por paso. */
+  private relatosDesplegados = new Set<string>();
+
+  /** Cuántos relatos de una persona quedan plegados arriba: con más de dos se
+   *  muestran los dos últimos, que es lo que se lee primero. */
+  relatosPlegados(paso: any, r: any): number {
+    if (this.relatosDesplegados.has(`${paso.id_activado_paso}-${r.id_involucrado}`)) return 0;
+    return Math.max(0, r.relatos.length - 2);
+  }
+
+  desplegarRelatos(paso: any, r: any) {
+    this.relatosDesplegados.add(`${paso.id_activado_paso}-${r.id_involucrado}`);
+  }
+
+  cancelarCorreccionRelato(relato: any) {
+    delete this.editandoRelato[relato.id_relato];
+  }
+
+  async guardarCorreccionRelato(paso: any, relato: any) {
+    const texto = this.editandoRelato[relato.id_relato];
+    if (!texto?.trim() || texto.trim() === relato.relato) {
+      delete this.editandoRelato[relato.id_relato];
+      return;
+    }
+    const ok = await this.confirmService.confirmarAccion(
+      'El relato se corrige, pero el texto anterior queda guardado y aparece en el expediente junto a la ' +
+        'corrección, con tu nombre y la fecha. ¿Guardar la corrección?',
+    );
+    if (!ok) return;
+    this.llamarRelato(`relato-${relato.id_relato}`,
+      this.api.editarRelato(this.id, paso.id_activado_paso, relato.id_relato, texto),
+      () => delete this.editandoRelato[relato.id_relato]);
+  }
+
+  /** Guarda y recarga el caso; la marca de "guardando" es por persona para
+   *  que el botón de una no bloquee a las demás. */
+  private llamarRelato(clave: string, req: any, alTerminar?: () => void) {
+    this.error.set('');
+    this.guardandoRelato.set(clave);
+    return new Promise<void>((resolve) =>
+      req.subscribe({
+        next: (r: any) => {
+          this.guardandoRelato.set(null);
+          alTerminar?.();
+          // La elección local ya quedó guardada: desde acá manda la del back.
+          for (const k of Object.keys(this.formsRelato))
+            if (k === clave) this.formsRelato[k].eleccion = null;
+          this.success.set(r?.message ?? 'Guardado');
+          this.cargar();
+          resolve();
+        },
+        error: (err: any) => {
+          this.guardandoRelato.set(null);
+          this.error.set(err.error?.message ?? 'No se pudo guardar');
+          resolve();
+        },
+      }),
+    );
   }
 
   // ── Presentación ─────────────────────────────────────────────────────────

@@ -41,6 +41,8 @@ export const Permiso = {
   EstablecimientoEditar  : 19,
   EstablecimientoEliminar: 20,
   EstablecimientoImportar: 21,
+  // Interruptor de acceso del colegio en Geo; aparte de editar la ficha.
+  EstablecimientoCambiarAcceso: 123,
 
   // sostenedor
   SostenedorVer                   : 22,
@@ -119,6 +121,8 @@ export const Permiso = {
   ProtocoloActivadoAnular       : 91,
   ProtocoloActivadoVerBitacora  : 92,
   ProtocoloActivadoVerTodos     : 115,
+  // Todas las tarjetas del caso; sin él, solo las que le tocan o le asignaron.
+  ProtocoloActivadoVerProcesos  : 122,
 
   // ── Ley 21.809 ────────────────────────────────────────────────────────────
   TipoFaltaVincularProtocolo: 93,
@@ -308,4 +312,6 @@ export const CODIGO_POR_ID: Record<number, string> = {
  119: 'denuncia.gestionar',
  120: 'denuncia.ver_identidad',
  121: 'dashboard.ver_resumen',
+ 122: 'protocolo_activado.ver_procesos',
+ 123: 'establecimiento.cambiar_acceso',
 };

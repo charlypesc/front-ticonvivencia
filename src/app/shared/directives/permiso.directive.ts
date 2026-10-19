@@ -34,6 +34,14 @@ export class Puede {
   /** Reemplaza el motivo del tooltip cuando el genérico no explica nada. */
   appPuedeMotivo = input<string>('');
 
+  /**
+   * Habilita aunque falte el permiso general: la pantalla sabe algo que lo
+   * reemplaza. Hoy, que el paso está asignado a quien mira (el backend acepta
+   * igual al responsable asignado, ver permisoOResponsable). appPuedeSi se
+   * sigue exigiendo.
+   */
+  appPuedeAunSin = input<boolean>(false);
+
   private auth = inject(AuthService);
   private el = inject(ElementRef<HTMLElement>);
   private renderer = inject(Renderer2);
@@ -42,7 +50,7 @@ export class Puede {
     // En un effect y no en ngOnInit porque `usuario` es un signal: al cerrar y
     // volver a entrar sin recargar la página, los controles se recalculan solos.
     effect(() => {
-      const habilitado = this.auth.can(this.appPuede()) && this.appPuedeSi();
+      const habilitado = (this.auth.can(this.appPuede()) || this.appPuedeAunSin()) && this.appPuedeSi();
       this.aplicar(habilitado);
     });
   }

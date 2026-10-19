@@ -1,5 +1,48 @@
 @use '../../../styles/variables' as *;
 
+// Ventas / resto del colegio. Mismo estilo que las pestañas de plantillas de Geo.
+.pestanas {
+  display: flex;
+  gap: 2px;
+  margin: 14px 0 4px;
+  border-bottom: 1px solid $gray-200;
+  overflow-x: auto;
+
+  &__tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: $gray-600;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover { color: $primary; }
+
+    &.activa {
+      color: $primary;
+      border-bottom-color: $primary;
+      font-weight: 600;
+    }
+  }
+
+  &__n {
+    font-size: 12px;
+    font-weight: 600;
+    background: $gray-100;
+    color: $gray-600;
+    border-radius: 999px;
+    padding: 1px 7px;
+  }
+}
+
 // Explica por qué el formulario de alta no pide contraseña. Sin esto, la
 // ausencia del campo se lee como un bug, no como una decisión.
 .hint-clave {

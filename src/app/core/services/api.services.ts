@@ -695,6 +695,82 @@ export class ApiService {
     return this.http.delete(`${this.base}/protocolos-activados/${id}/involucrados/${idInvolucrado}`);
   }
   /** Lo que se hizo con una persona en un paso: notificación, entrega, firma. */
+  // Acogida de relatos: a quién se le acoge (y por qué no), cada relato y sus
+  // correcciones. Ver relatos.controller.js en el back.
+  decidirRelato(id: number, idPaso: number, idInvolucrado: number, data: { se_acoge: boolean; motivo?: string }) {
+    return this.http.put(
+      `${this.base}/protocolos-activados/${id}/pasos/${idPaso}/relatos/personas/${idInvolucrado}`, data);
+  }
+
+  acogerRelato(id: number, idPaso: number, data: { id_involucrado: number; relato: string }) {
+    return this.http.post(`${this.base}/protocolos-activados/${id}/pasos/${idPaso}/relatos`, data);
+  }
+
+  /** Tarjeta "Medidas": la medida de una persona, o 'sin_medida'. */
+  registrarMedidaPaso(id: number, idPaso: number, data: {
+    id_involucrado: number; opcion: string; descripcion?: string; fundamento?: string;
+    dias_habiles?: number | null; motivo?: string;
+  }) {
+    return this.http.post(`${this.base}/protocolos-activados/${id}/pasos/${idPaso}/medidas`, data);
+  }
+
+  /** Paso de protección para las dos partes: las medidas marcadas en la lista. */
+  registrarProteccionPaso(id: number, idPaso: number, data: {
+    medidas: { id_involucrado: number; tipo: string; dias_habiles?: number | null; fundamento?: string }[];
+  }) {
+    return this.http.post<{ message: string }>(`${this.base}/protocolos-activados/${id}/pasos/${idPaso}/proteccion`, data);
+  }
+  sinMedidasProteccionPaso(id: number, idPaso: number, data: { motivo: string }) {
+    return this.http.post<{ message: string }>(
+      `${this.base}/protocolos-activados/${id}/pasos/${idPaso}/proteccion/sin-medidas`, data);
+  }
+
+  /** Tarjeta "Medidas": mantener o concluir una medida de protección de un paso anterior. */
+  decidirMedidaPrevia(id: number, idPaso: number, idMedida: number, accion: 'mantener' | 'deshacer' | 'concluir') {
+    return this.http.post<{ message: string }>(
+      `${this.base}/protocolos-activados/${id}/pasos/${idPaso}/medidas/previas/${idMedida}`, { accion });
+  }
+
+  // El documento que se firma por una medida de la tarjeta "Medidas": la
+  // resolución del director o el acta del equipo de convivencia.
+  getDocumentoMedidaPdf(id: number, idMedida: number) {
+    return this.http.get(`${this.base}/protocolos-activados/${id}/medidas/${idMedida}/documento-pdf`, {
+      responseType: 'blob', observe: 'response',
+    });
+  }
+
+  subirDocumentoMedida(id: number, idMedida: number, data: FormData) {
+    return this.http.put(`${this.base}/protocolos-activados/${id}/medidas/${idMedida}/documento`, data);
+  }
+
+  getDocumentoMedida(id: number, idMedida: number) {
+    return this.http.get(`${this.base}/protocolos-activados/${id}/medidas/${idMedida}/documento`, { responseType: 'blob' });
+  }
+
+  /** Encarga el relato de una persona a un funcionario (null lo quita). */
+  asignarRelato(id: number, idPaso: number, idInvolucrado: number, idUsuario: number | null) {
+    return this.http.put(
+      `${this.base}/protocolos-activados/${id}/pasos/${idPaso}/relatos/personas/${idInvolucrado}/responsable`,
+      { id_usuario: idUsuario });
+  }
+
+  // "¿Quién puede ver este protocolo completo?": la lista de acceso del caso.
+  getAccesoCaso(id: number) {
+    return this.http.get<any>(`${this.base}/protocolos-activados/${id}/acceso`);
+  }
+
+  otorgarAccesoCaso(id: number, idUsuario: number) {
+    return this.http.post(`${this.base}/protocolos-activados/${id}/acceso`, { id_usuario: idUsuario });
+  }
+
+  retirarAccesoCaso(id: number, idUsuario: number) {
+    return this.http.delete(`${this.base}/protocolos-activados/${id}/acceso/${idUsuario}`);
+  }
+
+  editarRelato(id: number, idPaso: number, idRelato: number, relato: string) {
+    return this.http.put(`${this.base}/protocolos-activados/${id}/pasos/${idPaso}/relatos/${idRelato}`, { relato });
+  }
+
   registrarGestion(id: number, idPasoInvolucrado: number, data: any) {
     return this.http.post(`${this.base}/protocolos-activados/${id}/gestiones/${idPasoInvolucrado}`, data);
   }

@@ -164,7 +164,7 @@ export class RegistroForm implements OnInit {
       return (
         'El reglamento del establecimiento asocia esta falta a ' +
         this.obligatoriosPendientes.map((p) => `"${p.protocolo_nombre}"`).join(' y ') +
-        '. Si no corresponde al caso, podés dejarlo sin activar: queda como pendiente en el registro.'
+        '. Si no corresponde al caso, puedes dejarlo sin activar: queda como pendiente en el registro.'
       );
     if (this.protocolosDeLaFalta.length > 0)
       return (

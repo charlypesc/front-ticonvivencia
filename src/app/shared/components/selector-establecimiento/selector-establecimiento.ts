@@ -65,7 +65,7 @@ import { normalizar, ordenarPorCoincidencia } from '../../utils/coincidencia';
         </app-buscador>
 
         @if (auth.establecimientoActivo() === null) {
-          <span class="selector-est__aviso">Elegí un establecimiento para ver sus datos</span>
+          <span class="selector-est__aviso">Elige un establecimiento para ver sus datos</span>
         }
       </div>
     }
@@ -131,7 +131,7 @@ export class SelectorEstablecimiento implements OnInit {
     return ordenarPorCoincidencia(coincidencias, q, (e: any) => `${e.nombre} ${e.rbd}`);
   });
 
-  /** Distingue "escribí un RBD que no está de alta" de "no encontré ese nombre". */
+  /** Distingue "escribiste un RBD que no está de alta" de "no encontré ese nombre". */
   pareceRbd = computed(() => /^\d[\d-]*$/.test(this.filtro().trim()));
 
   constructor(

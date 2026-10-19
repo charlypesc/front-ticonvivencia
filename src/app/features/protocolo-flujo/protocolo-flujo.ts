@@ -83,6 +83,46 @@ const OBSERVACIONES: PlantillaCampo = {
 
 const PLANTILLAS: PlantillaPaso[] = [
   {
+    // Todos los involucrados, cada uno con su medida o "Sin medidas" (ver
+    // medidasPaso.controller.js en el back).
+    tipo: 'medidas',
+    paso: {
+      nombre: 'Medidas',
+      descripcion:
+        'Definir la medida que corresponde a cada involucrado del caso: de protección, formativa, ' +
+        'disciplinaria o excepcional, o "Sin medidas". Las formativas, disciplinarias y excepcionales ' +
+        'se aplican a estudiantes; a funcionarios y externos, solo las de protección.',
+      plazo_valor: null,
+      plazo_unidad: null,
+    },
+    campos: [],
+    roles: [{ codigo: RolesEnum.ENCARGADO, tipo_participacion: 'ejecutor' }],
+    nota:
+      'No lleva preguntas: en el caso aparecen todos los involucrados y a cada uno se le elige la ' +
+      'medida (o "Sin medidas"). Cada medida queda con sus plazos en el caso, y el paso no se puede ' +
+      'completar mientras falte alguno.',
+  },
+  {
+    // El paso estándar de todos los protocolos: con él nace cada protocolo
+    // nuevo (ver constants/pasoRelatos.js en el back, mismos textos).
+    tipo: 'acogida_relatos',
+    paso: {
+      nombre: 'Acogida de relatos',
+      descripcion:
+        'Escuchar y registrar el relato de cada involucrado del caso. Primero se indica a quién se le ' +
+        'acogerá el relato y, si a alguien no, por qué. Cada relato queda guardado con la fecha y hora ' +
+        'en que se ingresó, y cada corrección queda en el expediente.',
+      plazo_valor: null,
+      plazo_unidad: null,
+    },
+    campos: [],
+    roles: [{ codigo: RolesEnum.ENCARGADO, tipo_participacion: 'ejecutor' }],
+    nota:
+      'No lleva preguntas: en el caso se muestra la lista de todos los involucrados para marcar a ' +
+      'quién se le acoge el relato (y por qué no a quien no), y cada relato se guarda con su fecha y ' +
+      'hora. El paso no se puede completar mientras falte alguno.',
+  },
+  {
     tipo: 'notificacion_apoderado',
     paso: {
       nombre: 'Notificación al apoderado',
@@ -125,31 +165,28 @@ const PLANTILLAS: PlantillaPaso[] = [
       nombre: 'Medidas de protección',
       descripcion:
         'Medidas de protección del art. 16 E letra j de la Ley 21.809: resguardan a la persona ' +
-        'afectada mientras se investiga y no son una sanción. La suspensión solo procede si ' +
-        'ninguna medida menos gravosa alcanza, no puede exceder 15 días hábiles y obliga a ' +
-        'realizar monitoreo pedagógico y a resguardar la continuidad de la trayectoria ' +
-        'educativa del estudiante suspendido. Si vence y el procedimiento sigue abierto, ' +
-        'corresponde adoptar otra medida: la ley no permite extenderla.',
+        'afectada mientras se investiga y no son una sanción. Se registran sobre quien recaen: ' +
+        'las de apoyo, en el afectado; la suspensión o la separación de aula, en el señalado. A ' +
+        'la parte sobre la que no se adopta nada se le marca "No corresponde". La suspensión ' +
+        'solo procede si ninguna medida menos gravosa alcanza, no puede exceder 15 días hábiles ' +
+        'y obliga a realizar monitoreo pedagógico y a resguardar la continuidad de la ' +
+        'trayectoria educativa del estudiante suspendido. Si vence y el procedimiento sigue ' +
+        'abierto, corresponde adoptar otra medida: la ley no permite extenderla.',
       plazo_valor: 24,
       plazo_unidad: 'horas',
-      por_involucrado_rol: 'afectado',
+      // Las dos partes: protege al afectado, pero muchas medidas recaen sobre el señalado.
+      por_involucrado_rol: 'todos',
       requiere_medida: true,
       tipo_medida_requerida: 'proteccion',
     },
-    campos: [
-      {
-        codigo: 'medidas_aplicadas',
-        etiqueta: '¿Se aplicaron medidas de protección?',
-        tipo_campo: 'seleccion',
-        opciones: ['si', 'no'],
-        es_obligatorio: true,
-      },
-      { ...OBSERVACIONES, etiqueta: 'Fundamento y observaciones' },
-    ],
+    // Sin preguntas: "¿se aplicaron medidas?" y "fundamento" ya los responde la
+    // tarjeta, persona por persona (su medida con fundamento, o "Sin medidas"
+    // con motivo). Repetidos acá abajo podían contradecirla.
+    campos: [],
     nota:
-      'Las medidas se registran en la tarjeta "Medidas de protección" del caso, con su tipo, sus ' +
-      'fechas y su seguimiento. Este paso deja constancia en el flujo de que se resolvieron y con ' +
-      'qué fundamento.',
+      'No lleva preguntas: en el caso, por cada persona afectada se elige cómo se la protege y ' +
+      'sobre quién recae la medida (ella o el señalado), o "Sin medidas" con su motivo. Cada ' +
+      'medida queda con su tipo y sus fechas para su seguimiento.',
     // No es un paso de aprobación —no lo firma nadie—, así que lo que necesita
     // es un ejecutor, no un aprobador como las otras dos medidas. Sin ninguno de
     // los dos el paso no le aparece por hacer a nadie y el caso se detiene ahí:
@@ -204,7 +241,8 @@ const PLANTILLAS: PlantillaPaso[] = [
     nota:
       'Se resuelve aprobando o rechazando, no completando un formulario: necesita un rol ' +
       'aprobador, y las salidas del paso ramifican por la respuesta a "¿Aprobado?". La ' +
-      'suspensión cautelar se registra además en la tarjeta del caso, con sus plazos.',
+      'suspensión se decreta en la tarjeta de cada señalado, dentro del mismo paso (fundamento y ' +
+      'notificación escrita), y sus plazos legales se calculan solos.',
   },
   {
     tipo: 'seguimiento',
@@ -375,6 +413,7 @@ export class ProtocoloFlujo implements OnInit {
     'informativo', 'formulario', 'adjunto', 'aprobacion', 'notificacion_externa',
     'seguimiento', 'notificacion_apoderado', 'notificacion_estudiante',
     'medida_proteccion', 'medida_disciplinaria', 'medida_cautelar',
+    'acogida_relatos', 'medidas',
   ];
   // 'booleano' se sacó: una pregunta de Selección con las opciones "si"/"no"
   // hace exactamente lo mismo (abre un camino por opción, igual que cualquier
@@ -409,6 +448,14 @@ export class ProtocoloFlujo implements OnInit {
       por_involucrado_rol: p.por_involucrado_rol,
       requiere_notificacion: p.requiere_notificacion,
       accion_al_vencer: p.accion_al_vencer,
+      // Lo que pregunta cada paso, escrito en la caja como en un caso en curso.
+      // La acogida de relatos no tiene preguntas: pide el relato de cada
+      // involucrado, y eso es lo que se dice.
+      preguntas: p.tipo_paso === 'acogida_relatos'
+        ? [{ etiqueta: 'El relato de cada involucrado' }]
+        : p.tipo_paso === 'medidas'
+        ? [{ etiqueta: 'La medida de cada involucrado' }]
+        : (p.campos ?? []).map((c: any) => ({ etiqueta: c.etiqueta || humanizar(c.codigo) })),
     })),
   );
 
@@ -606,6 +653,35 @@ export class ProtocoloFlujo implements OnInit {
    *  que el paso vuelva a pedir esa medida apenas alguien remarque la casilla
    *  por otro motivo. El servidor normaliza igual; esto es para que el modal
    *  muestre lo que se va a guardar. */
+  /** Un paso de tipo "Medida de …" ES esa medida: el tipo manda sobre la
+   *  casilla, igual que en el backend (normalizarMedidaRequerida). */
+  readonly MEDIDA_DEL_TIPO: Record<string, string> = {
+    medida_proteccion: 'proteccion',
+    medida_disciplinaria: 'disciplinaria',
+    medida_cautelar: 'cautelar',
+  };
+  /** A quién se le aplica cada medida si el paso no lo dice: sin alcance por
+   *  persona no hay tarjeta donde registrarla. */
+  private readonly ALCANCE_DE_MEDIDA: Record<string, string> = {
+    proteccion: 'afectado',
+    disciplinaria: 'senalado',
+    cautelar: 'senalado',
+  };
+
+  medidaDelTipo(): string | null {
+    return this.MEDIDA_DEL_TIPO[this.formPaso?.tipo_paso] ?? null;
+  }
+
+  /** Deja el paso pidiendo la medida de su tipo, con tarjeta por persona. */
+  private ajustarMedidaAlTipo() {
+    const clase = this.medidaDelTipo();
+    if (!clase) return;
+    this.formPaso.requiere_medida = true;
+    this.formPaso.tipo_medida_requerida = clase;
+    if (!this.formPaso.por_involucrado_rol)
+      this.formPaso.por_involucrado_rol = this.ALCANCE_DE_MEDIDA[clase];
+  }
+
   alCambiarRequiereMedida(marcado: boolean) {
     this.formPaso.requiere_medida = marcado;
     this.formPaso.tipo_medida_requerida = marcado
@@ -645,6 +721,9 @@ export class ProtocoloFlujo implements OnInit {
     this.formPaso.tipo_medida_requerida = this.formPaso.requiere_medida
       ? (this.formPaso.tipo_medida_requerida ?? 'cualquiera')
       : null;
+    // Un paso de medida guardado antes de esta regla se abre ya corregido: al
+    // guardarlo queda pidiendo su medida, que es lo que su tipo dice.
+    this.ajustarMedidaAlTipo();
 
     this.rolesSeleccionados = paso
       ? (paso.roles ?? []).map((r: any) => ({
@@ -860,6 +939,7 @@ export class ProtocoloFlujo implements OnInit {
     this.nombrarSegunTipo(plantilla);
     if (plantilla) this.aplicarPlantilla(plantilla);
     else for (const c of this.camposEdit) this.sincronizarRamas(c);
+    this.ajustarMedidaAlTipo();
   }
 
   /**

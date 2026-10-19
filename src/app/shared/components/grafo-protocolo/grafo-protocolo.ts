@@ -20,6 +20,15 @@ export interface NodoGrafo {
   /** Qué pasa si el plazo vence. 'escalar' es la marca de un plazo legal duro
    *  (la denuncia de 24 h), y por eso cambia el color del nodo. */
   accion_al_vencer?: string | null;
+  /** Solo en ejecución con `grande`: lo que pregunta el paso, y si ya se
+   *  respondió. Se escribe dentro de la caja para leer el caso sin abrir cada
+   *  paso. */
+  preguntas?: PreguntaNodo[];
+}
+
+export interface PreguntaNodo {
+  etiqueta: string;
+  respondida?: boolean;
 }
 
 export interface AristaGrafo {
@@ -50,6 +59,8 @@ interface NodoUbicado extends NodoGrafo {
   lineas: string[];
   /** `tipo · plazo`, recortado a lo que entra. */
   meta: string;
+  /** Las preguntas ya recortadas al ancho de la caja (solo con `grande`). */
+  lineasPreguntas: { texto: string; respondida: boolean }[];
   /** Segunda línea de meta: contra quién se cumple y si pide constancia.
    *  Vacía en los pasos del caso, que no llevan ninguna de las dos. */
   meta2: string;
@@ -83,6 +94,19 @@ const SEPARACION_CARRIL = 20;
  */
 const SEPARACION_BANDA = 8;
 
+/**
+ * Un color por flecha de retroceso.
+ *
+ * En un protocolo con varias vueltas atrás ("no se identificó al
+ * responsable", "se presentó apelación"), tres o cuatro líneas punteadas del
+ * mismo gris corren en paralelo por el costado y no se puede seguir cuál
+ * termina en qué caja. Con un color cada una —la línea, su punta, su rótulo y
+ * el hilo que los une—, se sigue a la vista. Son tonos oscuros y distintos
+ * entre sí, para que se lean sobre blanco y no se confundan con el verde y el
+ * amarillo del estado de las cajas.
+ */
+export const COLORES_RETROCESO = ['#7c3aed', '#0e7490', '#c2410c', '#be185d', '#4338ca', '#a16207'];
+
 interface AristaDibujada {
   d: string;
   /** La etiqueta partida en líneas y recortada para que no se monte sobre las
@@ -100,6 +124,8 @@ interface AristaDibujada {
    *  carriles de un costado se escriben alineados por fuera del más externo,
    *  así que sin la guía no se sabe cuál es de cuál. */
   guiaX?: number;
+  /** Solo en los retrocesos: el índice de su color en COLORES_RETROCESO. */
+  color?: number;
   /** Hacia qué lado se escribe el rótulo desde `lx`. */
   anclaje?: 'start' | 'end';
 }
@@ -154,7 +180,15 @@ export class GrafoProtocolo {
     { accion: 'eliminar', icono: 'ti-trash', titulo: 'Eliminar paso', peligro: true },
   ];
 
-  readonly ANCHO = 190;
+  /**
+   * Cajas grandes, con el estado y las preguntas del paso adentro. Es el modo
+   * de un caso en curso: ahí el diagrama es la pantalla de trabajo y no un
+   * mapa, así que cada caja tiene que decir qué se pregunta y qué falta sin
+   * abrirla. En el editor sigue chica: lo que importa ahí es la forma.
+   */
+  grande = input(false);
+
+  ANCHO = computed(() => (this.grande() ? 270 : 190));
   /** Cuánto se mete la punta del hexágono de los pasos que ramifican. */
   private readonly PUNTA = 16;
 
@@ -175,11 +209,55 @@ export class GrafoProtocolo {
   private readonly ALTO_META = 14;
   private readonly BOTTOM = 12;
   private readonly RESERVA_ACCIONES = 34;
+  /** Con `grande`, la primera línea de la caja dice en qué estado está el paso. */
+  private readonly ALTO_ESTADO = 18;
+  /** Del nombre a la primera pregunta, con la raya que las separa en medio. */
+  private readonly SEP_PREGUNTAS = 22;
+  private readonly ALTO_PREGUNTA = 16;
+  /** Más de esto alarga todas las cajas (miden lo mismo): lo que sobra se
+   *  resume en "+N más" y se lee completo al abrir el paso. */
+  private readonly MAX_PREGUNTAS = 6;
+
+  private offsetEstado = computed(() => (this.grande() ? this.ALTO_ESTADO : 0));
+
+  /** Las preguntas de cada nodo, ya recortadas y con el "+N más" si sobran. */
+  private preguntasPorNodo = computed<Map<number, { texto: string; respondida: boolean }[]>>(() => {
+    const mapa = new Map<number, { texto: string; respondida: boolean }[]>();
+    if (!this.grande()) return mapa;
+    for (const n of this.nodos()) {
+      const todas = n.preguntas ?? [];
+      const entran = todas.length > this.MAX_PREGUNTAS ? this.MAX_PREGUNTAS - 1 : todas.length;
+      // El ícono va como carácter delante: en SVG no hay <i> de Tabler.
+      const util = this.utilDe(n.id) - 4;
+      // En un caso, ✓ respondida y ○ pendiente. En el editor no hay nada que
+      // responder: es la lista de lo que el paso va a preguntar.
+      const marca = (p: PreguntaNodo) => (n.estado ? (p.respondida ? '✓' : '○') : '•');
+      const lineas = todas.slice(0, entran).map((p) => ({
+        texto: this.recortar(`${marca(p)} ${p.etiqueta}`, util, 11.5),
+        respondida: !!p.respondida,
+      }));
+      if (todas.length > entran)
+        lineas.push({ texto: `+${todas.length - entran} más`, respondida: false });
+      mapa.set(n.id, lineas);
+    }
+    return mapa;
+  });
+
+  private maxPreguntas = computed(() =>
+    Math.max(0, ...[...this.preguntasPorNodo().values()].map((l) => l.length)),
+  );
+
+  /** Lo que ocupa el bloque de preguntas, igual en todas las cajas. */
+  private altoPreguntas = computed(() =>
+    this.maxPreguntas() ? this.SEP_PREGUNTAS + (this.maxPreguntas() - 1) * this.ALTO_PREGUNTA + 6 : 0,
+  );
 
   ALTO = computed(
     () =>
       this.TOP +
+      this.offsetEstado() +
       (this.maxLineas() - 1) * this.ALTO_NOMBRE +
+      this.altoPreguntas() +
       this.GAP_META +
       (this.hayMeta2() ? this.ALTO_META : 0) +
       this.BOTTOM +
@@ -189,7 +267,7 @@ export class GrafoProtocolo {
   /** Ancho de texto útil: el hexágono tiene los lados en punta, así que su
    *  texto necesita más margen para no montarse sobre el borde inclinado. */
   private utilDe(id: number) {
-    return this.ANCHO - (this.ramifican().has(id) ? this.PAD_HEX : this.PAD_CAJA) * 2;
+    return this.ANCHO() - (this.ramifican().has(id) ? this.PAD_HEX : this.PAD_CAJA) * 2;
   }
 
   /** El nombre de cada nodo repartido en líneas, sin recortar nunca. */
@@ -342,13 +420,13 @@ export class GrafoProtocolo {
     // Cada fila se centra respecto de la más ancha: así el camino principal
     // queda como una columna al medio y las ramas se abren simétricas, en vez
     // de que todo se apoye contra el borde izquierdo.
-    const anchoDe = (cuantos: number) => cuantos * this.ANCHO + (cuantos - 1) * this.GAP_X();
+    const anchoDe = (cuantos: number) => cuantos * this.ANCHO() + (cuantos - 1) * this.GAP_X();
     const anchoMax = Math.max(0, ...[...porNivel.values()].map((g) => anchoDe(g.length)));
 
     const xRel = new Map<number, number>();
     for (const [, delNivel] of porNivel) {
       const inicio = (anchoMax - anchoDe(delNivel.length)) / 2;
-      delNivel.forEach((n, i) => xRel.set(n.id, inicio + i * (this.ANCHO + this.GAP_X())));
+      delNivel.forEach((n, i) => xRel.set(n.id, inicio + i * (this.ANCHO() + this.GAP_X())));
     }
     return { anchoMax, xRel, porNivel };
   });
@@ -383,6 +461,7 @@ export class GrafoProtocolo {
             11,
           ),
           meta2: this.recortar(this.textoMeta2(n), util, 11),
+          lineasPreguntas: this.preguntasPorNodo().get(n.id) ?? [],
           puntos: this.hexagono(x, y),
         });
       });
@@ -438,7 +517,7 @@ export class GrafoProtocolo {
       const xo = xRel.get(a.origen) ?? 0;
       const xd = xRel.get(a.destino) ?? 0;
       const hastaIzquierda = Math.min(xo, xd);
-      const hastaDerecha = anchoMax - (Math.max(xo, xd) + this.ANCHO);
+      const hastaDerecha = anchoMax - (Math.max(xo, xd) + this.ANCHO());
       (hastaDerecha < hastaIzquierda ? der : izq).push(a);
     }
     const lado = new Map<AristaGrafo, 'izq' | 'der'>();
@@ -486,7 +565,7 @@ export class GrafoProtocolo {
       const nd = nivel.get(a.destino);
       if (xo === undefined || xd === undefined || no === undefined || nd === undefined) continue;
       if (nd < no) continue;
-      const centro = (xo + xd) / 2 + this.ANCHO / 2;
+      const centro = (xo + xd) / 2 + this.ANCHO() / 2;
       const mitad = this.anchoEtiqueta(this.textoArista(a)) / 2;
       izq = Math.max(izq, mitad - centro);
       der = Math.max(der, centro + mitad - anchoMax);
@@ -584,7 +663,7 @@ export class GrafoProtocolo {
       // diagrama: se recorta con la medida de una caja más un hueco, que es lo
       // que hay de aire alrededor de una flecha, y el texto completo queda en
       // el tooltip.
-      const lineas = this.lineasEtiqueta(legible, this.ANCHO + this.GAP_X());
+      const lineas = this.lineasEtiqueta(legible, this.ANCHO() + this.GAP_X());
 
       // Volver al mismo paso: un lazo por el costado derecho. Es el "mantiene
       // seguimiento" de los protocolos reales. Va al costado y no por arriba
@@ -593,7 +672,7 @@ export class GrafoProtocolo {
       if (a.origen === a.destino) {
         const y1 = o.y + this.ALTO() * 0.3;
         const y2 = o.y + this.ALTO() * 0.7;
-        const fuera = o.x + this.ANCHO + 46;
+        const fuera = o.x + this.ANCHO() + 46;
         salida.push({
           d:
             `M ${this.bordeDer(o, y1)} ${y1} C ${fuera} ${y1 - 12}, ${fuera} ${y2 + 12}, ` +
@@ -601,7 +680,7 @@ export class GrafoProtocolo {
           lineas,
           titulo,
           atras: true,
-          lx: o.x + this.ANCHO + 50 + this.anchoEtiqueta(legible) / 2,
+          lx: o.x + this.ANCHO() + 50 + this.anchoEtiqueta(legible) / 2,
           ly: o.y + this.ALTO() / 2,
         });
         continue;
@@ -740,9 +819,9 @@ export class GrafoProtocolo {
         continue;
       }
 
-      const x1 = o.x + this.ANCHO / 2;
+      const x1 = o.x + this.ANCHO() / 2;
       const y1 = o.y + this.ALTO();
-      const x2 = d.x + this.ANCHO / 2;
+      const x2 = d.x + this.ANCHO() / 2;
       const y2 = d.y;
       const my = (y1 + y2) / 2;
       salida.push({
@@ -806,8 +885,15 @@ export class GrafoProtocolo {
         }
       if (!movio) break;
     }
+    // Un color por retroceso, en el orden en que se dibujan.
+    salida.filter((a) => a.atras).forEach((a, i) => (a.color = i % COLORES_RETROCESO.length));
     return salida;
   });
+
+  readonly COLORES_RETROCESO = COLORES_RETROCESO;
+  colorDe(a: AristaDibujada): string | null {
+    return a.color === undefined ? null : COLORES_RETROCESO[a.color];
+  }
 
   /** El SVG crece con el grafo; el contenedor le pone scroll horizontal.
    *  Los carriles de retroceso ya están reservados en `margenIzquierdo`, que
@@ -815,7 +901,7 @@ export class GrafoProtocolo {
    *  del paso que se repite. */
   ancho = computed(
     () =>
-      Math.max(...this.ubicados().map((n) => n.x + this.ANCHO), 0) +
+      Math.max(...this.ubicados().map((n) => n.x + this.ANCHO()), 0) +
       this.PAD +
       this.margenDerecho(),
   );
@@ -839,7 +925,7 @@ export class GrafoProtocolo {
         n.nivel === nivel &&
         !excluir.includes(n.id) &&
         n.x < hasta &&
-        n.x + this.ANCHO > desde,
+        n.x + this.ANCHO() > desde,
     );
   }
 
@@ -886,7 +972,7 @@ export class GrafoProtocolo {
   }
 
   private bordeDer(n: NodoUbicado, y: number) {
-    return n.x + this.ANCHO - (this.ramifican().has(n.id) ? this.PUNTA * this.sesgo(n, y) : 0);
+    return n.x + this.ANCHO() - (this.ramifican().has(n.id) ? this.PUNTA * this.sesgo(n, y) : 0);
   }
 
   /** 0 a media altura (donde está la punta del hexágono) y 1 en los bordes de
@@ -899,7 +985,43 @@ export class GrafoProtocolo {
    *  que un nombre corto no quede pegado al borde de arriba. */
   /** El nombre fluye desde arriba, línea a línea. */
   yNombre(n: NodoUbicado, i: number) {
-    return n.y + this.TOP + i * this.ALTO_NOMBRE;
+    return n.y + this.TOP + this.offsetEstado() + i * this.ALTO_NOMBRE;
+  }
+
+  /** La línea de estado, arriba del nombre (solo con `grande`). */
+  yEstado(n: NodoUbicado) {
+    return n.y + this.TOP - 2;
+  }
+
+  /**
+   * Las preguntas arrancan a la misma altura en todas las cajas, debajo del
+   * nombre más largo: con cada lista colgando de su propio nombre, la fila se
+   * veía escalonada.
+   */
+  yPregunta(n: NodoUbicado, i: number) {
+    return (
+      n.y + this.TOP + this.offsetEstado() + (this.maxLineas() - 1) * this.ALTO_NOMBRE +
+      this.SEP_PREGUNTAS + i * this.ALTO_PREGUNTA
+    );
+  }
+
+  /** La raya entre el nombre y las preguntas. */
+  ySeparador(n: NodoUbicado) {
+    return this.yPregunta(n, 0) - 14;
+  }
+
+  /** Lo que dice la línea de estado. El paso en curso no se anuncia como "en
+   *  curso" sino como el actual: es la pregunta que se hace quien mira. */
+  textoEstado(n: NodoUbicado): string {
+    return (
+      {
+        completado: '● Completado',
+        en_curso: '▶ Paso actual',
+        vencido: '▲ Paso actual · vencido',
+        pendiente: '○ Pendiente',
+        omitido: '– Omitido',
+      }[n.estado ?? ''] ?? ''
+    );
   }
 
   /**
@@ -964,7 +1086,7 @@ export class GrafoProtocolo {
    * toca el layout.
    */
   private hexagono(x: number, y: number): string {
-    const w = this.ANCHO;
+    const w = this.ANCHO();
     const h = this.ALTO();
     const p = this.PUNTA;
     return [
@@ -993,6 +1115,10 @@ export class GrafoProtocolo {
     }
     return new Set([...salidas].filter(([, n]) => n > 1).map(([id]) => id));
   });
+
+  /** Un caso en curso trae el estado de cada paso: la leyenda pasa a explicar
+   *  los colores del avance y no los de la familia del paso, que ahí no se ven. */
+  enEjecucion = computed(() => this.nodos().some((n) => !!n.estado));
 
   /** Pasos que vuelven sobre sí mismos: el ciclo de seguimiento. */
   private ciclicos = computed<Set<number>>(
@@ -1028,6 +1154,7 @@ export class GrafoProtocolo {
     return [
       `nodo--fam-${this.familia(n)}`,
       n.estado ? `nodo--${n.estado}` : '',
+      n.estado === 'en_curso' || n.estado === 'vencido' ? 'nodo--actual' : '',
       n.es_paso_inicial ? 'nodo--inicial' : '',
       n.es_paso_final ? 'nodo--final' : '',
     ].filter(Boolean);
@@ -1074,7 +1201,7 @@ export class GrafoProtocolo {
   private anchoEtiqueta(texto: string): number {
     return Math.max(
       0,
-      ...this.lineasEtiqueta(texto, this.ANCHO + this.GAP_X()).map((l) => this.anchoAprox(l, 11)),
+      ...this.lineasEtiqueta(texto, this.ANCHO() + this.GAP_X()).map((l) => this.anchoAprox(l, 11)),
     );
   }
 

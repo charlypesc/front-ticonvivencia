@@ -25,16 +25,42 @@
             (click)="mostrarImportar.set(true)">
             <i class="ti ti-file-spreadsheet"></i> Cargar varios (Excel)
         </button>
+        @if (hayRolVentas()) {
+        <button class="btn btn--outline btn--sm" style="width: auto;" [appPuede]="Permiso.UsuarioCrear"
+            (click)="abrirFormVendedor()">
+            <i class="ti ti-briefcase"></i> Nuevo vendedor
+        </button>
+        }
     </div>
+
+    <!-- Solo en el Colegio MiConvivencia, que es donde existe el rol VENTAS:
+         separa al equipo comercial de las cuentas demo del colegio. -->
+    @if (hayRolVentas()) {
+    <nav class="pestanas" role="tablist">
+        <button type="button" role="tab" class="pestanas__tab" [class.activa]="filtro() === 'todos'"
+            (click)="filtro.set('todos')">
+            Todos <span class="pestanas__n">{{ usuarios().length }}</span>
+        </button>
+        <button type="button" role="tab" class="pestanas__tab" [class.activa]="filtro() === 'ventas'"
+            (click)="filtro.set('ventas')">
+            <i class="ti ti-briefcase"></i> Ventas <span class="pestanas__n">{{ cantidadVentas() }}</span>
+        </button>
+        <button type="button" role="tab" class="pestanas__tab" [class.activa]="filtro() === 'otros'"
+            (click)="filtro.set('otros')">
+            Resto del colegio <span class="pestanas__n">{{ usuarios().length - cantidadVentas() }}</span>
+        </button>
+    </nav>
+    }
+
     @if (loading()) {
     <div class="empty-state">
         <i class="ti ti-loader-2 spin"></i>
         <p>Cargando usuarios...</p>
     </div>
-    } @else if (usuarios().length === 0) {
+    } @else if (usuariosVisibles().length === 0) {
     <div class="empty-state">
         <i class="ti ti-users-off"></i>
-        <p>No hay usuarios registrados</p>
+        <p>{{ filtro() === 'ventas' && hayRolVentas() ? 'Todavía no hay vendedores' : 'No hay usuarios registrados' }}</p>
     </div>
     } @else {
     <div class="table-wrap">
@@ -49,7 +75,7 @@
                 </tr>
             </thead>
             <tbody>
-                @for (u of usuarios(); track u.id_usuario) {
+                @for (u of usuariosVisibles(); track u.id_usuario) {
                 <!-- La fila entera abre la edición: buscar el lápiz de 24px al
                      final de la tabla es peor que pinchar donde ya se está
                      mirando. Sin permiso para editar no reacciona. -->
