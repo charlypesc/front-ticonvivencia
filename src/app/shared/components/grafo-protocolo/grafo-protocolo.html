@@ -104,7 +104,9 @@
                 <span class="chip" [class.chip--suelto]="a.lineas.length === 1 && !esValor(a.lineas[0])"
                     [style.border-color]="colorDe(a)" [style.color]="colorDe(a)" [title]="a.titulo">
                     @for (linea of a.lineas; track $index) {
-                    @if (esValor(linea)) {
+                    @if (linea === SEP_O) {
+                    <span class="chip__o">o</span>
+                    } @else if (esValor(linea)) {
                     <span class="chip__valor" [ngClass]="claseValor(linea)" [style.color]="colorDe(a)">{{ linea.slice(2) }}</span>
                     } @else {
                     <span class="chip__pregunta">{{ linea }}</span>

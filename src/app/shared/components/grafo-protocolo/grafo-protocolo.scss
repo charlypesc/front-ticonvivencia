@@ -105,6 +105,27 @@
 
   &__pregunta { color: inherit; }
 
+  // Separador entre condiciones de un mismo chip: una "o" chica entre dos
+  // rayas, ocupa el mismo alto que una línea de texto.
+  &__o {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: $gray-400;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      border-top: 1px solid $gray-200;
+    }
+  }
+
   &__valor {
     font-weight: 700;
     color: $primary;
