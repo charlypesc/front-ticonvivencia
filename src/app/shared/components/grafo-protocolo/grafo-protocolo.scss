@@ -64,24 +64,62 @@
   fill: $gray-600;
 }
 
-.etiqueta {
+// El recuadro que contiene al chip es más ancho que él (holgura sobre un ancho
+// aproximado): no debe robarle clicks a nada, solo el chip los recibe.
+.rotulo-fo {
+  overflow: visible;
+  pointer-events: none;
+}
+
+.rotulo {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // Los de los carriles se alinean contra el borde exterior, donde llega la guía.
+  &--inicio { justify-content: flex-start; .chip { align-items: flex-start; } }
+  &--fin    { justify-content: flex-end;   .chip { align-items: flex-end; } }
+}
+
+// El rótulo de una flecha: una píldora blanca que tapa la línea por debajo (el
+// fondo opaco hace el trabajo que antes hacía el halo blanco del texto), con la
+// pregunta en gris y el valor de la rama destacado.
+.chip {
+  pointer-events: auto;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 9px;
+  background: $white;
+  border: 1px solid $gray-200;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba($gray-900, .06), 0 2px 6px rgba($gray-900, .05);
   font-size: 11px;
-  fill: $primary;
-  text-anchor: middle;
-  // El halo blanco alrededor del texto lo despega de la línea sobre la que
-  // está escrito. 4px y no 3: con 3 las tildes y los signos de pregunta seguían
-  // tocando el trazo de la arista.
-  paint-order: stroke;
-  stroke: $white;
-  stroke-width: 4px;
+  line-height: 12px;
+  white-space: nowrap;
+  color: $gray-600;
+  cursor: default;
 
-  &--atras { fill: $gray-600; }
+  &__pregunta { color: inherit; }
 
-  // Alineados contra el borde exterior de los carriles, no centrados: van
-  // después de `.etiqueta` a propósito, para ganarle al `text-anchor: middle`
-  // sin subir la especificidad.
-  &--inicio { text-anchor: start; }
-  &--fin    { text-anchor: end; }
+  &__valor {
+    font-weight: 700;
+    color: $primary;
+
+    &--si { color: #15803d; }
+    &--no { color: $accent-danger; }
+  }
+
+  // "en los demás casos": no es una condición, es el resto. Va en cursiva y más
+  // apagado para que no compita con las ramas que sí preguntan algo.
+  &--suelto {
+    font-style: italic;
+    background: $gray-50;
+    border-style: dashed;
+  }
 }
 
 // El hilo que une el rótulo con su carril. Más fino y más tenue que la arista:
