@@ -322,31 +322,29 @@ export class GrafoProtocolo {
   /** Tope de líneas apiladas que se le reservan al hueco: un paso con seis
    *  salidas rotuladas separaría sus dos filas media pantalla, y a esa altura
    *  el problema deja de ser que los rótulos se pisen. */
-  private readonly MAX_LINEAS_APILADAS = 8;
+  private readonly MAX_LINEAS_APILADAS = 10;
   GAP_Y = computed(() => {
-    // Un paso que abre varias ramas escribe TODOS sus rótulos en el mismo
-    // hueco, uno debajo del otro (los separa el desempate de `dibujadas`). Con
-    // el alto de una sola etiqueta, las de más abajo se salían del hueco y
-    // terminaban escritas encima de las cajas de la fila siguiente —o detrás,
-    // que las cajas se dibujan después—. Se reserva el alto del paso que más
-    // rótulos apila. Se cuenta por fila y no por paso: dos pasos hermanos
-    // escriben en el mismo hueco, y aunque estén lejos en horizontal el
-    // desempate los puede terminar cruzando.
+    // Cada flecha que avanza lleva su chip centrado en la mitad del hueco, y
+    // las que van al mismo destino comparten uno solo (`rotulosAvance`), así
+    // que lo que el hueco tiene que aguantar es el chip más alto de la fila,
+    // con aire arriba y abajo para que no toque las cajas.
     const nivel = this.niveles();
+    const avance = this.rotulosAvance();
     const porFila = new Map<number, number>();
     let unaSola = 0;
     // Cada rótulo es un chip: a sus líneas se les suma el relleno y el borde,
-    // más el aire que el desempate deja entre uno y el siguiente.
+    // más el aire hasta el chip de al lado.
     const altoRotulo = (lineas: number) =>
       lineas ? lineas * this.ALTO_LINEA + this.EXTRA_CHIP : 0;
     for (const a of this.aristas()) {
-      const alto = altoRotulo(this.partirEtiqueta(this.textoArista(a)).length);
-      unaSola = Math.max(unaSola, alto);
-      // Solo las que avanzan: los retrocesos rotulan por fuera del diagrama.
-      const o = nivel.get(a.origen);
-      const d = nivel.get(a.destino);
-      if (o === undefined || d === undefined || d <= o) continue;
-      porFila.set(o, (porFila.get(o) ?? 0) + alto);
+      const r = avance.get(a);
+      if (!r) {
+        // Los retrocesos rotulan por fuera del diagrama, a la altura de su tramo.
+        unaSola = Math.max(unaSola, altoRotulo(this.partirEtiqueta(this.textoArista(a)).length));
+        continue;
+      }
+      const o = nivel.get(a.origen)!;
+      porFila.set(o, Math.max(porFila.get(o) ?? 0, altoRotulo(r.lineas.length)));
     }
     const apiladas = Math.min(
       this.MAX_LINEAS_APILADAS * (this.ALTO_LINEA + this.EXTRA_CHIP / 2),
@@ -828,19 +826,20 @@ export class GrafoProtocolo {
       const x2 = d.x + this.ANCHO() / 2;
       const y2 = d.y;
       const my = (y1 + y2) / 2;
+      // Las flechas paralelas (mismo origen y destino) se dibujan sobre la
+      // misma curva: solo la primera lleva el chip, con todas sus condiciones.
+      const r = this.rotulosAvance().get(a);
       salida.push({
         d: `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`,
-        lineas,
-        titulo,
+        lineas: r?.lineas ?? [],
+        titulo: r?.titulo ?? titulo,
         atras: false,
         lx: (x1 + x2) / 2,
-        // El rótulo cuelga del paso del que sale, no del medio del hueco: los
-        // que se pisan se van acomodando hacia abajo, y arrancando desde el
-        // medio un paso con cuatro salidas rotuladas (el de porte de armas)
-        // empujaba las últimas fuera del hueco, encima de la fila siguiente.
-        // Colgando de arriba, la pila crece hacia el hueco, que `GAP_Y` ya
-        // dimensionó para que las aguante todas.
-        ly: y1 + 21,
+        // El chip va justo en la mitad de la curva —ese punto cae exactamente
+        // sobre la línea—, así se lee de qué flecha es. Antes colgaba del paso
+        // de arriba y quedaba flotando al costado de su flecha o montado sobre
+        // la caja. `yGuia` = ly - 4 es el centro del chip.
+        ly: my + 4,
       });
     }
     // Dos etiquetas a la misma altura quedaban una encima de otra; se separan
@@ -1210,6 +1209,87 @@ export class GrafoProtocolo {
       ...this.lineasEtiqueta(texto, this.ANCHO() + this.GAP_X()).map((l) => this.anchoAprox(l, 11)),
     );
   }
+
+  /** Ancho máximo del texto de un chip de flecha que avanza: más ancho, una
+   *  pregunta larga hacía un chip que tapaba media fila. Lo que no entra en
+   *  dos líneas se recorta y queda completo en el tooltip. */
+  private readonly ANCHO_ROTULO = 230;
+
+  /** Línea separadora entre condiciones de un mismo chip ("o"). */
+  readonly SEP_O = '\u0001o';
+
+  /** Parte un texto en hasta `max` líneas por palabras; la última se recorta. */
+  private envolver(texto: string, ancho: number, max = 2): string[] {
+    const cabe = this.maxCaracteres(ancho, 11);
+    const lineas: string[] = [];
+    let actual = '';
+    for (const palabra of texto.split(/\s+/)) {
+      const prueba = actual ? `${actual} ${palabra}` : palabra;
+      if (prueba.length <= cabe || !actual) {
+        actual = prueba;
+        continue;
+      }
+      lineas.push(actual);
+      actual = palabra;
+    }
+    if (actual) lineas.push(actual);
+    if (lineas.length > max) {
+      lineas.splice(max - 1, lineas.length, lineas.slice(max - 1).join(' '));
+    }
+    return lineas.map((l) => this.recortar(l, ancho, 11));
+  }
+
+  /**
+   * El chip de cada flecha que avanza.
+   *
+   * Un paso que deriva al mismo destino por varias condiciones (porte de
+   * armas: "¿delito? = Sí", "arma de fuego", "elemento incendiario",
+   * "¿lesionados? = Sí") guarda una arista por condición, y todas se dibujan
+   * sobre la misma curva. Con un chip por arista quedaban cuatro apilados
+   * sobre una sola línea. Se junta todo en un chip con las condiciones
+   * separadas por "o", y las que preguntan lo mismo se escriben juntas
+   * ("Tipo de objeto: Arma de fuego o Elemento incendiario"). Las demás
+   * aristas del grupo quedan sin rótulo.
+   */
+  private rotulosAvance = computed(() => {
+    const nivel = this.niveles();
+    const grupos = new Map<string, AristaGrafo[]>();
+    for (const a of this.aristas()) {
+      const o = nivel.get(a.origen);
+      const d = nivel.get(a.destino);
+      if (o === undefined || d === undefined || d <= o) continue;
+      const k = `${a.origen}>${a.destino}`;
+      const g = grupos.get(k);
+      g ? g.push(a) : grupos.set(k, [a]);
+    }
+
+    const mapa = new Map<AristaGrafo, { lineas: string[]; titulo: string }>();
+    for (const grupo of grupos.values()) {
+      const porPregunta = new Map<string, string[]>();
+      const titulos: string[] = [];
+      for (const a of grupo) {
+        const texto = this.textoArista(a);
+        if (!texto) continue;
+        titulos.push(a.condicion && a.condicion !== texto ? `${texto}  (${a.condicion})` : texto);
+        const [pregunta, valor] = this.partirEtiqueta(texto);
+        const valores = porPregunta.get(pregunta) ?? [];
+        const v = valor?.slice(2);
+        if (v && !valores.includes(v)) valores.push(v);
+        porPregunta.set(pregunta, valores);
+      }
+      const lineas = [...porPregunta].flatMap(([pregunta, valores], i) => [
+        ...(i ? [this.SEP_O] : []),
+        ...this.envolver(pregunta, this.ANCHO_ROTULO),
+        ...(valores.length
+          ? [`= ${this.recortar(valores.join(' o '), this.ANCHO_ROTULO, 11, true)}`]
+          : []),
+      ]);
+      grupo.forEach((a, i) =>
+        mapa.set(a, i ? { lineas: [], titulo: '' } : { lineas, titulo: titulos.join('\no\n') }),
+      );
+    }
+    return mapa;
+  });
 
   /** Relleno del chip del rótulo (debe calzar con `.chip` en el SCSS). */
   private readonly PAD_CHIP_X = 9;
