@@ -93,12 +93,26 @@
         <circle [attr.cx]="a.guiaX" [attr.cy]="yGuia(a)" r="2.5" class="guia-punto" [style.fill]="colorDe(a)" />
         <path [attr.d]="guia(a)" class="guia" marker-end="url(#punta-guia)" [style.stroke]="colorDe(a)" />
         }
-        @for (linea of a.lineas; track $index) {
-        <text [attr.x]="a.lx" [attr.y]="yEtiqueta(a, $index)" class="etiqueta"
-            [class.etiqueta--atras]="a.atras" [class.etiqueta--inicio]="a.anclaje === 'start'"
-            [class.etiqueta--fin]="a.anclaje === 'end'" [style.fill]="colorDe(a)">{{ linea }}
-            <title>{{ a.titulo }}</title>
-        </text>
+        <!-- Cada rótulo es un chip HTML: la pregunta en gris y el valor de la
+             rama destacado debajo. En HTML y no en <text> para que el borde y
+             el relleno se ajusten solos al texto. -->
+        @if (a.lineas.length) {
+        @let c = cajaEtiqueta(a);
+        <foreignObject [attr.x]="c.x" [attr.y]="c.y" [attr.width]="c.w" [attr.height]="c.h" class="rotulo-fo">
+            <div class="rotulo" [class.rotulo--inicio]="a.anclaje === 'start'"
+                [class.rotulo--fin]="a.anclaje === 'end'">
+                <span class="chip" [class.chip--suelto]="a.lineas.length === 1 && !esValor(a.lineas[0])"
+                    [style.border-color]="colorDe(a)" [style.color]="colorDe(a)" [title]="a.titulo">
+                    @for (linea of a.lineas; track $index) {
+                    @if (esValor(linea)) {
+                    <span class="chip__valor" [ngClass]="claseValor(linea)" [style.color]="colorDe(a)">{{ linea.slice(2) }}</span>
+                    } @else {
+                    <span class="chip__pregunta">{{ linea }}</span>
+                    }
+                    }
+                </span>
+            </div>
+        </foreignObject>
         }
         }
 

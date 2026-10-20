@@ -335,20 +335,24 @@ export class GrafoProtocolo {
     const nivel = this.niveles();
     const porFila = new Map<number, number>();
     let unaSola = 0;
+    // Cada rótulo es un chip: a sus líneas se les suma el relleno y el borde,
+    // más el aire que el desempate deja entre uno y el siguiente.
+    const altoRotulo = (lineas: number) =>
+      lineas ? lineas * this.ALTO_LINEA + this.EXTRA_CHIP : 0;
     for (const a of this.aristas()) {
-      const lineas = this.partirEtiqueta(this.textoArista(a)).length;
-      unaSola = Math.max(unaSola, lineas);
+      const alto = altoRotulo(this.partirEtiqueta(this.textoArista(a)).length);
+      unaSola = Math.max(unaSola, alto);
       // Solo las que avanzan: los retrocesos rotulan por fuera del diagrama.
       const o = nivel.get(a.origen);
       const d = nivel.get(a.destino);
       if (o === undefined || d === undefined || d <= o) continue;
-      porFila.set(o, (porFila.get(o) ?? 0) + lineas);
+      porFila.set(o, (porFila.get(o) ?? 0) + alto);
     }
     const apiladas = Math.min(
-      this.MAX_LINEAS_APILADAS,
+      this.MAX_LINEAS_APILADAS * (this.ALTO_LINEA + this.EXTRA_CHIP / 2),
       Math.max(unaSola, ...porFila.values()),
     );
-    return this.GAP_Y_MIN + apiladas * this.ALTO_LINEA;
+    return this.GAP_Y_MIN + apiladas;
   });
 
   private readonly PAD = 20;
@@ -873,8 +877,10 @@ export class GrafoProtocolo {
           // Una arista sin rótulo no ocupa lugar ni se lo quita a nadie.
           if (!salida[i].lineas.length || !salida[j].lineas.length) continue;
           const alto =
-            ((salida[i].lineas.length + salida[j].lineas.length) / 2) * this.ALTO_LINEA + 6;
-          const cruce = (anchoRotulo(salida[i]) + anchoRotulo(salida[j])) / 2 + 8;
+            ((salida[i].lineas.length + salida[j].lineas.length) / 2) * this.ALTO_LINEA +
+            this.EXTRA_CHIP;
+          const cruce =
+            (anchoRotulo(salida[i]) + anchoRotulo(salida[j])) / 2 + 2 * this.PAD_CHIP_X + 6;
           if (
             Math.abs(centroRotulo(salida[i]) - centroRotulo(salida[j])) < cruce &&
             Math.abs(salida[i].ly - salida[j].ly) < alto
@@ -1205,10 +1211,42 @@ export class GrafoProtocolo {
     );
   }
 
-  /** Y de cada línea de la etiqueta: el bloque queda centrado en `ly`, que es
-   *  donde iba la etiqueta cuando era de una sola línea. */
-  yEtiqueta(a: AristaDibujada, i: number) {
-    return a.ly + (i - (a.lineas.length - 1) / 2) * this.ALTO_LINEA;
+  /** Relleno del chip del rótulo (debe calzar con `.chip` en el SCSS). */
+  private readonly PAD_CHIP_X = 9;
+  private readonly PAD_CHIP_Y = 4;
+  /** Lo que un chip ocupa en alto además de sus líneas: relleno, borde y el
+   *  aire mínimo hasta el chip de al lado. */
+  private readonly EXTRA_CHIP = 2 * this.PAD_CHIP_Y + 2 + 6;
+
+  /** Una línea que empieza con `= ` es el valor de la rama ("Sí", "Arma de
+   *  fuego"): en el chip va destacado y sin el signo. */
+  esValor(linea: string) {
+    return linea.startsWith('= ');
+  }
+
+  /** Color del valor: Sí y No se leen de un vistazo por el color. */
+  claseValor(linea: string) {
+    const v = linea.slice(2).trim().toLowerCase();
+    return v === 'sí' || v === 'si' ? 'chip__valor--si' : v === 'no' ? 'chip__valor--no' : '';
+  }
+
+  /**
+   * El recuadro del `<foreignObject>` donde se dibuja el chip del rótulo.
+   *
+   * El chip es HTML para que se mida solo (borde, relleno y sombra calzan con
+   * el texto real); el recuadro solo tiene que contenerlo, así que se le da
+   * holgura sobre el ancho aproximado y el chip se centra —o se alinea contra
+   * `lx` en los carriles— adentro. El medio del bloque cae en `ly - 4`, igual
+   * que la guía.
+   */
+  cajaEtiqueta(a: AristaDibujada) {
+    const ancho =
+      Math.max(0, ...a.lineas.map((l) => this.anchoAprox(l, 11, this.esValor(l)))) +
+      2 * this.PAD_CHIP_X;
+    const w = Math.round(ancho * 1.3 + 24);
+    const h = a.lineas.length * this.ALTO_LINEA + 2 * this.PAD_CHIP_Y + 8;
+    const x = a.anclaje === 'start' ? a.lx - 2 : a.anclaje === 'end' ? a.lx - w + 2 : a.lx - w / 2;
+    return { x, y: this.yGuia(a) - h / 2, w, h };
   }
 
   /**
