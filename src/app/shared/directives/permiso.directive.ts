@@ -1,5 +1,5 @@
 import { Directive, ElementRef, Renderer2, effect, inject, input } from '@angular/core';
-import { AuthService } from '../../core/services/auth.service';
+import { AuthService, MSG_ADMIN_NO_CREA, PERMISOS_NO_ADMIN } from '../../core/services/auth.service';
 import { PermisoId, CODIGO_POR_ID } from '../../core/constants/permisos';
 
 /**
@@ -108,6 +108,8 @@ export class Puede {
 
   private motivo() {
     if (this.appPuedeMotivo()) return this.appPuedeMotivo();
+    // Al admin no le falta un permiso que pedir: es la cuenta la que no corresponde.
+    if (this.auth.esAdmin() && PERMISOS_NO_ADMIN.includes(this.appPuede())) return MSG_ADMIN_NO_CREA;
     // El código del permiso ('curso.crear') es lo que hay que pedirle al
     // administrador, así que va en el tooltip en vez de un "no autorizado" seco.
     return `No tienes permiso para esta acción (${CODIGO_POR_ID[this.appPuede()]})`;

@@ -4,7 +4,16 @@ import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, switchMap, tap } from 'rxjs/operators';
 import { Usuario, AuthResponse } from '../models/usuario.model';
-import { CODIGO_POR_ID, PermisoId } from '../constants/permisos';
+import { CODIGO_POR_ID, Permiso, PermisoId } from '../constants/permisos';
+
+/**
+ * Lo único que la cuenta ADMIN no hace aunque pase todo lo demás: crear
+ * registros. Un registro queda firmado por quien lo crea y esa firma tiene que
+ * ser de una persona del colegio. Espejo de noAdminAutor() en el backend.
+ */
+export const PERMISOS_NO_ADMIN: readonly PermisoId[] = [Permiso.RegistroCrear, Permiso.DocumentoSubir];
+export const MSG_ADMIN_NO_CREA =
+  'La cuenta de administrador no crea registros: ingresa con la cuenta del coordinador de convivencia u otro funcionario del colegio.';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -184,7 +193,7 @@ export class AuthService {
   can(permiso: PermisoId): boolean {
     const u = this.usuario();
     if (!u) return false;
-    if (u.es_admin) return true;
+    if (u.es_admin) return !PERMISOS_NO_ADMIN.includes(permiso);
     return (u.permisos ?? []).includes(permiso) || this.permisosDelCaso().includes(permiso);
   }
 

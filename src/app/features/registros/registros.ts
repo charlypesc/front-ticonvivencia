@@ -190,8 +190,12 @@ export class Registros implements OnInit {
   }
 
   async eliminar(r: any) {
+    // Con protocolo se borra el expediente entero: tiene que quedar dicho antes
+    // de confirmar, no descubrirse después.
     const confirmado = await this.confirmService.confirmarAccion(
-      `¿Eliminar el registro "${r.asunto}", esto eliminará los estudiantes asociados y el documento digitalizado asociado, estas seguro?`,
+      r.protocolos_activos > 0
+        ? `¿Eliminar el registro "${r.asunto}"? Tiene un protocolo activado: también se eliminará el protocolo con todo su expediente (pasos, relatos, medidas e informes), los estudiantes asociados y el documento digitalizado. Esta acción no se puede deshacer.`
+        : `¿Eliminar el registro "${r.asunto}"? Se eliminarán también los estudiantes asociados y el documento digitalizado. Esta acción no se puede deshacer.`,
     );
     if (!confirmado) return;
     this.error.set('');
